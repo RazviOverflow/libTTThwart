@@ -8,7 +8,7 @@ ld.so.preload** are loaded **before** those from LD_PRELOAD.
 
 Statistically linked libraries are immune to LD_PRELOAD as well as functions defined within the very source code.
 
-#### * [vulnerable.c](/vulnerable.c) is a TOCTTOU vulnerable sourcecoded. <lstat, open> call sequence. 
+#### [vulnerable.c](/vulnerable.c) is a TOCTTOU vulnerable sourcecoded. <lstat, open> call sequence. 
 
 ### Here you can find very useful LD_PRELOAD information:
 
