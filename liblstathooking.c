@@ -20,6 +20,11 @@ static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags);
 
+// Adding prototypes just to avoid conlficts
+void restorePrivileges(int);
+int applyPoLP(void);
+
+
 int __xstat(int ver, const char *path, struct stat *buf)
 {
   if ( old_xstat == NULL ) {
@@ -35,14 +40,17 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
   printf("User program invoked lstat on file %s, ver number is %d\n", path, ver);
   
-  printf("Address of path is: %X\n", &path);
+  int originaleuid = applyPoLP();
 
   if ( old_lxstat == NULL ) {
     old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
   }
 
   printf("lxstat %s\n",path);
-  return old_lxstat(ver,path, buf);
+  int returnValue = old_lxstat(ver,path, buf);
+  restorePrivileges(originaleuid);
+  return returnValue;
+
 }
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
@@ -58,14 +66,39 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 int open(const char *path, int flags)
 {
 
-	printf("User program invoked open on file %s, with flags %d\n", path, flags);
-  
-  printf("Address of path is: %X\n", &path);
+  printf("User invoked open() on: %s\n", path);
+
+  int originaleuid = applyPoLP();
 
   if ( old_open == NULL ) {
     old_open = dlsym(RTLD_NEXT, "open");
   }
 
-  printf("open %s\n",path);
-  return old_open(path, flags);
+  int returnValue = old_open(path, flags);
+  restorePrivileges(originaleuid);
+  return returnValue;
+}
+
+// This functioln applies the Principle of Least Privilege
+// and returns the original effective user id, for it to be
+// later restored. 
+int applyPoLP(){
+
+  int originaleuid = geteuid();
+  int originalruid = getuid();
+
+
+  seteuid(originalruid);
+  printf("Original effective user id: %d changed to actual user id (ruid): %d\n", originaleuid, originalruid);
+
+  return originaleuid;
+
+}
+
+
+void restorePrivileges(int privileges){
+
+  seteuid(privileges);
+  printf("Effective user privileges restored to %d\n", privileges);
+
 }
