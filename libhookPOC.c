@@ -1,8 +1,8 @@
 /* RazviOverflow
  This file must be compiled with the following command:
-	gcc -shared -fPIC liblstathooking.c -o liblstathooking.so -ldl
+	gcc -shared -fPIC libhookPOC.c -o libhookPOC.so -ldl
  You can then execute the vulnerable code with:
- 	LD_PRELOAD=$PWD/liblstathooking.so ./vulnerable tryout
+ 	LD_PRELOAD=$PWD/libhookPOC.so ./vulnerable tryout
 
 Iint lstat64 (const char *__restrict __file
 */
