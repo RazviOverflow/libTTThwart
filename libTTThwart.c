@@ -59,7 +59,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
     old_xstat = dlsym(RTLD_NEXT, "__xstat");
   }
 
-  printf("xstat %s\n",path);
+  //printf("xstat %s\n",path);
   return old_xstat(ver,path, buf);
 } 
 
@@ -115,7 +115,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
     old_xstat64 = dlsym(RTLD_NEXT, "__xstat64");
   }
 
-  printf("xstat64 %s\n",path);
+  //printf("xstat64 %s\n",path);
   return old_xstat64(ver,path, buf);
 }
 
