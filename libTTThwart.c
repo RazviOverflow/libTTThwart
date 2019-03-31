@@ -1,8 +1,8 @@
 /* RazviOverflow
  This file must be compiled with the following command:
-	gcc -shared -fPIC libhookPOC.c -o libhookPOC.so -ldl
+	gcc -shared -fPIC libTTThwart.c -o libTTThwart.so -ldl
  You can then execute the vulnerable code with:
- 	LD_PRELOAD=$PWD/libhookPOC.so ./vulnerable tryout
+ 	LD_PRELOAD=$PWD/libTTThwart.so ./vulnerable tryout
 
 Iint lstat64 (const char *__restrict __file
 */
@@ -16,6 +16,7 @@ Iint lstat64 (const char *__restrict __file
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
@@ -25,12 +26,32 @@ static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags) = NULL; 
 
+void checkDlsymError(){
+  char * error = dlerror();
+  if(error != NULL){
+    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+
+  }
+}
+
 typedef struct{
   const char *path;
   int inode;
 } FileObjectInfo;
 
 FileObjectInfo fileInfo;
+
+int openWrapper(const char *path, int flags, ...){
+
+    if ( old_open == NULL ) {
+    old_open = dlsym(RTLD_NEXT, "open");
+  }
+
+    checkDlsymError();
+
+    return old_open(path, flags);
+
+ }
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
@@ -51,8 +72,9 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   
   // Parenthesis are needed because of operator precedence.
   // https://en.cppreference.com/w/c/language/operator_precedence
-  if((fd = open(path, O_RDONLY)) < 0){
+  if((fd = openWrapper(path, O_RDONLY)) < 0){
     printf("Errors occured while trying to access %s.\nAborting.", path);
+    perror("Error is: ");
     exit(-1);
   }
 
@@ -61,8 +83,12 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   struct stat file_stat;
   if((ret = fstat(fd, &file_stat)) < 0 ){
     printf("Errors occured while trying to stat %s file descriptor.\nAborting.", fd);
+    perror("Error is: ");
     exit(-1);
   }
+
+  //After opening a FD, it must be closed
+  close(fd);
 
   printf("Inode of %s is: %d\n", path, file_stat.st_ino);
 
@@ -74,6 +100,8 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   if ( old_lxstat == NULL ) {
     old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
   }
+
+  checkDlsymError();
 
   printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
 
@@ -96,9 +124,10 @@ int open(const char *path, int flags, ...)
 
   printf("User invoked open() on: %s\n", path);
 
+  int fileDes = openWrapper(path, O_RDONLY);
+
   if(path == fileInfo.path){
     printf("Paths are equal\n");
-    int fileDes = old_open(path, O_RDONLY);
     struct stat fileStat;
     fstat(fileDes, &fileStat);
     int inode = fileStat.st_ino;
@@ -106,17 +135,16 @@ int open(const char *path, int flags, ...)
         printf("inodes are equal\n");
     } else {
       printf("WARNING!!!!!\n ATTENTION!!!!\ninodes are not equal\n");
+      close(fileDes);
       exit(-1);
     }
   }
-  
-  if ( old_open == NULL ) {
-    old_open = dlsym(RTLD_NEXT, "open");
-  }
 
-  return old_open(path, flags);
+  close(fileDes);
+  return openWrapper(path, flags);
  }
 
+ 
 
 //#########################
 /*
