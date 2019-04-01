@@ -34,7 +34,8 @@ void checkDlsymError(){
   }
 }
 
-FileObjectInfo fileInfo;
+//FileObjectInfo fileInfo;
+FileObjectInfos array = Initialize(2);
 
 int openWrapper(const char *path, int flags, ...){
 
@@ -47,6 +48,17 @@ int openWrapper(const char *path, int flags, ...){
     return old_open(path, flags);
 
  }
+
+// true = ok; false = warning!
+bool checkParametersProperties(char * path, ino_t inode){
+	int index = Find(array, path);
+	if(index==-1){
+		Insert(array, path, inode);
+		return true;
+	} else {
+		///TODO!!!
+	}
+}
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
@@ -87,10 +99,13 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
   printf("Inode of %s is: %lu\n", path, file_stat.st_ino);
 
-  fileInfo.path = strdup(path);
-  fileInfo.inode = file_stat.st_ino;
-
+  //fileInfo.path = strdup(path);
+  //fileInfo.inode = file_stat.st_ino;
   
+  //Adding to global array.
+  printf("##################\nANTES DE ANIADIR: %d\n", array.used);
+  Insert(array, (char *) path, file_stat.st_ino);
+  printf("##################\nDESPUES DE ANIADIR: %d\n", array.used);
 
   if ( old_lxstat == NULL ) {
     old_lxstat = dlsym(RTLD_NEXT, "__lxstat");

@@ -2,17 +2,20 @@
 
 
 //TODO malloc family functions error checking
+//TODO find
 
-void Initialize(FileObjectInfos * array, size_t initialSize){
+FileObjectInfos Initialize(size_t initialSize){
 
-	array->list = (FileObjectInfo *) calloc(initialSize, sizeof(FileObjectInfo));
+	FileObjectInfos array;
+
+	array.list = (FileObjectInfo *) calloc(initialSize, sizeof(FileObjectInfo));
 	
-	array->used = 0;
-	array->size = initialSize;
+	array.used = 0;
+	array.size = initialSize;
 
 	//Elements of array are contiguous
 	//memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * initialSize);
-	
+	return array;
 
 }
 
@@ -62,4 +65,15 @@ void Free(FileObjectInfos * array){
 	array->used = 0;
 	array->size = 0;
 
+}
+
+int Find(FileObjectInfos * array, char * path){
+	int returnValue = -1;
+	for(int i = 0; i < array->used; i++){
+		if(!strcmp(array->list[i].path, path)){
+			returnValue = i;
+			break;
+		}
+	}
+	return returnValue;
 }

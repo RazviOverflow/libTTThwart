@@ -19,10 +19,10 @@ typedef struct{
 	size_t size;
 } FileObjectInfos;
 
-void Initialize(FileObjectInfos*, size_t);
+FileObjectInfos Initialize(size_t);
 void Insert(FileObjectInfos*, char *, ino_t);
 void Free(FileObjectInfos *);
-FileObjectInfo Find(char* );
+int Find(FileObjectInfos *, char* );
 //void CreateFileObjectInfo(char*, ino_t); //private
 
 #endif //FILEOBJECTINFOS
