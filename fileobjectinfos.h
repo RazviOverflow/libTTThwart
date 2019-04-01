@@ -1,21 +1,28 @@
 #ifndef FILEOBJECTINFOS
 #define FILEOBJECTINFOS
 
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+
 typedef struct{
-  const char *path;
+  char *path;
   int inode;
 } FileObjectInfo;
 
 typedef struct{
-	FileObjectInfo *array;
+	FileObjectInfo * list;
 	size_t used;
 	size_t size;
-}
+} FileObjectInfos;
 
 void Initialize(FileObjectInfos*, size_t);
-bool Insert(FileObjectInfos*, FileObjectInfo, ino_t);
+void Insert(FileObjectInfos*, char *, ino_t);
 void Free(FileObjectInfos *);
 FileObjectInfo Find(char* );
-void CreateFileObjectInfo(char*, ino_t); //private
+//void CreateFileObjectInfo(char*, ino_t); //private
 
-#endif FILEOBJECTINFOS
+#endif //FILEOBJECTINFOS

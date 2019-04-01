@@ -9,14 +9,14 @@ Iint lstat64 (const char *__restrict __file
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#include "fileobjectinfos.h"
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
@@ -33,11 +33,6 @@ void checkDlsymError(){
 
   }
 }
-
-typedef struct{
-  const char *path;
-  int inode;
-} FileObjectInfo;
 
 FileObjectInfo fileInfo;
 
@@ -82,7 +77,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
   struct stat file_stat;
   if((ret = fstat(fd, &file_stat)) < 0 ){
-    printf("Errors occured while trying to stat %s file descriptor.\nAborting.", fd);
+    printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
     perror("Error is: ");
     exit(-1);
   }
@@ -90,9 +85,9 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   //After opening a FD, it must be closed
   close(fd);
 
-  printf("Inode of %s is: %d\n", path, file_stat.st_ino);
+  printf("Inode of %s is: %lu\n", path, file_stat.st_ino);
 
-  fileInfo.path = path;
+  fileInfo.path = strdup(path);
   fileInfo.inode = file_stat.st_ino;
 
   
