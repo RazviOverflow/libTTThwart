@@ -8,15 +8,14 @@ Iint lstat64 (const char *__restrict __file
 */
 #define _GNU_SOURCE
 
-#include <stdio.h>
 #include <dlfcn.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdbool.h>
 
-#include "fileobjectinfos.h"
+#include "fileobjectsinfo.h"
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
@@ -35,10 +34,17 @@ void checkDlsymError(){
 }
 
 //FileObjectInfo fileInfo;
-FileObjectInfos array = Initialize(2);
+//FileObjectsInfo* array = Initialize(2);
+FileObjectsInfo * array;
+
+void checkArray(){
+    if(array == NULL){
+        array = Initialize(2);
+    }
+}
 
 int openWrapper(const char *path, int flags, ...){
-
+    checkArray();
     if ( old_open == NULL ) {
     old_open = dlsym(RTLD_NEXT, "open");
   }
@@ -50,13 +56,16 @@ int openWrapper(const char *path, int flags, ...){
  }
 
 // true = ok; false = warning!
-bool checkParametersProperties(char * path, ino_t inode){
-	int index = Find(array, path);
+bool checkParametersProperties(const char * path, ino_t inode){
+	int index = FindIndex(array, path);
 	if(index==-1){
 		Insert(array, path, inode);
 		return true;
 	} else {
-		///TODO!!!
+		FileObjectInfo fileInfo = Get(array, index);
+
+        if(fileInfo.inode != inode) return false;
+        else return true;
 	}
 }
 
@@ -72,7 +81,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
-
+    checkArray();
   printf("User program invoked lstat on file %s, ver number is %d\n", path, ver);
 
   int fd, ret;
@@ -103,19 +112,27 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   //fileInfo.inode = file_stat.st_ino;
   
   //Adding to global array.
-  printf("##################\nANTES DE ANIADIR: %d\n", array.used);
-  Insert(array, (char *) path, file_stat.st_ino);
-  printf("##################\nDESPUES DE ANIADIR: %d\n", array.used);
+  printf("##################\nANTES DE ANIADIR: %lu\n", array->used);
 
-  if ( old_lxstat == NULL ) {
-    old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
+  if(checkParametersProperties(path, file_stat.st_ino)){
+    printf("##################\nDESPUES DE ANIADIR: %lu\n", array->used);
+
+    if ( old_lxstat == NULL ) {
+        old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
+    }
+
+    checkDlsymError();
+    FileObjectInfo fileInfo = array->list[array->used]; 
+    printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
+
+    return old_lxstat(ver,path, buf);
+  } else { 
+    printf("ERROR! IN LSTAT! INODES AR ENOT EQUAL!!\n");
+    exit(-1);
   }
 
-  checkDlsymError();
 
-  printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
-
-  return old_lxstat(ver,path, buf);
+  
 
 }
 
@@ -136,22 +153,20 @@ int open(const char *path, int flags, ...)
 
   int fileDes = openWrapper(path, O_RDONLY);
 
-  if(path == fileInfo.path){
-    printf("Paths are equal\n");
     struct stat fileStat;
     fstat(fileDes, &fileStat);
     int inode = fileStat.st_ino;
-    if(inode == fileInfo.inode){
-        printf("inodes are equal\n");
-    } else {
-      printf("WARNING!!!!!\n ATTENTION!!!!\ninodes are not equal\n");
-      close(fileDes);
-      exit(-1);
-    }
-  }
+    close(fileDes);
 
-  close(fileDes);
-  return openWrapper(path, flags);
+    if(checkParametersProperties(path, inode)){
+        return openWrapper(path, flags); 
+    } else {
+        printf("ERROR! IN OPEN! INODES AR ENOT EQUAL!!\n");
+        exit(-1);
+    }
+    
+
+  
  }
 
  
