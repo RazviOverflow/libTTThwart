@@ -38,20 +38,25 @@ void checkDlsymError(){
 FileObjectsInfo * array;
 
 void checkArray(){
-    if(array == NULL){
-        array = Initialize(2);
+            if(array == NULL){
+                array = Initialize(2);
+            }
     }
-}
-
+ 
 int openWrapper(const char *path, int flags, ...){
-    checkArray();
-    if ( old_open == NULL ) {
-    old_open = dlsym(RTLD_NEXT, "open");
-  }
-
-    checkDlsymError();
-
-    return old_open(path, flags);
+        checkArray();
+            if ( old_open == NULL ) {
+            printf("It is failing here ↓↓↓↓↓↓!\n");
+            fflush(stdout);
+            old_open = dlsym(RTLD_NEXT, "open");
+            if(!old_open){ 
+                printf("dlsym failure: %s\n", dlerror());
+            }
+            printf("It is failing here ↑↑↑↑↑!\n");
+            fflush(stdout);
+      }
+        checkDlsymError();
+        return old_open(path, flags);
 
  }
 
@@ -150,16 +155,13 @@ int open(const char *path, int flags, ...)
 {
 
   printf("User invoked open() on: %s\n", path);
-
-  int fileDes = openWrapper(path, O_RDONLY);
-
-    struct stat fileStat;
+    int fileDes = openWrapper(path, O_RDONLY);
+        struct stat fileStat;
     fstat(fileDes, &fileStat);
     int inode = fileStat.st_ino;
-    close(fileDes);
-
-    if(checkParametersProperties(path, inode)){
-        return openWrapper(path, flags); 
+    close(fileDes); 
+        if(checkParametersProperties(path, inode)){
+                return openWrapper(path, flags); 
     } else {
         printf("ERROR! IN OPEN! INODES AR ENOT EQUAL!!\n");
         exit(-1);
