@@ -1,6 +1,6 @@
 SHELL= /bin/sh
 CC=gcc
-CFLAGS= -shared -fPIC -Wall
+CFLAGS= -shared -fPIC -Wall -Wextra
 LDFLAGS= -ldl
 
 INCLUDEDIR=include

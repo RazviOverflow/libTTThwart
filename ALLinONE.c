@@ -15,7 +15,12 @@ Iint lstat64 (const char *__restrict __file
 #include <errno.h>
 #include <stdbool.h>
 
-#include "fileobjectsinfo.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
@@ -25,164 +30,228 @@ static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags) = NULL; 
 
-void checkDlsymError(){
-  char * error = dlerror();
-  if(error != NULL){
-    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+//TODO malloc family functions error checking
+//TODO find
 
-  }
+//#################### fileobjectsinfo.c #######################
+typedef struct{
+  char *path;
+  int inode;
+} FileObjectInfo;
+
+typedef struct{
+    FileObjectInfo * list;
+    size_t used;
+    size_t size;
+} FileObjectsInfo;
+
+FileObjectsInfo array;
+
+void Initialize(FileObjectsInfo *array,size_t initialSize){
+    printf("we reach here! 1\n");
+    fflush(stdout);
+    
+
+    array->list = (FileObjectInfo *) calloc(initialSize, sizeof(FileObjectInfo));
+    printf("we reach here! 2\n");
+    fflush(stdout);
+    array->used = 0;
+    array->size = initialSize;
+    printf("we reach here! 3\n");
+    fflush(stdout);
+    //Elements of array are contiguous
+    //memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * initialSize);
 }
 
-//FileObjectInfo fileInfo;
-//FileObjectsInfo* array = Initialize(2);
-FileObjectsInfo * array;
+/*
+FileObjectInfo CreateFileObjectInfo(char * path, ino_t inode){
+    FileObjectInfo fileObjectInfo;
+    fileObjectInfo.path = path;
+    fileObjectInfo.inode = inode;
+    return fileObjectInfo;
+}
+*/
 
-void checkArray(){
-    printf("It is failing here ↓check 1↓↓↓↓↓!\n");
-            if(array == NULL){
-                printf("It is failing here ↓check 2↓↓↓↓↓!\n");
-                array = Initialize(2);
-                printf("It is failing here ↓check 3↓↓↓↓↓!\n");
-            }
+void Insert(FileObjectsInfo * array, const char * path, ino_t inode){
+    if(array->used == array->size){
+        array->size *= 2;
+        array->list = (FileObjectInfo *)realloc(array->list,
+            array->size * sizeof(FileObjectInfo));
+
+        //Initializing new elements of realocated array
+        memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * (array->size - array->used));
+
+
     }
- 
-int openWrapper(const char *path, int flags, ...){
-        checkArray();
-            if ( old_open == NULL ) {
-            printf("It is failing here ↓↓↓↓↓↓!\n");
-            fflush(stdout);
-            old_open = dlsym(RTLD_NEXT, "open");
-            if(!old_open){ 
-                printf("dlsym failure: %s\n", dlerror());
-            }
-            printf("It is failing here ↑↑↑↑↑!\n");
-            fflush(stdout);
-      }
-        checkDlsymError();
-        return old_open(path, flags);
 
- }
+    //FileObjectInfo fileObjectInfo = CreateFileObjectInfo(path, inode);
 
-// true = ok; false = warning!
-bool checkParametersProperties(const char * path, ino_t inode){
-	int index = FindIndex(array, path);
-	if(index==-1){
-		Insert(array, path, inode);
-		return true;
-	} else {
-		FileObjectInfo fileInfo = Get(array, index);
+    //array->list[array->used].path = (const char *)malloc(strlen(path)+1);
+    //strcpy(array->list[array->used].path, path);
 
-        if(fileInfo.inode != inode) return false;
-        else return true;
-	}
+    array->list[array->used].path = strdup(path);
+    array->list[array->used].inode = inode;
+
+    array->used++;
+
 }
+
+void Free(FileObjectsInfo * array){
+
+    for(int i = 0; i < array->used; i++){
+        free(array->list[i].path);
+        array->list[i].path = NULL;
+    }
+
+    free(array->list);
+    array->list = NULL;
+
+    array->used = 0;
+    array->size = 0;
+
+}
+
+int FindIndex(FileObjectsInfo * array, const char * path){
+    int returnValue = -1;
+    for(int i = 0; i < array->used; i++){
+        if(!strcmp(array->list[i].path, path)){
+            returnValue = i;
+            break;
+        }
+    }
+    return returnValue;
+}
+
+FileObjectInfo Get(FileObjectsInfo * array, int index){
+    return array->list[index];
+}
+
+//#######################################################################
+
+void check_and_initialize_array(){
+    if(array.size == 0){
+        Initialize(&array, 2);
+    }
+}
+
+int openWrapper(const char *path, int flags, ...){
+    check_and_initialize_array();
+    printf("Array size is: %d\n", array.size);
+    if ( old_open == NULL ) {
+        printf("It is failing here ↓↓↓↓↓↓!\n");
+        fflush(stdout);
+        old_open = dlsym(RTLD_NEXT, "open");
+        if(!old_open){ 
+            printf("dlsym failure: %s\n", dlerror());
+        }
+        printf("It is failing here ↑↑↑↑↑!\n");
+        fflush(stdout);
+    }
+    return old_open(path, flags);
+
+}
+
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 
     printf("It is failing here XSTAT ↓↓↓↓↓↓!\n");
-            fflush(stdout);
-  if ( old_xstat == NULL ) {
+    fflush(stdout);
+    if ( old_xstat == NULL ) {
 
-    old_xstat = dlsym(RTLD_NEXT, "__xstat");
-  }
+        old_xstat = dlsym(RTLD_NEXT, "__xstat");
+    }
 
   //printf("xstat %s\n",path);
-  return old_xstat(ver,path, buf);
+    return old_xstat(ver,path, buf);
 } 
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
     printf("It is failing here LXSTAT ↓↓↓↓↓↓!\n");
-            fflush(stdout);
-    checkArray();
-  printf("User program invoked lstat on file %s, ver number is %d\n", path, ver);
-  fflush(stdout);
-  int fd, ret;
-  
+    fflush(stdout);
+        //printf("ver number is %d\n",ver);
+    printf("It is failing here ↓check 5↓↓↓↓↓!\n");
+    printf("User program invoked lstat on file %s\n", path);
+    printf("It is failing here ↓check 6↓↓↓↓↓!\n");
+    fflush(stdout);
+    int fd, ret;
+
   // Parenthesis are needed because of operator precedence.
   // https://en.cppreference.com/w/c/language/operator_precedence
-  if((fd = openWrapper(path, O_RDONLY)) < 0){
-    printf("Errors occured while trying to access %s.\nAborting.", path);
-    perror("Error is: ");
-    exit(-1);
-  }
+    if((fd = openWrapper(path, O_RDONLY)) < 0){
+        printf("Errors occured while trying to access %s.\nAborting.", path);
+        perror("Error is: ");
+        exit(-1);
+    }
 
-  printf("Created fileDescriptor is: %d\n", fd);
+    printf("Created fileDescriptor is: %d\n", fd);
 
-  struct stat file_stat;
-  if((ret = fstat(fd, &file_stat)) < 0 ){
-    printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
-    perror("Error is: ");
-    exit(-1);
-  }
+    struct stat file_stat;
+    if((ret = fstat(fd, &file_stat)) < 0 ){
+        printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
+        perror("Error is: ");
+        exit(-1);
+    }
 
   //After opening a FD, it must be closed
-  close(fd);
+    close(fd);
 
-  printf("Inode of %s is: %lu\n", path, file_stat.st_ino);
+    printf("Inode of %s is: %lu\n", path, file_stat.st_ino);
 
   //fileInfo.path = strdup(path);
   //fileInfo.inode = file_stat.st_ino;
-  
+
   //Adding to global array.
-  printf("##################\nANTES DE ANIADIR: %lu\n", array->used);
-  fflush(stdout);
-  if(checkParametersProperties(path, file_stat.st_ino)){
-    printf("##################\nDESPUES DE ANIADIR: %lu\n", array->used);
+    printf("##################\nANTES DE ANIADIR:");
+    fflush(stdout);
+
+    printf("##################\nDESPUES DE ANIADIR:");
     fflush(stdout);
     if ( old_lxstat == NULL ) {
         old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
     }
 
-    checkDlsymError();
-    FileObjectInfo fileInfo = array->list[array->used]; 
-    printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
+            //printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
 
     return old_lxstat(ver,path, buf);
-  } else { 
-    printf("ERROR! IN LSTAT! INODES AR ENOT EQUAL!!\n");
-    exit(-1);
-  }
 
 
-  
+
+
 
 }
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
     printf("It is failing here XSTAT64 ↓↓↓↓↓↓!\n");
-            fflush(stdout);
-  if ( old_xstat64 == NULL ) {
-    old_xstat64 = dlsym(RTLD_NEXT, "__xstat64");
-  }
+    fflush(stdout);
+    if ( old_xstat64 == NULL ) {
+        old_xstat64 = dlsym(RTLD_NEXT, "__xstat64");
+    }
 
   //printf("xstat64 %s\n",path);
-  return old_xstat64(ver,path, buf);
+    return old_xstat64(ver,path, buf);
 }
 
 int open(const char *path, int flags, ...)
 {
 
   printf("User invoked open() on: %s\n", path);
-    int fileDes = openWrapper(path, O_RDONLY);
-        struct stat fileStat;
-    fstat(fileDes, &fileStat);
-    int inode = fileStat.st_ino;
-    close(fileDes); 
-        if(checkParametersProperties(path, inode)){
-                return openWrapper(path, flags); 
-    } else {
-        printf("ERROR! IN OPEN! INODES AR ENOT EQUAL!!\n");
-        exit(-1);
-    }
-    
+  int fileDes = openWrapper(path, O_RDONLY);
+  struct stat fileStat;
+  fstat(fileDes, &fileStat);
+  int inode = fileStat.st_ino;
+  close(fileDes); 
+
+  return openWrapper(path, flags); 
+
+
 
   
- }
+}
 
- 
+
 
 //#########################
 /*
