@@ -92,7 +92,11 @@ void Insert(FileObjectsInfo * array, const char * path, ino_t inode){
     array->list[array->used].path = strdup(path);
     array->list[array->used].inode = inode;
 
+   
+
     array->used++;
+
+
 
 }
 
@@ -134,18 +138,44 @@ void check_and_initialize_array(){
     }
 }
 
-int openWrapper(const char *path, int flags, ...){
+void check_dlsym_error(){
+  char * error = dlerror();
+  if(error != NULL){
+    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+    exit(EXIT_FAILURE);
+  }
+}
+
+/*
+    The correct way to test for an error is to call dlerror() 
+    to clear any old error conditions, then call dlsym(), and 
+    then call dlerror() again, saving its return value into a
+    variable, and check whether this saved value is not NULL.
+    https://linux.die.net/man/3/dlsym
+*/
+void* dlsym_wrapper(char *original_function){
+    
+    dlerror();
+
+    void *function_handler;
+    
+    function_handler = dlsym(RTLD_NEXT, original_function);
+
+    check_dlsym_error();
+
+    return function_handler;
+}
+/*
+    The open wrapper ensures old_open is initialized and is used
+    by other inner functions in order to avoid open() recursivity
+    and overhead.
+*/
+int open_wrapper(const char *path, int flags, ...){
+    printf("Array size is: %d\n", (int) array.size);
     check_and_initialize_array();
-    printf("Array size is: %d\n", array.size);
+    printf("Array size is: %d\n", (int) array.size);
     if ( old_open == NULL ) {
-        printf("It is failing here ↓↓↓↓↓↓!\n");
-        fflush(stdout);
-        old_open = dlsym(RTLD_NEXT, "open");
-        if(!old_open){ 
-            printf("dlsym failure: %s\n", dlerror());
-        }
-        printf("It is failing here ↑↑↑↑↑!\n");
-        fflush(stdout);
+        old_open = dlsym_wrapper("open");
     }
     return old_open(path, flags);
 
@@ -159,7 +189,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
     fflush(stdout);
     if ( old_xstat == NULL ) {
 
-        old_xstat = dlsym(RTLD_NEXT, "__xstat");
+        old_xstat = dlsym_wrapper("__xstat");
     }
 
   //printf("xstat %s\n",path);
@@ -168,18 +198,12 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
-    printf("It is failing here LXSTAT ↓↓↓↓↓↓!\n");
-    fflush(stdout);
-        //printf("ver number is %d\n",ver);
-    printf("It is failing here ↓check 5↓↓↓↓↓!\n");
-    printf("User program invoked lstat on file %s\n", path);
-    printf("It is failing here ↓check 6↓↓↓↓↓!\n");
-    fflush(stdout);
+
     int fd, ret;
 
   // Parenthesis are needed because of operator precedence.
   // https://en.cppreference.com/w/c/language/operator_precedence
-    if((fd = openWrapper(path, O_RDONLY)) < 0){
+    if((fd = open_wrapper(path, O_RDONLY)) < 0){
         printf("Errors occured while trying to access %s.\nAborting.", path);
         perror("Error is: ");
         exit(-1);
@@ -197,19 +221,26 @@ int __lxstat(int ver, const char *path, struct stat *buf)
   //After opening a FD, it must be closed
     close(fd);
 
-    printf("Inode of %s is: %lu\n", path, file_stat.st_ino);
+    ino_t inode = file_stat.st_ino;
+
+    printf("\n#### BEFORE ADDING####\nArray used: %d\n",array.used);
+    printf("Inode of %s is: %lu\n", path, inode);
+    Insert(&array, path, inode);
+    printf("\n#### AFTER ADDING####\nArray used: %d\n",array.used);
 
   //fileInfo.path = strdup(path);
   //fileInfo.inode = file_stat.st_ino;
 
-  //Adding to global array.
-    printf("##################\nANTES DE ANIADIR:");
-    fflush(stdout);
 
-    printf("##################\nDESPUES DE ANIADIR:");
-    fflush(stdout);
+
+  //Adding to global array.
+   // printf("##################\nANTES DE ANIADIR:\n");
+    //fflush(stdout);
+
+    //printf("##################\nDESPUES DE ANIADIR:\n");
+    //fflush(stdout);
     if ( old_lxstat == NULL ) {
-        old_lxstat = dlsym(RTLD_NEXT, "__lxstat");
+        old_lxstat = dlsym_wrapper("__lxstat");
     }
 
             //printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
@@ -227,7 +258,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
     printf("It is failing here XSTAT64 ↓↓↓↓↓↓!\n");
     fflush(stdout);
     if ( old_xstat64 == NULL ) {
-        old_xstat64 = dlsym(RTLD_NEXT, "__xstat64");
+        old_xstat64 = dlsym_wrapper("__xstat64");
     }
 
   //printf("xstat64 %s\n",path);
@@ -238,13 +269,13 @@ int open(const char *path, int flags, ...)
 {
 
   printf("User invoked open() on: %s\n", path);
-  int fileDes = openWrapper(path, O_RDONLY);
+  int fileDes = open_wrapper(path, O_RDONLY);
   struct stat fileStat;
   fstat(fileDes, &fileStat);
   int inode = fileStat.st_ino;
   close(fileDes); 
 
-  return openWrapper(path, flags); 
+  return open_wrapper(path, flags); 
 
 
 
