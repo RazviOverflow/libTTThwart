@@ -51,11 +51,20 @@ typedef struct{
 FileObjectsInfo g_array;
 //####################################################
 
+/* 
+
+// This function is highly probable to be deleted since array initialiation is
+// only needed when inserting elements for the first time, so there is no need
+// for such a dedicated function. Checking and initialization can be carried
+// out in Insert function. 
+
 void check_and_initialize_array(){
+    printf("Check and initialize has been called\n");
     if(g_array.size == 0){
         Initialize(&g_array, 2);
     }
 }
+*/
 
 void check_dlsym_error(){
   char * error = dlerror();
@@ -71,17 +80,14 @@ void check_dlsym_error(){
     the corresponding memory.
 */
 void Initialize(FileObjectsInfo *array, size_t size){
-    printf("we reach here! 1\n");
-    fflush(stdout);
-    
-
-    array->list = (FileObjectInfo *) calloc(size, sizeof(FileObjectInfo));
-    printf("we reach here! 2\n");
-    fflush(stdout);
+    printf("Initialize has been called for array: %X and size: %d\n", &(*array), size);
+    array->list = (FileObjectInfo *) calloc(size, sizeof(FileObjectInfo)); 
+    if(!array->list){
+        printf("Error allocating memory for array in Initialize process.\n");
+        exit(EXIT_FAILURE);
+    }
     array->used = 0;
     array->size = size;
-    printf("we reach here! 3\n");
-    fflush(stdout);
     //Elements of array are contiguous
     //memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * initialSize);
 }
@@ -104,12 +110,32 @@ FileObjectInfo CreateFileObjectInfo(char * path, ino_t inode){
     After the element is inserted, "used" member of the given
     array is postincremented.
 */
-void Insert(FileObjectsInfo * array, const char * path, ino_t inode){
-    check_and_initialize_array();
+void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
+    printf("Insert has been called for array: %X with path: %s and inode: %d\n",&(*array), path, inode);
+    
+    // If array has not been yet initialized, initialize it. 
+    if(array->size == 0){
+        Initialize(&g_array, 2);
+    }
+
+    // If number of elements (used) in the array equals its size, it means
+    // the array requires more room. It's size gets doubled
     if(array->used == array->size){
+        printf("Size of array %X is about to get doubled.\n", &(*array));
         array->size *= 2;
-        array->list = (FileObjectInfo *)realloc(array->list,
+        FileObjectInfo *aux = (FileObjectInfo *)realloc(array->list,
             array->size * sizeof(FileObjectInfo));
+
+        // It is never a good idea to do something like:
+        // array->list = realloc... because if realloc fails you lose the
+        // reference to your original data and realloc does not free() so
+        // there'll be an implicit memory leak.
+        if(!aux){
+            printf("Error trying to realloc size for array in Insert process.\n");
+            exit(EXIT_FAILURE);
+        } else {
+            array->list = aux;
+        }
 
         //Initializing new elements of realocated array
         memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * (array->size - array->used));
@@ -166,6 +192,7 @@ int FindIndex(FileObjectsInfo * array, const char * path){
                 break;
             }
         }
+        return returnValue;
     } else {
         return returnValue;
     }
@@ -207,8 +234,6 @@ void* dlsym_wrapper(char *original_function){
 */
 int open_wrapper(const char *path, int flags, ...){
     printf("Array size is: %d\n", (int) g_array.size);
-    check_and_initialize_array();
-    printf("Array size is: %d\n", (int) g_array.size);
     if ( old_open == NULL ) {
         old_open = dlsym_wrapper("open");
     }
@@ -233,7 +258,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
-
+    printf("User invoked lxstat for path: %s\n", path);
     int fd, ret;
 
   // Parenthesis are needed because of operator precedence.
@@ -241,7 +266,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
     if((fd = open_wrapper(path, O_RDONLY)) < 0){
         printf("Errors occured while trying to access %s.\nAborting.", path);
         perror("Error is: ");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Created fileDescriptor is: %d\n", fd);
@@ -250,7 +275,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
     if((ret = fstat(fd, &file_stat)) < 0 ){
         printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
         perror("Error is: ");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
   //After opening a FD, it must be closed
