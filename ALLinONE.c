@@ -32,6 +32,8 @@ static int (*old_open)(const char *path, int flags) = NULL;
 
 //TODO malloc family functions error checking
 //TODO find
+//TODO implement logger and replace printf family with corresponding log level
+
 
 //#################### fileobjectsinfo.c #######################
 typedef struct{
@@ -45,18 +47,39 @@ typedef struct{
     size_t size;
 } FileObjectsInfo;
 
-FileObjectsInfo array;
+//########## GLOBAL VARIABLES ########################
+FileObjectsInfo g_array;
+//####################################################
 
-void Initialize(FileObjectsInfo *array,size_t initialSize){
+void check_and_initialize_array(){
+    if(g_array.size == 0){
+        Initialize(&g_array, 2);
+    }
+}
+
+void check_dlsym_error(){
+  char * error = dlerror();
+  if(error != NULL){
+    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+    exit(EXIT_FAILURE);
+  }
+}
+
+
+/*
+    Initializes the given array with the given size, allocating
+    the corresponding memory.
+*/
+void Initialize(FileObjectsInfo *array, size_t size){
     printf("we reach here! 1\n");
     fflush(stdout);
     
 
-    array->list = (FileObjectInfo *) calloc(initialSize, sizeof(FileObjectInfo));
+    array->list = (FileObjectInfo *) calloc(size, sizeof(FileObjectInfo));
     printf("we reach here! 2\n");
     fflush(stdout);
     array->used = 0;
-    array->size = initialSize;
+    array->size = size;
     printf("we reach here! 3\n");
     fflush(stdout);
     //Elements of array are contiguous
@@ -72,7 +95,17 @@ FileObjectInfo CreateFileObjectInfo(char * path, ino_t inode){
 }
 */
 
+/*
+    Inserts into the given array the given path and inode.  
+    Before inserting elements into the given array, the array 
+    must be initialized.
+    If there is not enough room in the array to insert a new
+    FileObjectInfo element, the size of the array gets doubled.
+    After the element is inserted, "used" member of the given
+    array is postincremented.
+*/
 void Insert(FileObjectsInfo * array, const char * path, ino_t inode){
+    check_and_initialize_array();
     if(array->used == array->size){
         array->size *= 2;
         array->list = (FileObjectInfo *)realloc(array->list,
@@ -100,6 +133,10 @@ void Insert(FileObjectsInfo * array, const char * path, ino_t inode){
 
 }
 
+/*
+    Frees the memory used by the given array. This function
+    is ment to be called at the end of the program.
+*/
 void Free(FileObjectsInfo * array){
 
     for(int i = 0; i < array->used; i++){
@@ -115,36 +152,34 @@ void Free(FileObjectsInfo * array){
 
 }
 
+/*
+    Find the index of the given path in the given array. If array's
+    size is not bigger than 0, it means the array has not yet been 
+    initialized, so there is no way the element could be found. 
+*/
 int FindIndex(FileObjectsInfo * array, const char * path){
     int returnValue = -1;
-    for(int i = 0; i < array->used; i++){
-        if(!strcmp(array->list[i].path, path)){
-            returnValue = i;
-            break;
+    if(array->size > 0){
+        for(int i = 0; i < array->used; i++){
+            if(!strcmp(array->list[i].path, path)){
+                returnValue = i;
+                break;
+            }
         }
+    } else {
+        return returnValue;
     }
-    return returnValue;
 }
 
+/*
+   Retrieve the FileObjectInfo element at the given index in the
+   given array. 
+*/
 FileObjectInfo Get(FileObjectsInfo * array, int index){
     return array->list[index];
 }
 
 //#######################################################################
-
-void check_and_initialize_array(){
-    if(array.size == 0){
-        Initialize(&array, 2);
-    }
-}
-
-void check_dlsym_error(){
-  char * error = dlerror();
-  if(error != NULL){
-    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
-    exit(EXIT_FAILURE);
-  }
-}
 
 /*
     The correct way to test for an error is to call dlerror() 
@@ -171,9 +206,9 @@ void* dlsym_wrapper(char *original_function){
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-    printf("Array size is: %d\n", (int) array.size);
+    printf("Array size is: %d\n", (int) g_array.size);
     check_and_initialize_array();
-    printf("Array size is: %d\n", (int) array.size);
+    printf("Array size is: %d\n", (int) g_array.size);
     if ( old_open == NULL ) {
         old_open = dlsym_wrapper("open");
     }
@@ -223,10 +258,10 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
     ino_t inode = file_stat.st_ino;
 
-    printf("\n#### BEFORE ADDING####\nArray used: %d\n",array.used);
+    printf("\n#### BEFORE ADDING####\nArray used: %d\n",g_array.used);
     printf("Inode of %s is: %lu\n", path, inode);
-    Insert(&array, path, inode);
-    printf("\n#### AFTER ADDING####\nArray used: %d\n",array.used);
+    Insert(&g_array, path, inode);
+    printf("\n#### AFTER ADDING####\nArray used: %d\n",g_array.used);
 
   //fileInfo.path = strdup(path);
   //fileInfo.inode = file_stat.st_ino;
