@@ -1,10 +1,8 @@
 /* RazviOverflow
  This file must be compiled with the following command:
 	gcc -shared -Wall -Wextra -fPIC ALLinONE.c -o ALLinONE.so -std=c99 -ldl
- You can then execute the vulnerable code with:
- 	LD_PRELOAD=$PWD/libTTThwart.so ./vulnerable tryout
-
-Iint lstat64 (const char *__restrict __file
+ 
+ Glibc min version => 2.19
 */
 #define _GNU_SOURCE
 
@@ -37,14 +35,14 @@ static int (*old_open)(const char *path, int flags) = NULL;
 
 //#################### file_objects_info.c #######################
 typedef struct{
-  char *path;
-  ino_t inode;
+	char *path;
+	ino_t inode;
 } file_object_info;
 
 typedef struct{
-    file_object_info * list;
-    size_t used;
-    size_t size;
+	file_object_info * list;
+	size_t used;
+	size_t size;
 } file_objects_info;
 
 //########## GLOBAL VARIABLES ########################
@@ -67,11 +65,11 @@ void check_and_initialize_array(){
 */
 
 void check_dlsym_error(){
-  char * error = dlerror();
-  if(error != NULL){
-    printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
-    exit(EXIT_FAILURE);
-}
+	char * error = dlerror();
+	if(error != NULL){
+		printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+		exit(EXIT_FAILURE);
+	}
 }
 
 
@@ -80,14 +78,14 @@ void check_dlsym_error(){
     the corresponding memory.
 */
 void initialize_array(file_objects_info *array, size_t size){
-    printf("Initialize has been called for array: %X and size: %d\n", &(*array), size);
-    array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
-    if(!array->list){
-        printf("Error allocating memory for array in Initialize process.\n");
-        exit(EXIT_FAILURE);
-    }
-    array->used = 0;
-    array->size = size;
+	printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
+	array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
+	if(!array->list){
+		printf("Error allocating memory for array in Initialize process.\n");
+		exit(EXIT_FAILURE);
+	}
+	array->used = 0;
+	array->size = size;
     //Elements of array are contiguous
     //memset(&array->list[array->used], 0, sizeof(file_object_info) * initialSize);
 }
@@ -111,49 +109,49 @@ file_object_info Createfile_object_info(char * path, ino_t inode){
     array is postincremented.
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
-    printf("Insert has been called for array: %X with path: %s and inode: %d\n",&(*array), path, inode);
-    
+	printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
+
     // If array has not been yet initialized, initialize it. 
-    if(array->size == 0){
-        initialize_array(&g_array, 2);
-    }
+	if(array->size == 0){
+		initialize_array(&g_array, 2);
+	}
 
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
-    if(array->used == array->size){
-        printf("Size of array %X is about to get doubled.\n", &(*array));
-        array->size *= 2;
-        file_object_info *aux = (file_object_info *)realloc(array->list,
-            array->size * sizeof(file_object_info));
+	if(array->used == array->size){
+		printf("Size of array %X is about to get doubled.\n", &(*array));
+		array->size *= 2;
+		file_object_info *aux = (file_object_info *)realloc(array->list,
+			array->size * sizeof(file_object_info));
 
         // It is never a good idea to do something like:
         // array->list = realloc... because if realloc fails you lose the
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
-        if(!aux){
-            printf("Error trying to realloc size for array in Insert process.\n");
-            exit(EXIT_FAILURE);
-        } else {
-            array->list = aux;
-        }
+		if(!aux){
+			printf("Error trying to realloc size for array in Insert process.\n");
+			exit(EXIT_FAILURE);
+		} else {
+			array->list = aux;
+		}
 
         //Initializing new elements of realocated array
-        memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
+		memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
 
 
-    }
+	}
 
     //file_object_info file_object_info = Createfile_object_info(path, inode);
 
     //array->list[array->used].path = (const char *)malloc(strlen(path)+1);
     //strcpy(array->list[array->used].path, path);
 
-    array->list[array->used].path = strdup(path);
-    array->list[array->used].inode = inode;
+	array->list[array->used].path = strdup(path);
+	array->list[array->used].inode = inode;
 
 
 
-    array->used++;
+	array->used++;
 
 
 
@@ -165,16 +163,16 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
 */
 void free_array(file_objects_info *array){
 
-    for(int i = 0; i < array->used; i++){
-        free(array->list[i].path);
-        array->list[i].path = NULL;
-    }
+	for(uint i = 0; i < array->used; i++){
+		free(array->list[i].path);
+		array->list[i].path = NULL;
+	}
 
-    free(array->list);
-    array->list = NULL;
+	free(array->list);
+	array->list = NULL;
 
-    array->used = 0;
-    array->size = 0;
+	array->used = 0;
+	array->size = 0;
 
 }
 
@@ -184,18 +182,18 @@ void free_array(file_objects_info *array){
     initialized, so there is no way the element could be found. 
 */
 int find_index_in_array(file_objects_info *array, const char *path){
-    int returnValue = -1;
-    if(array->size > 0){
-        for(int i = 0; i < array->used; i++){
-            if(!strcmp(array->list[i].path, path)){
-                returnValue = i;
-                break;
-            }
-        }
-        return returnValue;
-    } else {
-        return returnValue;
-    }
+	int returnValue = -1;
+	if(array->size > 0){
+		for(uint i = 0; i < array->used; i++){
+			if(!strcmp(array->list[i].path, path)){
+				returnValue = i;
+				break;
+			}
+		}
+		return returnValue;
+	} else {
+		return returnValue;
+	}
 }
 
 /*
@@ -203,7 +201,7 @@ int find_index_in_array(file_objects_info *array, const char *path){
    given array. 
 */
 file_object_info get_from_array_at_index(file_objects_info *array, int index){
-    return array->list[index];
+	return array->list[index];
 }
 
 /*
@@ -216,19 +214,19 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
 */
 void check_parameters_properties(const char *path, ino_t inode, const char *caller_function_name){
 
-    int index = find_index_in_array(&g_array, path);
-    if(index < 0){
-        insert_in_array(&g_array, path, inode);
-    } else {
-        file_object_info aux = get_from_array_at_index(&g_array,index);
-        if(aux.inode != inode){
-            printf("WARNIN! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function.", caller_function_name, path);
-            fflush(stdout);
-            exit(EXIT_FAILURE);
-        }
+	int index = find_index_in_array(&g_array, path);
+	if(index < 0){
+		insert_in_array(&g_array, path, inode);
+	} else {
+		file_object_info aux = get_from_array_at_index(&g_array,index);
+		if(aux.inode != inode){
+			printf("WARNIN! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function.", caller_function_name, path);
+			fflush(stdout);
+			exit(EXIT_FAILURE);
+		}
 
-    }
-    printf("######\n");
+	}
+	printf("######\n");
 }
 
 //#######################################################################
@@ -240,17 +238,17 @@ void check_parameters_properties(const char *path, ino_t inode, const char *call
     variable, and check whether this saved value is not NULL.
     https://linux.die.net/man/3/dlsym
 */
-void* dlsym_wrapper(char *original_function){
+void* dlsym_wrapper(const char *original_function){
 
-    dlerror();
+	dlerror();
 
-    void *function_handler;
-    
-    function_handler = dlsym(RTLD_NEXT, original_function);
+	void *function_handler;
 
-    check_dlsym_error();
+	function_handler = dlsym(RTLD_NEXT, original_function);
 
-    return function_handler;
+	check_dlsym_error();
+
+	return function_handler;
 }
 /*
     The open wrapper ensures old_open is initialized and is used
@@ -258,11 +256,11 @@ void* dlsym_wrapper(char *original_function){
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-    printf("Array size is: %d and used is:%d\n", (int) g_array.size, g_array.used);
-    if ( old_open == NULL ) {
-        old_open = dlsym_wrapper("open");
-    }
-    return old_open(path, flags);
+	printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
+	if ( old_open == NULL ) {
+		old_open = dlsym_wrapper("open");
+	}
+	return old_open(path, flags);
 
 }
 
@@ -271,91 +269,120 @@ int open_wrapper(const char *path, int flags, ...){
     checking.
 */
 ino_t get_inode(const char *path){
-    int fd, ret;
-    ino_t inode;
-    printf("User invoked get_inode for %s\n", path);
+	int fd, ret;
+	ino_t inode;
+	printf("User invoked get_inode for %s\n", path);
     // Parenthesis are needed because of operator precedence.
     // https://en.cppreference.com/w/c/language/operator_precedence
-    if((fd = open_wrapper(path, O_RDONLY)) < 0){
-        printf("Errors occured while trying to access %s.\nAborting.", path);
-        perror("Error1 is: ");
-        fflush(stdout);
+	if((fd = open_wrapper(path, O_RDONLY)) < 0){
+		printf("Errors occured while trying to access %s.\nAborting.", path);
+		perror("Error1 is: ");
+		fflush(stdout);
         //exit(EXIT_FAILURE);
-    } else {
-        printf("Created fileDescriptor is: %d\n", fd);
-        struct stat file_stat;
-        if((ret = fstat(fd, &file_stat)) < 0 ){
-            printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
-            perror("Error2 is: ");
-            close(fd);
+	} else {
+		printf("Created fileDescriptor is: %d\n", fd);
+		struct stat file_stat;
+		if((ret = fstat(fd, &file_stat)) < 0 ){
+			printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
+			perror("Error2 is: ");
+			close(fd);
             //exit(EXIT_FAILURE);
-        } else {
-            inode = file_stat.st_ino;
+		} else {
+			inode = file_stat.st_ino;
             //After opening a FD, it must be closed
-            close(fd);
-        }
-    }
-    printf("User invoked get_inode for %s and it's %d\n", path, inode);
-    return inode;
+			close(fd);
+		}
+	}
+	printf("User invoked get_inode for %s and it's %lu\n", path, inode);
+	return inode;
 }
+
+char* sanitize_path(const char *path){
+/*
+	If resolved_path is specified as NULL, then realpath() uses malloc(3)
+    to allocate a buffer of up to PATH_MAX bytes to hold the resolved
+    pathname, and returns a pointer to this buffer.  The caller should
+    deallocate this buffer using free(3).
+    https://linux.die.net/man/3/realpath
+*/
+	char *aux = realpath(path, NULL);
+	if(!path){
+		printf("Error resolving path %s\n", path);
+		perror("Real path");
+		exit(EXIT_FAILURE);
+	}
+	return aux;
+}
+
+//#####################################################################3
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 
- printf("User invoked %s on: %s\n", __func__, path);
+	path = sanitize_path(path);
 
- ino_t inode = get_inode(path);
- check_parameters_properties(path, inode, __func__);
+	printf("User invoked %s on: %s\n", __func__, path);
 
- if ( old_xstat == NULL ) {
-    old_xstat = dlsym_wrapper(__func__);
-}
+	ino_t inode = get_inode(path);
+	check_parameters_properties(path, inode, __func__);
+
+	if ( old_xstat == NULL ) {
+		old_xstat = dlsym_wrapper(__func__);
+	}
 
   //printf("xstat64 %s\n",path);
-return old_xstat(ver, path, buf);
+	return old_xstat(ver, path, buf);
 } 
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
-    printf("User invoked %s on: %s\n", __func__, path);
 
-    ino_t inode = get_inode(path);
+	path = sanitize_path(path);
 
-    check_parameters_properties(path, inode, __func__);
-    
-    if ( old_lxstat == NULL ) {
-        old_lxstat = dlsym_wrapper(__func__);
-    }
+	printf("User invoked %s on: %s\n", __func__, path);
 
-    return old_lxstat(ver,path, buf);
+	ino_t inode = get_inode(path);
+
+	check_parameters_properties(path, inode, __func__);
+
+	if ( old_lxstat == NULL ) {
+		old_lxstat = dlsym_wrapper(__func__);
+	}
+
+	return old_lxstat(ver,path, buf);
 }
 
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
 
-    printf("User invoked %s on: %s\n", __func__, path);
+	path = sanitize_path(path);
 
-    ino_t inode = get_inode(path);
-    check_parameters_properties(path, inode, __func__);
+	printf("User invoked %s on: %s\n", __func__, path);
 
-    if ( old_xstat64 == NULL ) {
-        old_xstat64 = dlsym_wrapper(__func__);
-    }
+	ino_t inode = get_inode(path);
+
+	check_parameters_properties(path, inode, __func__);
+
+	if ( old_xstat64 == NULL ) {
+		old_xstat64 = dlsym_wrapper(__func__);
+	}
 
   //printf("xstat64 %s\n",path);
-    return old_xstat64(ver, path, buf);
+	return old_xstat64(ver, path, buf);
 }
 
 int open(const char *path, int flags, ...)
 {
 
-  printf("User invoked %s on: %s\n", __func__, path);
-  
-  ino_t inode = get_inode(path);
+	path = sanitize_path(path);
 
-  check_parameters_properties(path, inode, __func__);
-  return open_wrapper(path, flags); 
+	printf("User invoked %s on: %s\n", __func__, path);
+
+	ino_t inode = get_inode(path);
+
+	check_parameters_properties(path, inode, __func__);
+	return open_wrapper(path, flags); 
 }
 
 //#########################
