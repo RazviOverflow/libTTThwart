@@ -35,20 +35,20 @@ static int (*old_open)(const char *path, int flags) = NULL;
 //TODO implement logger and replace printf family with corresponding log level
 
 
-//#################### fileobjectsinfo.c #######################
+//#################### file_objects_info.c #######################
 typedef struct{
   char *path;
-  int inode;
-} FileObjectInfo;
+  ino_t inode;
+} file_object_info;
 
 typedef struct{
-    FileObjectInfo * list;
+    file_object_info * list;
     size_t used;
     size_t size;
-} FileObjectsInfo;
+} file_objects_info;
 
 //########## GLOBAL VARIABLES ########################
-FileObjectsInfo g_array;
+file_objects_info g_array;
 //####################################################
 
 /* 
@@ -71,7 +71,7 @@ void check_dlsym_error(){
   if(error != NULL){
     printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
     exit(EXIT_FAILURE);
-  }
+}
 }
 
 
@@ -79,9 +79,9 @@ void check_dlsym_error(){
     Initializes the given array with the given size, allocating
     the corresponding memory.
 */
-void Initialize(FileObjectsInfo *array, size_t size){
+void initialize_array(file_objects_info *array, size_t size){
     printf("Initialize has been called for array: %X and size: %d\n", &(*array), size);
-    array->list = (FileObjectInfo *) calloc(size, sizeof(FileObjectInfo)); 
+    array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
     if(!array->list){
         printf("Error allocating memory for array in Initialize process.\n");
         exit(EXIT_FAILURE);
@@ -89,15 +89,15 @@ void Initialize(FileObjectsInfo *array, size_t size){
     array->used = 0;
     array->size = size;
     //Elements of array are contiguous
-    //memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * initialSize);
+    //memset(&array->list[array->used], 0, sizeof(file_object_info) * initialSize);
 }
 
 /*
-FileObjectInfo CreateFileObjectInfo(char * path, ino_t inode){
-    FileObjectInfo fileObjectInfo;
-    fileObjectInfo.path = path;
-    fileObjectInfo.inode = inode;
-    return fileObjectInfo;
+file_object_info Createfile_object_info(char * path, ino_t inode){
+    file_object_info file_object_info;
+    file_object_info.path = path;
+    file_object_info.inode = inode;
+    return file_object_info;
 }
 */
 
@@ -106,16 +106,16 @@ FileObjectInfo CreateFileObjectInfo(char * path, ino_t inode){
     Before inserting elements into the given array, the array 
     must be initialized.
     If there is not enough room in the array to insert a new
-    FileObjectInfo element, the size of the array gets doubled.
+    file_object_info element, the size of the array gets doubled.
     After the element is inserted, "used" member of the given
     array is postincremented.
 */
-void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
+void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     printf("Insert has been called for array: %X with path: %s and inode: %d\n",&(*array), path, inode);
     
     // If array has not been yet initialized, initialize it. 
     if(array->size == 0){
-        Initialize(&g_array, 2);
+        initialize_array(&g_array, 2);
     }
 
     // If number of elements (used) in the array equals its size, it means
@@ -123,8 +123,8 @@ void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
     if(array->used == array->size){
         printf("Size of array %X is about to get doubled.\n", &(*array));
         array->size *= 2;
-        FileObjectInfo *aux = (FileObjectInfo *)realloc(array->list,
-            array->size * sizeof(FileObjectInfo));
+        file_object_info *aux = (file_object_info *)realloc(array->list,
+            array->size * sizeof(file_object_info));
 
         // It is never a good idea to do something like:
         // array->list = realloc... because if realloc fails you lose the
@@ -138,12 +138,12 @@ void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
         }
 
         //Initializing new elements of realocated array
-        memset(&array->list[array->used], 0, sizeof(FileObjectInfo) * (array->size - array->used));
+        memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
 
 
     }
 
-    //FileObjectInfo fileObjectInfo = CreateFileObjectInfo(path, inode);
+    //file_object_info file_object_info = Createfile_object_info(path, inode);
 
     //array->list[array->used].path = (const char *)malloc(strlen(path)+1);
     //strcpy(array->list[array->used].path, path);
@@ -151,7 +151,7 @@ void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
     array->list[array->used].path = strdup(path);
     array->list[array->used].inode = inode;
 
-   
+
 
     array->used++;
 
@@ -163,7 +163,7 @@ void Insert(FileObjectsInfo *array, const char *path, ino_t inode){
     Frees the memory used by the given array. This function
     is ment to be called at the end of the program.
 */
-void Free(FileObjectsInfo * array){
+void free_array(file_objects_info *array){
 
     for(int i = 0; i < array->used; i++){
         free(array->list[i].path);
@@ -183,7 +183,7 @@ void Free(FileObjectsInfo * array){
     size is not bigger than 0, it means the array has not yet been 
     initialized, so there is no way the element could be found. 
 */
-int FindIndex(FileObjectsInfo * array, const char * path){
+int find_index_in_array(file_objects_info *array, const char *path){
     int returnValue = -1;
     if(array->size > 0){
         for(int i = 0; i < array->used; i++){
@@ -199,11 +199,37 @@ int FindIndex(FileObjectsInfo * array, const char * path){
 }
 
 /*
-   Retrieve the FileObjectInfo element at the given index in the
+   Retrieve the file_object_info element at the given index in the
    given array. 
 */
-FileObjectInfo Get(FileObjectsInfo * array, int index){
+file_object_info get_from_array_at_index(file_objects_info *array, int index){
     return array->list[index];
+}
+
+/*
+    Checks properties of the given parameters, this is, the given path and 
+    inode. Checking properties in this context means checking if a 
+    file_object_info with the same path already exists in the array. If it
+    doesn't, insert it and return true, othwerwise (if it does) compare 
+    the given inode and the inode of the file_object_info. If they're equal
+    return true, otherwise return false (TOCTTOU detected). 
+*/
+void check_parameters_properties(const char *path, ino_t inode, const char *caller_function_name){
+
+    int index = find_index_in_array(&g_array, path);
+    if(index < 0){
+        insert_in_array(&g_array, path, inode);
+    } else {
+        file_object_info aux = get_from_array_at_index(&g_array,index);
+        if(aux.inode != inode){
+            printf("WARNIN! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function.", caller_function_name, path);
+            exit(EXIT_FAILURE);
+        } else {
+            return true;
+        }
+
+    }
+
 }
 
 //#######################################################################
@@ -216,7 +242,7 @@ FileObjectInfo Get(FileObjectsInfo * array, int index){
     https://linux.die.net/man/3/dlsym
 */
 void* dlsym_wrapper(char *original_function){
-    
+
     dlerror();
 
     void *function_handler;
@@ -241,6 +267,41 @@ int open_wrapper(const char *path, int flags, ...){
 
 }
 
+/*
+    Retrieves the corresponding inode of a give path while performing errors
+    checking.
+*/
+ino_t get_inode(const char *path){
+    int fd, ret;
+    ino_t inode;
+
+    // Parenthesis are needed because of operator precedence.
+    // https://en.cppreference.com/w/c/language/operator_precedence
+    if((fd = open_wrapper(path, O_RDONLY)) < 0){
+        printf("Errors occured while trying to access %s.\nAborting.", path);
+        perror("Error is: ");
+        exit(EXIT_FAILURE);
+    } else {
+
+        printf("Created fileDescriptor is: %d\n", fd);
+
+        struct stat file_stat;
+        if((ret = fstat(fd, &file_stat)) < 0 ){
+            printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
+            perror("Error is: ");
+            close(fd);
+            exit(EXIT_FAILURE);
+        } else {
+
+
+            inode = file_stat.st_ino;
+  //After opening a FD, it must be closed
+            close(fd);
+        }
+    }
+    return inode;
+
+}
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
@@ -261,31 +322,9 @@ int __lxstat(int ver, const char *path, struct stat *buf)
     printf("User invoked lxstat for path: %s\n", path);
     int fd, ret;
 
-  // Parenthesis are needed because of operator precedence.
-  // https://en.cppreference.com/w/c/language/operator_precedence
-    if((fd = open_wrapper(path, O_RDONLY)) < 0){
-        printf("Errors occured while trying to access %s.\nAborting.", path);
-        perror("Error is: ");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Created fileDescriptor is: %d\n", fd);
-
-    struct stat file_stat;
-    if((ret = fstat(fd, &file_stat)) < 0 ){
-        printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
-        perror("Error is: ");
-        exit(EXIT_FAILURE);
-    }
-
-  //After opening a FD, it must be closed
-    close(fd);
-
-    ino_t inode = file_stat.st_ino;
-
     printf("\n#### BEFORE ADDING####\nArray used: %d\n",g_array.used);
     printf("Inode of %s is: %lu\n", path, inode);
-    Insert(&g_array, path, inode);
+    check_parameters_properties(path, inode, __func__);
     printf("\n#### AFTER ADDING####\nArray used: %d\n",g_array.used);
 
   //fileInfo.path = strdup(path);
@@ -306,12 +345,8 @@ int __lxstat(int ver, const char *path, struct stat *buf)
             //printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
 
     return old_lxstat(ver,path, buf);
-
-
-
-
-
 }
+
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
@@ -335,14 +370,10 @@ int open(const char *path, int flags, ...)
   int inode = fileStat.st_ino;
   close(fileDes); 
 
+
+  check_parameters_properties(path, inode, __func__);
   return open_wrapper(path, flags); 
-
-
-
-  
 }
-
-
 
 //#########################
 /*
