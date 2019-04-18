@@ -1,6 +1,6 @@
 /* RazviOverflow
  This file must be compiled with the following command:
-	gcc -shared -fPIC libTTThwart.c -o libTTThwart.so -ldl
+	gcc -shared -Wall -Wextra -fPIC ALLinONE.c -o ALLinONE.so -std=c99 -ldl
  You can then execute the vulnerable code with:
  	LD_PRELOAD=$PWD/libTTThwart.so ./vulnerable tryout
 
@@ -223,13 +223,12 @@ void check_parameters_properties(const char *path, ino_t inode, const char *call
         file_object_info aux = get_from_array_at_index(&g_array,index);
         if(aux.inode != inode){
             printf("WARNIN! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function.", caller_function_name, path);
+            fflush(stdout);
             exit(EXIT_FAILURE);
-        } else {
-            return true;
         }
 
     }
-
+    printf("######\n");
 }
 
 //#######################################################################
@@ -259,7 +258,7 @@ void* dlsym_wrapper(char *original_function){
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-    printf("Array size is: %d\n", (int) g_array.size);
+    printf("Array size is: %d and used is:%d\n", (int) g_array.size, g_array.used);
     if ( old_open == NULL ) {
         old_open = dlsym_wrapper("open");
     }
@@ -274,75 +273,59 @@ int open_wrapper(const char *path, int flags, ...){
 ino_t get_inode(const char *path){
     int fd, ret;
     ino_t inode;
-
+    printf("User invoked get_inode for %s\n", path);
     // Parenthesis are needed because of operator precedence.
     // https://en.cppreference.com/w/c/language/operator_precedence
     if((fd = open_wrapper(path, O_RDONLY)) < 0){
         printf("Errors occured while trying to access %s.\nAborting.", path);
-        perror("Error is: ");
-        exit(EXIT_FAILURE);
+        perror("Error1 is: ");
+        fflush(stdout);
+        //exit(EXIT_FAILURE);
     } else {
-
         printf("Created fileDescriptor is: %d\n", fd);
-
         struct stat file_stat;
         if((ret = fstat(fd, &file_stat)) < 0 ){
             printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
-            perror("Error is: ");
+            perror("Error2 is: ");
             close(fd);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
         } else {
-
-
             inode = file_stat.st_ino;
-  //After opening a FD, it must be closed
+            //After opening a FD, it must be closed
             close(fd);
         }
     }
+    printf("User invoked get_inode for %s and it's %d\n", path, inode);
     return inode;
-
 }
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 
-    printf("It is failing here XSTAT ↓↓↓↓↓↓!\n");
-    fflush(stdout);
-    if ( old_xstat == NULL ) {
+ printf("User invoked %s on: %s\n", __func__, path);
 
-        old_xstat = dlsym_wrapper("__xstat");
-    }
+ ino_t inode = get_inode(path);
+ check_parameters_properties(path, inode, __func__);
 
-  //printf("xstat %s\n",path);
-    return old_xstat(ver,path, buf);
+ if ( old_xstat == NULL ) {
+    old_xstat = dlsym_wrapper(__func__);
+}
+
+  //printf("xstat64 %s\n",path);
+return old_xstat(ver, path, buf);
 } 
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
-    printf("User invoked lxstat for path: %s\n", path);
-    int fd, ret;
+    printf("User invoked %s on: %s\n", __func__, path);
 
-    printf("\n#### BEFORE ADDING####\nArray used: %d\n",g_array.used);
-    printf("Inode of %s is: %lu\n", path, inode);
+    ino_t inode = get_inode(path);
+
     check_parameters_properties(path, inode, __func__);
-    printf("\n#### AFTER ADDING####\nArray used: %d\n",g_array.used);
-
-  //fileInfo.path = strdup(path);
-  //fileInfo.inode = file_stat.st_ino;
-
-
-
-  //Adding to global array.
-   // printf("##################\nANTES DE ANIADIR:\n");
-    //fflush(stdout);
-
-    //printf("##################\nDESPUES DE ANIADIR:\n");
-    //fflush(stdout);
+    
     if ( old_lxstat == NULL ) {
-        old_lxstat = dlsym_wrapper("__lxstat");
+        old_lxstat = dlsym_wrapper(__func__);
     }
-
-            //printf("Hooked %s whose inode is %d.\n", fileInfo.path, fileInfo.inode);
 
     return old_lxstat(ver,path, buf);
 }
@@ -350,26 +333,26 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
-    printf("It is failing here XSTAT64 ↓↓↓↓↓↓!\n");
-    fflush(stdout);
+
+    printf("User invoked %s on: %s\n", __func__, path);
+
+    ino_t inode = get_inode(path);
+    check_parameters_properties(path, inode, __func__);
+
     if ( old_xstat64 == NULL ) {
-        old_xstat64 = dlsym_wrapper("__xstat64");
+        old_xstat64 = dlsym_wrapper(__func__);
     }
 
   //printf("xstat64 %s\n",path);
-    return old_xstat64(ver,path, buf);
+    return old_xstat64(ver, path, buf);
 }
 
 int open(const char *path, int flags, ...)
 {
 
-  printf("User invoked open() on: %s\n", path);
-  int fileDes = open_wrapper(path, O_RDONLY);
-  struct stat fileStat;
-  fstat(fileDes, &fileStat);
-  int inode = fileStat.st_ino;
-  close(fileDes); 
-
+  printf("User invoked %s on: %s\n", __func__, path);
+  
+  ino_t inode = get_inode(path);
 
   check_parameters_properties(path, inode, __func__);
   return open_wrapper(path, flags); 
