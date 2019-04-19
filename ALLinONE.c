@@ -304,6 +304,7 @@ char* sanitize_path(const char *path){
     pathname, and returns a pointer to this buffer.  The caller should
     deallocate this buffer using free(3).
     https://linux.die.net/man/3/realpath
+    https://wiki.sei.cmu.edu/confluence/display/c/FIO02-C.+Canonicalize+path+names+originating+from+tainted+sources
 */
 	char *aux = realpath(path, NULL);
 	if(!path){
