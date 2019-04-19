@@ -41,22 +41,26 @@ Both files represent TOCTTOU-vulnerable code. The way of exploiting TOCTTOU cons
 In order to test TOCTTOU exploitation simply follow these steps: (**Assuming you are working from the same directory where you cloned this repo and from where this README is**)
 
 1. We need some protected file, so let's create one with root user.
+
 ``
 echo "A root file" | sudo tee r00t.file
 ``
 
 2. Now let's compile the vulnerable code you want to test. We'll call the binary *vulnerable*. So you execute either of these commands:
+
 ``
 sudo gcc vulnerableAccessFopen.c -o vulnerable
 sudo gcc vulnerableLstatOpen.c -o vulnerable
 `` 
 
 3. Now we need to activate setuid bit.
+
 ``
 sudo chmod u+s vulnerable
 ``
 
 4. You should now have the following files (amongst others):
+
 ``
 -rwxr-xr-x 1 user user ... ... .. ..:.. exploit.sh
 -rw-r--r-- 1 root root ... ... .. ..:.. r00t.file
@@ -64,6 +68,7 @@ sudo chmod u+s vulnerable
 ``
 
 5. Now, in order to exploit the vulnerable code, simply execute the script:
+
 ``
 ./exploit.sh r00t.file 2> /dev/null
 ``
