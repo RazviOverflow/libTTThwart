@@ -28,8 +28,6 @@ static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags) = NULL; 
 
-//TODO malloc family functions error checking
-//TODO find
 //TODO implement logger and replace printf family with corresponding log level
 
 
@@ -182,11 +180,17 @@ void free_array(file_objects_info *array){
     initialized, so there is no way the element could be found. 
 */
 int find_index_in_array(file_objects_info *array, const char *path){
+	printf("Invoked find index in array\n");
 	int returnValue = -1;
+
 	if(array->size > 0){
+		printf("Entered the if\n");
 		for(uint i = 0; i < array->used; i++){
+			printf("We reach the comparison\n");
 			if(!strcmp(array->list[i].path, path)){
+				printf("It is here where it breaks\n");
 				returnValue = i;
+
 				break;
 			}
 		}
@@ -213,7 +217,6 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
     return true, otherwise return false (TOCTTOU detected). 
 */
 void check_parameters_properties(const char *path, ino_t inode, const char *caller_function_name){
-
 	int index = find_index_in_array(&g_array, path);
 	if(index < 0){
 		insert_in_array(&g_array, path, inode);
@@ -274,6 +277,9 @@ ino_t get_inode(const char *path){
 	printf("User invoked get_inode for %s\n", path);
     // Parenthesis are needed because of operator precedence.
     // https://en.cppreference.com/w/c/language/operator_precedence
+
+    // ERRORS CHECKiNG
+    /*
 	if((fd = open_wrapper(path, O_RDONLY)) < 0){
 		printf("Errors occured while trying to access %s.\nAborting.", path);
 		perror("Error1 is: ");
@@ -292,7 +298,14 @@ ino_t get_inode(const char *path){
             //After opening a FD, it must be closed
 			close(fd);
 		}
-	}
+	}*/
+
+	// NO ERRORS CHECKING
+	fd = open_wrapper(path, O_RDONLY);
+	struct stat file_stat;
+	fstat(fd, &file_stat);
+	inode = file_stat.st_ino;
+
 	printf("User invoked get_inode for %s and it's %lu\n", path, inode);
 	return inode;
 }
@@ -315,17 +328,24 @@ char* sanitize_path(const char *path){
 	return aux;
 }
 
+void print_function_and_path(const char* func, const char* path){
+	printf("User invoked %s on: %s\n", func, path);
+}
+
 //#####################################################################3
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
+	printf("I'VE RECEIVED PATH %s\n", path);
+	if(path && path[0] != '\0'){ // path != null && path[0] == \0
+		
+		//path = sanitize_path(path);
 
-	path = sanitize_path(path);
+		print_function_and_path(__func__, path);
 
-	printf("User invoked %s on: %s\n", __func__, path);
-
-	ino_t inode = get_inode(path);
-	check_parameters_properties(path, inode, __func__);
+		ino_t inode = get_inode(path);
+		check_parameters_properties(path, inode, __func__);
+	}
 
 	if ( old_xstat == NULL ) {
 		old_xstat = dlsym_wrapper(__func__);
@@ -340,7 +360,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 	path = sanitize_path(path);
 
-	printf("User invoked %s on: %s\n", __func__, path);
+	print_function_and_path(__func__, path);
 
 	ino_t inode = get_inode(path);
 
@@ -359,7 +379,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	path = sanitize_path(path);
 
-	printf("User invoked %s on: %s\n", __func__, path);
+	print_function_and_path(__func__, path);
 
 	ino_t inode = get_inode(path);
 
@@ -378,7 +398,7 @@ int open(const char *path, int flags, ...)
 
 	path = sanitize_path(path);
 
-	printf("User invoked %s on: %s\n", __func__, path);
+	print_function_and_path(__func__, path);
 
 	ino_t inode = get_inode(path);
 
