@@ -27,9 +27,10 @@ static int (*old_xstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags) = NULL; 
+static int (*old_access)(const char *path, int mode) = NULL;
+static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
 
 //TODO implement logger and replace printf family with corresponding log level
-
 
 //#################### file_objects_info.c #######################
 typedef struct{
@@ -76,7 +77,8 @@ void check_dlsym_error(){
     the corresponding memory.
 */
 void initialize_array(file_objects_info *array, size_t size){
-	printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
+	//printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
+	printf("Initialize array has been called\n");
 	array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
 	if(!array->list){
 		printf("Error allocating memory for array in Initialize process.\n");
@@ -107,7 +109,8 @@ file_object_info Createfile_object_info(char * path, ino_t inode){
     array is postincremented.
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
-	printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
+	//printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
+	printf("Insert has been called for path: %s\n", path);
 
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
@@ -117,7 +120,8 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
 	if(array->used == array->size){
-		printf("Size of array %X is about to get doubled.\n", &(*array));
+		//printf("Size of array %X is about to get doubled.\n", &(*array));
+		printf("Size of array is about to get doubled\n");
 		array->size *= 2;
 		file_object_info *aux = (file_object_info *)realloc(array->list,
 			array->size * sizeof(file_object_info));
@@ -184,12 +188,9 @@ int find_index_in_array(file_objects_info *array, const char *path){
 	int returnValue = -1;
 
 	if(array->size > 0){
-		printf("Entered the if\n");
 		for(uint i = 0; i < array->used; i++){
-			printf("We reach the comparison\n");
-			if(!strcmp(array->list[i].path, path)){
-				printf("It is here where it breaks\n");
-				returnValue = i;
+				if(!strcmp(array->list[i].path, path)){
+						returnValue = i;
 
 				break;
 			}
@@ -223,10 +224,13 @@ void check_parameters_properties(const char *path, ino_t inode, const char *call
 	} else {
 		file_object_info aux = get_from_array_at_index(&g_array,index);
 		if(aux.inode != inode){
-			printf("WARNIN! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function.", caller_function_name, path);
+			printf("WARNING! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function. It was previously %lu and now it is %lu. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
 			fflush(stdout);
 			exit(EXIT_FAILURE);
+		} else {
+			printf("NODES ARE EQUAL!!! :) HAPPINESS");
 		}
+
 
 	}
 	printf("######\n");
@@ -259,7 +263,8 @@ void* dlsym_wrapper(const char *original_function){
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-	printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
+	//printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
+	printf("Invoked open_wrapper for %s\n", path);
 	if ( old_open == NULL ) {
 		old_open = dlsym_wrapper("open");
 	}
@@ -306,7 +311,8 @@ ino_t get_inode(const char *path){
 	fstat(fd, &file_stat);
 	inode = file_stat.st_ino;
 
-	printf("User invoked get_inode for %s and it's %lu\n", path, inode);
+	//printf("User invoked get_inode for %s and it's %lu\n", path, inode);
+	printf("User invoked get_inode for %s \n", path);
 	return inode;
 }
 
@@ -332,20 +338,34 @@ void print_function_and_path(const char* func, const char* path){
 	printf("User invoked %s on: %s\n", func, path);
 }
 
+//################### Constructor & Destructor ###################
+static void before_main(void) __attribute__((constructor));
+static void after_main(void) __attribute__((destructor));
+
+static void before_main(void){
+	printf("######### BEFORE MAIN!!!!\n");
+}
+
+static void after_main(void){
+	printf("######### AFTER MAIN!!!!\n");
+	free_array(&g_array);
+	printf("Dirección de array: %X\n", &g_array);
+
+}
+//################################################################
+
 //#####################################################################3
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 	printf("I'VE RECEIVED PATH %s\n", path);
-	if(path && path[0] != '\0'){ // path != null && path[0] == \0
-		
-		//path = sanitize_path(path);
 
-		print_function_and_path(__func__, path);
+	//path = sanitize_path(path);
 
-		ino_t inode = get_inode(path);
-		check_parameters_properties(path, inode, __func__);
-	}
+	print_function_and_path(__func__, path);
+
+	ino_t inode = get_inode(path);
+	check_parameters_properties(path, inode, __func__);
 
 	if ( old_xstat == NULL ) {
 		old_xstat = dlsym_wrapper(__func__);
@@ -358,7 +378,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
 
-	path = sanitize_path(path);
+	//path = sanitize_path(path);
 
 	print_function_and_path(__func__, path);
 
@@ -377,7 +397,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
 
-	path = sanitize_path(path);
+	//path = sanitize_path(path);
 
 	print_function_and_path(__func__, path);
 
@@ -396,15 +416,48 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 int open(const char *path, int flags, ...)
 {
 
-	path = sanitize_path(path);
+	//path = sanitize_path(path);
 
 	print_function_and_path(__func__, path);
 
 	ino_t inode = get_inode(path);
 
 	check_parameters_properties(path, inode, __func__);
+
 	return open_wrapper(path, flags); 
 }
+
+int access(const char *path, int mode){
+
+	print_function_and_path(__func__, path);
+
+	ino_t inode = get_inode(path);
+
+	check_parameters_properties(path, inode, __func__);
+
+	if(old_access == NULL){
+		old_access = dlsym_wrapper(__func__);
+	}	
+
+	return old_access(path, mode);
+
+}
+
+FILE *fopen(const char *path, const char *mode){
+	print_function_and_path(__func__, path);
+
+	ino_t inode = get_inode(path);
+
+	check_parameters_properties(path, inode, __func__);
+
+	if(old_fopen == NULL){
+		old_fopen = dlsym_wrapper(__func__);
+	}
+
+	return old_fopen(path, mode);
+
+}
+
 
 //#########################
 /*
