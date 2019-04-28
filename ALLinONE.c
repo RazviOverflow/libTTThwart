@@ -30,7 +30,7 @@ static int (*old_open)(const char *path, int flags) = NULL;
 static int (*old_access)(const char *path, int mode) = NULL;
 static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
 
-//TODO implement logger and replace printf family with corresponding log level
+////TODO implement logger and replace printf family with corresponding log level
 
 //#################### file_objects_info.c #######################
 typedef struct{
@@ -56,7 +56,7 @@ file_objects_info g_array;
 // out in Insert function. 
 
 void check_and_initialize_array(){
-    printf("Check and initialize has been called\n");
+    //printf("Check and initialize has been called\n");
     if(g_array.size == 0){
         Initialize(&g_array, 2);
     }
@@ -66,7 +66,7 @@ void check_and_initialize_array(){
 void check_dlsym_error(){
 	char * error = dlerror();
 	if(error != NULL){
-		printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
+		//printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -77,11 +77,11 @@ void check_dlsym_error(){
     the corresponding memory.
 */
 void initialize_array(file_objects_info *array, size_t size){
-	//printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
-	printf("Initialize array has been called\n");
+	////printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
+	//printf("Initialize array has been called\n");
 	array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
 	if(!array->list){
-		printf("Error allocating memory for array in Initialize process.\n");
+		//printf("Error allocating memory for array in Initialize process.\n");
 		exit(EXIT_FAILURE);
 	}
 	array->used = 0;
@@ -109,8 +109,8 @@ file_object_info Createfile_object_info(char * path, ino_t inode){
     array is postincremented.
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
-	//printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
-	printf("Insert has been called for path: %s\n", path);
+	////printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
+	//printf("Insert has been called for path: %s\n", path);
 
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
@@ -120,8 +120,8 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
 	if(array->used == array->size){
-		//printf("Size of array %X is about to get doubled.\n", &(*array));
-		printf("Size of array is about to get doubled\n");
+		////printf("Size of array %X is about to get doubled.\n", &(*array));
+		//printf("Size of array is about to get doubled\n");
 		array->size *= 2;
 		file_object_info *aux = (file_object_info *)realloc(array->list,
 			array->size * sizeof(file_object_info));
@@ -131,7 +131,7 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
 		if(!aux){
-			printf("Error trying to realloc size for array in Insert process.\n");
+			//printf("Error trying to realloc size for array in Insert process.\n");
 			exit(EXIT_FAILURE);
 		} else {
 			array->list = aux;
@@ -184,7 +184,7 @@ void free_array(file_objects_info *array){
     initialized, so there is no way the element could be found. 
 */
 int find_index_in_array(file_objects_info *array, const char *path){
-	printf("Invoked find index in array\n");
+	//printf("Invoked find index in array\n");
 	int returnValue = -1;
 
 	if(array->size > 0){
@@ -228,12 +228,12 @@ void check_parameters_properties(const char *path, ino_t inode, const char *call
 			fflush(stdout);
 			exit(EXIT_FAILURE);
 		} else {
-			printf("NODES ARE EQUAL!!! :) HAPPINESS");
+			//printf("NODES ARE EQUAL!!! :) HAPPINESS");
 		}
 
 
 	}
-	printf("######\n");
+	//printf("######\n");
 }
 
 //#######################################################################
@@ -263,8 +263,8 @@ void* dlsym_wrapper(const char *original_function){
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-	//printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
-	printf("Invoked open_wrapper for %s\n", path);
+	////printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
+	//printf("Invoked open_wrapper for %s\n", path);
 	if ( old_open == NULL ) {
 		old_open = dlsym_wrapper("open");
 	}
@@ -279,22 +279,22 @@ int open_wrapper(const char *path, int flags, ...){
 ino_t get_inode(const char *path){
 	int fd, ret;
 	ino_t inode;
-	printf("User invoked get_inode for %s\n", path);
+	//printf("User invoked get_inode for %s\n", path);
     // Parenthesis are needed because of operator precedence.
     // https://en.cppreference.com/w/c/language/operator_precedence
 
     // ERRORS CHECKiNG
     /*
 	if((fd = open_wrapper(path, O_RDONLY)) < 0){
-		printf("Errors occured while trying to access %s.\nAborting.", path);
+		//printf("Errors occured while trying to access %s.\nAborting.", path);
 		perror("Error1 is: ");
 		fflush(stdout);
         //exit(EXIT_FAILURE);
 	} else {
-		printf("Created fileDescriptor is: %d\n", fd);
+		//printf("Created fileDescriptor is: %d\n", fd);
 		struct stat file_stat;
 		if((ret = fstat(fd, &file_stat)) < 0 ){
-			printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
+			//printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
 			perror("Error2 is: ");
 			close(fd);
             //exit(EXIT_FAILURE);
@@ -311,8 +311,8 @@ ino_t get_inode(const char *path){
 	fstat(fd, &file_stat);
 	inode = file_stat.st_ino;
 
-	//printf("User invoked get_inode for %s and it's %lu\n", path, inode);
-	printf("User invoked get_inode for %s \n", path);
+	////printf("User invoked get_inode for %s and it's %lu\n", path, inode);
+	//printf("User invoked get_inode for %s \n", path);
 	return inode;
 }
 
@@ -327,7 +327,7 @@ char* sanitize_path(const char *path){
 */
 	char *aux = realpath(path, NULL);
 	if(!path){
-		printf("Error resolving path %s\n", path);
+		//printf("Error resolving path %s\n", path);
 		perror("Real path");
 		exit(EXIT_FAILURE);
 	}
@@ -335,7 +335,7 @@ char* sanitize_path(const char *path){
 }
 
 void print_function_and_path(const char* func, const char* path){
-	printf("User invoked %s on: %s\n", func, path);
+	//printf("User invoked %s on: %s\n", func, path);
 }
 
 //################### Constructor & Destructor ###################
@@ -343,13 +343,13 @@ static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
 static void before_main(void){
-	printf("######### BEFORE MAIN!!!!\n");
+	//printf("######### BEFORE MAIN!!!!\n");
 }
 
 static void after_main(void){
-	printf("######### AFTER MAIN!!!!\n");
+	//printf("######### AFTER MAIN!!!!\n");
 	free_array(&g_array);
-	printf("Dirección de array: %X\n", &g_array);
+	//printf("Dirección de array: %X\n", &g_array);
 
 }
 //################################################################
@@ -358,7 +358,7 @@ static void after_main(void){
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
-	printf("I'VE RECEIVED PATH %s\n", path);
+	//printf("I'VE RECEIVED PATH %s\n", path);
 
 	//path = sanitize_path(path);
 
@@ -371,7 +371,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 		old_xstat = dlsym_wrapper(__func__);
 	}
 
-  //printf("xstat64 %s\n",path);
+  ////printf("xstat64 %s\n",path);
 	return old_xstat(ver, path, buf);
 } 
 
@@ -409,7 +409,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 		old_xstat64 = dlsym_wrapper(__func__);
 	}
 
-  //printf("xstat64 %s\n",path);
+  ////printf("xstat64 %s\n",path);
 	return old_xstat64(ver, path, buf);
 }
 
@@ -876,7 +876,7 @@ lstat(const char *path, struct stat *buf)
 int
 lstat64(const char *path, struct stat *buf)
 {
-    printf("USER INVOKED LSTAT64 ON: %s !!!!! ", path);
+    //printf("USER INVOKED LSTAT64 ON: %s !!!!! ", path);
     intercept("lstat64", 2);
     set_errno();
     return -1;
