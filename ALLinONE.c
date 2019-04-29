@@ -250,7 +250,7 @@ void print_function_and_path(const char* func, const char* path){
 */
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
-	path = sanitize_path(path);
+	//path = sanitize_path(path);
 
 	print_function_and_path(caller_function_name, path);
 
@@ -362,6 +362,7 @@ const char* sanitize_path(const char *path){
     https://linux.die.net/man/3/realpath
     https://wiki.sei.cmu.edu/confluence/display/c/FIO02-C.+Canonicalize+path+names+originating+from+tainted+sources
 */
+	printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", path);
 	const char *aux = realpath(path, NULL);
 	if(!aux){
 		
