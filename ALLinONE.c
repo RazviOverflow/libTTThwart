@@ -41,7 +41,7 @@ void check_parameters_properties(const char *, const char *);
 void* dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, ...);
 ino_t get_inode(const char *);
-char* sanitize_path(const char *);
+const char* sanitize_path(const char *);
 
 /// ########## Prototype declaration ##########
 
@@ -249,7 +249,9 @@ void print_function_and_path(const char* func, const char* path){
     return true, otherwise return false (TOCTTOU detected). 
 */
 void check_parameters_properties(const char *path, const char *caller_function_name){
-	
+
+	path = sanitize_path(path);
+
 	print_function_and_path(caller_function_name, path);
 
 	ino_t inode = get_inode(path);
@@ -351,7 +353,7 @@ ino_t get_inode(const char *path){
 	return inode;
 }
 
-char* sanitize_path(const char *path){
+const char* sanitize_path(const char *path){
 /*
 	If resolved_path is specified as NULL, then realpath() uses malloc(3)
     to allocate a buffer of up to PATH_MAX bytes to hold the resolved
@@ -360,11 +362,13 @@ char* sanitize_path(const char *path){
     https://linux.die.net/man/3/realpath
     https://wiki.sei.cmu.edu/confluence/display/c/FIO02-C.+Canonicalize+path+names+originating+from+tainted+sources
 */
-	char *aux = realpath(path, NULL);
-	if(!path){
-		//printf("Error resolving path %s\n", path);
-		perror("Real path");
-		exit(EXIT_FAILURE);
+	const char *aux = realpath(path, NULL);
+	if(!aux){
+		
+		//perror("Real path");
+		//exit(EXIT_FAILURE);
+
+		return path;
 	}
 	return aux;
 }
