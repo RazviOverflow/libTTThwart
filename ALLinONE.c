@@ -261,7 +261,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 	} else {
 		file_object_info aux = get_from_array_at_index(&g_array,index);
 		if(aux.inode != inode){
-			printf("WARNING! TOCTTOU DETECTED!. Inode of %s has changed since it was previously invoked. Threat detected when invoking %s function. It was previously %lu and now it is %lu. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
+			printf("WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
 			fflush(stdout);
 			exit(EXIT_FAILURE);
 		} else {
