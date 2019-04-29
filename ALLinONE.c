@@ -19,20 +19,35 @@
 #include <string.h>
 #include <sys/types.h>
 
+////TODO implement logger and replace printf family with corresponding log level
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
 
+/// ########## Hooked functions ##########
 static int (*old_xstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*old_open)(const char *path, int flags) = NULL; 
 static int (*old_access)(const char *path, int mode) = NULL;
 static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
+/// ########## Hooked functions ##########
 
-////TODO implement logger and replace printf family with corresponding log level
+/// <-------------------------------------------------> 
 
-//#################### file_objects_info.c #######################
+/// ########## Prototype declaration ##########
+
+void check_parameters_properties(const char *, const char *);
+void* dlsym_wrapper(const char *);
+int open_wrapper(const char *, int, ...);
+ino_t get_inode(const char *);
+char* sanitize_path(const char *);
+
+/// ########## Prototype declaration ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## file_objects_info.c ##########
 typedef struct{
 	char *path;
 	ino_t inode;
@@ -44,10 +59,17 @@ typedef struct{
 	size_t size;
 } file_objects_info;
 
-//########## GLOBAL VARIABLES ########################
-file_objects_info g_array;
-//####################################################
+/// ########## file_objects_info.c ##########
 
+/// <-------------------------------------------------> 
+
+/// ########## GLOBAL VARIABLES ##########
+file_objects_info g_array;
+/// ########## GLOBAL VARIABLES ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## Array management ##########
 /* 
 
 // This function is highly probable to be deleted since array initialiation is
@@ -209,6 +231,15 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
 	return array->list[index];
 }
 
+/// ########## Array management ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## Core and useful functions ##########
+void print_function_and_path(const char* func, const char* path){
+	printf("User invoked %s on: %s\n", func, path);
+}
+
 /*
     Checks properties of the given parameters, this is, the given path and 
     inode. Checking properties in this context means checking if a 
@@ -217,8 +248,14 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
     the given inode and the inode of the file_object_info. If they're equal
     return true, otherwise return false (TOCTTOU detected). 
 */
-void check_parameters_properties(const char *path, ino_t inode, const char *caller_function_name){
+void check_parameters_properties(const char *path, const char *caller_function_name){
+	
+	print_function_and_path(caller_function_name, path);
+
+	ino_t inode = get_inode(path);
+
 	int index = find_index_in_array(&g_array, path);
+
 	if(index < 0){
 		insert_in_array(&g_array, path, inode);
 	} else {
@@ -235,8 +272,6 @@ void check_parameters_properties(const char *path, ino_t inode, const char *call
 	}
 	//printf("######\n");
 }
-
-//#######################################################################
 
 /*
     The correct way to test for an error is to call dlerror() 
@@ -277,7 +312,7 @@ int open_wrapper(const char *path, int flags, ...){
     checking.
 */
 ino_t get_inode(const char *path){
-	int fd, ret;
+	int fd;
 	ino_t inode;
 	//printf("User invoked get_inode for %s\n", path);
     // Parenthesis are needed because of operator precedence.
@@ -333,12 +368,11 @@ char* sanitize_path(const char *path){
 	}
 	return aux;
 }
+/// ########## Core and useful functions ##########
 
-void print_function_and_path(const char* func, const char* path){
-	//printf("User invoked %s on: %s\n", func, path);
-}
+/// <-------------------------------------------------> 
 
-//################### Constructor & Destructor ###################
+/// ########## Coconstructor and Destructor ##########
 static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
@@ -352,9 +386,11 @@ static void after_main(void){
 	//printf("Dirección de array: %X\n", &g_array);
 
 }
-//################################################################
+/// ########## Coconstructor and Destructor ##########
 
-//#####################################################################3
+/// <-------------------------------------------------> 
+
+/// ########## Hooked functions replacement code ##########
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
@@ -362,10 +398,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 	//path = sanitize_path(path);
 
-	print_function_and_path(__func__, path);
-
-	ino_t inode = get_inode(path);
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	if ( old_xstat == NULL ) {
 		old_xstat = dlsym_wrapper(__func__);
@@ -380,11 +413,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 	//path = sanitize_path(path);
 
-	print_function_and_path(__func__, path);
-
-	ino_t inode = get_inode(path);
-
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	if ( old_lxstat == NULL ) {
 		old_lxstat = dlsym_wrapper(__func__);
@@ -399,11 +428,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	//path = sanitize_path(path);
 
-	print_function_and_path(__func__, path);
-
-	ino_t inode = get_inode(path);
-
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	if ( old_xstat64 == NULL ) {
 		old_xstat64 = dlsym_wrapper(__func__);
@@ -418,22 +443,14 @@ int open(const char *path, int flags, ...)
 
 	//path = sanitize_path(path);
 
-	print_function_and_path(__func__, path);
-
-	ino_t inode = get_inode(path);
-
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	return open_wrapper(path, flags); 
 }
 
 int access(const char *path, int mode){
 
-	print_function_and_path(__func__, path);
-
-	ino_t inode = get_inode(path);
-
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	if(old_access == NULL){
 		old_access = dlsym_wrapper(__func__);
@@ -444,11 +461,8 @@ int access(const char *path, int mode){
 }
 
 FILE *fopen(const char *path, const char *mode){
-	print_function_and_path(__func__, path);
 
-	ino_t inode = get_inode(path);
-
-	check_parameters_properties(path, inode, __func__);
+	check_parameters_properties(path, __func__);
 
 	if(old_fopen == NULL){
 		old_fopen = dlsym_wrapper(__func__);
