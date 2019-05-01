@@ -19,6 +19,9 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <limits.h>
+#include <time.h>
+
 ////TODO implement logger and replace printf family with corresponding log level
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
@@ -42,6 +45,8 @@ void* dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, ...);
 ino_t get_inode(const char *);
 const char* sanitize_path(const char *);
+const char * sanitize_and_get_absolute_path(const char *);
+void timestamp();
 
 /// ########## Prototype declaration ##########
 
@@ -252,6 +257,8 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 
 	//path = sanitize_path(path);
 
+	path = sanitize_and_get_absolute_path(path);
+
 	print_function_and_path(caller_function_name, path);
 
 	ino_t inode = get_inode(path);
@@ -263,7 +270,8 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 	} else {
 		file_object_info aux = get_from_array_at_index(&g_array,index);
 		if(aux.inode != inode){
-			printf("WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
+			timestamp();
+			printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
 			fflush(stdout);
 			exit(EXIT_FAILURE);
 		} else {
@@ -352,16 +360,17 @@ ino_t get_inode(const char *path){
 	//printf("User invoked get_inode for %s \n", path);
 	return inode;
 }
-
+/* High chances are there for this function to be deleted since sanitize_and_get_absolute_path
+does the job without resolcing, expanding symbolic links. 
 const char* sanitize_path(const char *path){
-/*
+
 	If resolved_path is specified as NULL, then realpath() uses malloc(3)
     to allocate a buffer of up to PATH_MAX bytes to hold the resolved
     pathname, and returns a pointer to this buffer.  The caller should
     deallocate this buffer using free(3).
     https://linux.die.net/man/3/realpath
     https://wiki.sei.cmu.edu/confluence/display/c/FIO02-C.+Canonicalize+path+names+originating+from+tainted+sources
-*/
+
 	printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", path);
 	const char *aux = realpath(path, NULL);
 	if(!aux){
@@ -372,6 +381,101 @@ const char* sanitize_path(const char *path){
 		return path;
 	}
 	return aux;
+}
+*/
+
+/*
+	Function to get full path of a given parameter without resolveing, expanding
+	symbolic links. That's why realpeth() is useless. 
+	https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
+*/
+const char * sanitize_and_get_absolute_path(const char * src) {
+
+		printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", src);
+
+        char * res;
+        size_t res_len;
+        size_t src_len = strlen(src);
+
+        const char * ptr = src;
+        const char * end = &src[src_len];
+        const char * next;
+
+        if (src_len == 0 || src[0] != '/') {
+
+                // relative path
+
+                char pwd[PATH_MAX];
+                size_t pwd_len;
+
+                if (getcwd(pwd, sizeof(pwd)) == NULL) {
+                        return NULL;
+                }
+
+                pwd_len = strlen(pwd);
+                res = malloc(pwd_len + 1 + src_len + 1);
+                memcpy(res, pwd, pwd_len);
+                res_len = pwd_len;
+        } else {
+                res = malloc((src_len > 0 ? src_len : 1) + 1);
+                res_len = 0;
+        }
+
+        for (ptr = src; ptr < end; ptr=next+1) {
+                size_t len;
+                next = memchr(ptr, '/', end-ptr);
+                if (next == NULL) {
+                        next = end;
+                }
+                len = next-ptr;
+                switch(len) {
+                case 2:
+                        if (ptr[0] == '.' && ptr[1] == '.') {
+                                const char * slash = memrchr(res, '/', res_len);
+                                if (slash != NULL) {
+                                        res_len = slash - res;
+                                }
+                                continue;
+                        }
+                        break;
+                case 1:
+                        if (ptr[0] == '.') {
+                                continue;
+
+                        }
+                        break;
+                case 0:
+                        continue;
+                }
+                res[res_len++] = '/';
+                memcpy(&res[res_len], ptr, len);
+                res_len += len;
+        }
+
+        if (res_len == 0) {
+                res[res_len++] = '/';
+        }
+        res[res_len] = '\0';
+        return res;
+}
+
+/*
+	Function used to print current time with the following format:
+	DD mm dd hh:MM:ss yyyy [hh:MM:ss.nanoseconds]
+	Example: <Wed May  1 13:44:17 2019
+ 				[13:45:17.676232682]>
+*/
+void timestamp(){
+	time_t ltime;
+	ltime = time(NULL);
+
+	struct tm *tm_struct = localtime(&ltime);
+
+	struct timespec spec;
+	clock_gettime(CLOCK_REALTIME, &spec);
+
+	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min + 1, tm_struct->tm_sec, spec.tv_nsec);
+
 }
 /// ########## Core and useful functions ##########
 
