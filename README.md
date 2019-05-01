@@ -62,9 +62,9 @@ sudo chmod u+s vulnerable
 4. You should now have the following files (amongst others):
 
 ``
--rwxr-xr-x 1 user user ... ... .. ..:.. exploit.sh  
--rw-r--r-- 1 root root ... ... .. ..:.. r00t.file  
--rwsr-xr-x 1 root root ... ... .. ..:.. vulnerable  
+-rwxr-xr-x 1 user user ... ... .. ..:.. exploit.sh
+-rw-r--r-- 1 root root ... ... .. ..:.. r00t.file 
+-rwsr-xr-x 1 root root ... ... .. ..:.. vulnerable
 ``
 
 5. Now, in order to exploit the vulnerable code, simply execute the script:
