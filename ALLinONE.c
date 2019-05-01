@@ -393,44 +393,55 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 
 		printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", src);
 
-        char * res;
+        char *res;
         size_t res_len;
         size_t src_len = strlen(src);
 
-        const char * ptr = src;
-        const char * end = &src[src_len];
-        const char * next;
+        const char *pointer;
+        const char *end_pointer;
+        const char *next_pointer;
 
+        // Relative path
         if (src_len == 0 || src[0] != '/') {
 
-                // relative path
+                char cwd[PATH_MAX];
+                size_t cwd_len;
 
-                char pwd[PATH_MAX];
-                size_t pwd_len;
-
-                if (getcwd(pwd, sizeof(pwd)) == NULL) {
+                // Copy into cwd the null-terminated current working 
+                // directory with a max length of sizeof(cwd)
+                if (getcwd(cwd, sizeof(cwd)) == NULL) {
                         return NULL;
                 }
 
-                pwd_len = strlen(pwd);
-                res = malloc(pwd_len + 1 + src_len + 1);
-                memcpy(res, pwd, pwd_len);
-                res_len = pwd_len;
+                cwd_len = strlen(cwd);
+                res = malloc(cwd_len + 1 + src_len + 1);
+                // Copies cwd_len bytes from cwd to res
+                memcpy(res, cwd, cwd_len);
+                res_len = cwd_len;
         } else {
+        // Absolute path
                 res = malloc((src_len > 0 ? src_len : 1) + 1);
                 res_len = 0;
         }
 
-        for (ptr = src; ptr < end; ptr=next+1) {
+        end_pointer = &src[src_len];
+
+        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
                 size_t len;
-                next = memchr(ptr, '/', end-ptr);
-                if (next == NULL) {
-                        next = end;
+
+                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
+                // to by pointer for the first instance of '/'
+                next_pointer = memchr(pointer, '/', end_pointer-pointer);
+
+                if (next_pointer == NULL) {
+                        next_pointer = end_pointer;
                 }
-                len = next-ptr;
+
+                len = next_pointer-pointer;
+                
                 switch(len) {
                 case 2:
-                        if (ptr[0] == '.' && ptr[1] == '.') {
+                        if (pointer[0] == '.' && pointer[1] == '.') {
                                 const char * slash = memrchr(res, '/', res_len);
                                 if (slash != NULL) {
                                         res_len = slash - res;
@@ -439,7 +450,7 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                         }
                         break;
                 case 1:
-                        if (ptr[0] == '.') {
+                        if (pointer[0] == '.') {
                                 continue;
 
                         }
@@ -447,8 +458,9 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                 case 0:
                         continue;
                 }
+
                 res[res_len++] = '/';
-                memcpy(&res[res_len], ptr, len);
+                memcpy(&res[res_len], pointer, len);
                 res_len += len;
         }
 
