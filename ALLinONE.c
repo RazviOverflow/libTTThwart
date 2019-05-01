@@ -418,13 +418,17 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                 // Copies cwd_len bytes from cwd to res
                 memcpy(res, cwd, cwd_len);
                 res_len = cwd_len;
+                
         } else {
         // Absolute path
-                res = malloc((src_len > 0 ? src_len : 1) + 1);
+                //res = malloc((src_len > 0 ? src_len : 1) + 1);
+        		res = malloc(src_len + 1);
                 res_len = 0;
+                
         }
 
         end_pointer = &src[src_len];
+
 
         for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
                 size_t len;
@@ -437,16 +441,29 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                         next_pointer = end_pointer;
                 }
 
+
                 len = next_pointer-pointer;
-                
+
+
                 switch(len) {
                 case 2:
                         if (pointer[0] == '.' && pointer[1] == '.') {
+                        	// memrchr is like memchr, except that is searches 
+                        	// backward from the end of the res_len bytes pointed
+                        	// to by res instead of forward from the beginning
                                 const char * slash = memrchr(res, '/', res_len);
                                 if (slash != NULL) {
+                                	// This way the las node from the current
+                                	// directory is deleted. Lets say res starts
+                                	// @ 0x2 mem address and slash is @ 0x10.
+                                	// res_len would be 0x8 which is exactly
+                                	// the length between 0x2 and 0x10.
                                         res_len = slash - res;
                                 }
-                                continue;
+                                // Continue applies only to loop statements. 
+                                //That is, this jumps right to next for iteration,
+                                // skipping the remaining code.
+                                continue; 
                         }
                         break;
                 case 1:
@@ -458,7 +475,6 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                 case 0:
                         continue;
                 }
-
                 res[res_len++] = '/';
                 memcpy(&res[res_len], pointer, len);
                 res_len += len;
@@ -467,6 +483,8 @@ const char * sanitize_and_get_absolute_path(const char * src) {
         if (res_len == 0) {
                 res[res_len++] = '/';
         }
+        // Marks the end of the new sanitized and absoluted path, thus discarding
+        // whatever follows res_len
         res[res_len] = '\0';
         return res;
 }
