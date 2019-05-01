@@ -42,36 +42,36 @@ In order to test TOCTTOU exploitation simply follow these steps: (**Assuming you
 
 1. We need some protected file, so let's create one with root user.
 
-``
+```
 echo "A root file" | sudo tee r00t.file
-``
+```
 
 2. Now let's compile the vulnerable code you want to test. We'll call the binary *vulnerable*. So you execute either of these commands:
 
-``
+```
 sudo gcc vulnerableAccessFopen.c -o vulnerable
 sudo gcc vulnerableLstatOpen.c -o vulnerable
-`` 
+``` 
 
 3. Now we need to activate setuid bit.
 
-``
+```
 sudo chmod u+s vulnerable
-``
+```
 
 4. You should now have the following files (amongst others):
 
-``
+```
 -rwxr-xr-x 1 user user ... ... .. ..:.. exploit.sh
 -rw-r--r-- 1 root root ... ... .. ..:.. r00t.file 
 -rwsr-xr-x 1 root root ... ... .. ..:.. vulnerable
-``
+```
 
 5. Now, in order to exploit the vulnerable code, simply execute the script:
 
-``
+```
 ./exploit.sh r00t.file 2> /dev/null
-``
+```
 *If you want to see every output, edit the script and dont redirect its output. Then simply execute ./exploit.sh r00t.file*
 
 6. Now simply wait for the script to finish. Sooner or later r00t.file will be edited via a *user* created file that's been replaced by a symbolic link at the right moment. Since TOCTTOU vulnerability is a non-deterministic one, we cannot know beforehand how long it will take to actually exploit the vulnerability. There are many factors to take into account, such as CPU performance, OS, enviroment variables, OS preempting, context switches, etc...
