@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdarg.h>
 
 #include <limits.h>
 #include <time.h>
@@ -31,7 +32,7 @@
 static int (*old_xstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
-static int (*old_open)(const char *path, int flags) = NULL; 
+static int (*old_open)(const char *path, int flags, ...) = NULL; 
 static int (*old_access)(const char *path, int mode) = NULL;
 static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
 /// ########## Hooked functions ##########
@@ -310,10 +311,18 @@ void* dlsym_wrapper(const char *original_function){
 int open_wrapper(const char *path, int flags, ...){
 	////printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
 	//printf("Invoked open_wrapper for %s\n", path);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+
 	if ( old_open == NULL ) {
 		old_open = dlsym_wrapper("open");
 	}
-	return old_open(path, flags);
+
+	int open_result = old_open(path, flags, variable_arguments);
+	va_end(variable_arguments);
+
+	return open_result;
 
 }
 
@@ -391,9 +400,7 @@ const char* sanitize_path(const char *path){
 */
 const char * sanitize_and_get_absolute_path(const char * src) {
 
-		printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", src);
-
-        char *res;
+		char *res;
         size_t res_len;
         size_t src_len = strlen(src);
 
