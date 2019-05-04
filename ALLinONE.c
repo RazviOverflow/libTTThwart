@@ -48,6 +48,7 @@ ino_t get_inode(const char *);
 const char* sanitize_path(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 void timestamp();
+int file_exists(const char *);
 
 /// ########## Prototype declaration ##########
 
@@ -262,26 +263,32 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 
 	print_function_and_path(caller_function_name, path);
 
-	ino_t inode = get_inode(path);
+	if(file_exists(path)){
+		ino_t inode = get_inode(path);
 
-	int index = find_index_in_array(&g_array, path);
+		int index = find_index_in_array(&g_array, path);
 
-	if(index < 0){
-		insert_in_array(&g_array, path, inode);
-	} else {
-		file_object_info aux = get_from_array_at_index(&g_array,index);
-		if(aux.inode != inode){
-			timestamp();
-			printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
-			fflush(stdout);
-			exit(EXIT_FAILURE);
+		printf("->>>>>>>>>> FILE %s EXISTS:\n", path);
+
+		// /dev/tty breaks right here
+
+		if(index < 0){
+			insert_in_array(&g_array, path, inode);
 		} else {
-			//printf("NODES ARE EQUAL!!! :) HAPPINESS");
+			file_object_info aux = get_from_array_at_index(&g_array,index);
+			if(aux.inode != inode){
+			//printf("FILE %s EXISTS: %d\n", path, exists);
+				timestamp();
+				printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
+				fflush(stdout);
+				exit(EXIT_FAILURE);
+			} else {
+				// #### EMPTY BLOCK TODO!
+				//printf("NODES ARE EQUAL!!! :) HAPPINESS");
+			}
 		}
-
-
-	}
 	//printf("######\n");
+	} // if file_exists
 }
 
 /*
@@ -514,6 +521,20 @@ void timestamp(){
 	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min + 1, tm_struct->tm_sec, spec.tv_nsec);
 
 }
+
+int file_exists(const char *pathname){
+	printf("En file_Exists se ha recibido el pathname [%s]\n", pathname);
+	if(!strcmp(pathname, "/dev/tty")){
+		return 1;
+	} else {
+		if(open_wrapper(pathname, O_RDONLY, NULL) < 0){
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+}
+
 /// ########## Core and useful functions ##########
 
 /// <-------------------------------------------------> 
@@ -523,7 +544,7 @@ static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
 static void before_main(void){
-	//printf("######### BEFORE MAIN!!!!\n");
+	printf("######### BEFORE MAIN!!!!\n");
 }
 
 static void after_main(void){
