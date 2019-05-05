@@ -325,6 +325,7 @@ ino_t get_inode(const char *path){
 	struct stat file_stat;
 	fstat(fd, &file_stat);
 	inode = file_stat.st_ino;
+	close(fd);
 
 	////printf("User invoked get_inode for %s and it's %lu\n", path, inode);
 	//printf("User invoked get_inode for %s \n", path);
