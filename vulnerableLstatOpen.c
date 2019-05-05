@@ -16,7 +16,6 @@ int process_filename(char *filename)
     {
         printf("[+] Opening file %s...\n", filename);
         fflush(stdout);
-        sleep(1);
         int fd, nb;
         if((fd = open(filename, O_RDWR | O_APPEND)) == -1){
             printf("[!] Error while trying to open %s.\n", filename);

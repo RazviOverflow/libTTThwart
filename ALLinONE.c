@@ -50,6 +50,7 @@ const char * sanitize_and_get_absolute_path(const char *);
 void timestamp();
 int file_does_exist(const char *);
 
+
 /// ########## Prototype declaration ##########
 
 /// <-------------------------------------------------> 
@@ -71,6 +72,7 @@ typedef struct{
 /// <-------------------------------------------------> 
 
 /// ########## GLOBAL VARIABLES ##########
+extern char *program_invocation_name;
 file_objects_info g_array;
 /// ########## GLOBAL VARIABLES ##########
 
@@ -204,7 +206,7 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
 
 /// ########## Core and useful functions ##########
 void print_function_and_path(const char* func, const char* path){
-	printf("User invoked %s on: %s\n", func, path);
+	printf("User invoked %s via process %s on: %s\n", func, program_invocation_name, path);
 }
 
 /*
