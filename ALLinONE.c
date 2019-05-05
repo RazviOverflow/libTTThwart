@@ -48,7 +48,7 @@ ino_t get_inode(const char *);
 const char* sanitize_path(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 void timestamp();
-int file_exists(const char *);
+int file_does_exist(const char *);
 
 /// ########## Prototype declaration ##########
 
@@ -77,21 +77,6 @@ file_objects_info g_array;
 /// <-------------------------------------------------> 
 
 /// ########## Array management ##########
-/* 
-
-// This function is highly probable to be deleted since array initialiation is
-// only needed when inserting elements for the first time, so there is no need
-// for such a dedicated function. Checking and initialization can be carried
-// out in Insert function. 
-
-void check_and_initialize_array(){
-    //printf("Check and initialize has been called\n");
-    if(g_array.size == 0){
-        Initialize(&g_array, 2);
-    }
-}
-*/
-
 void check_dlsym_error(){
 	char * error = dlerror();
 	if(error != NULL){
@@ -120,15 +105,6 @@ void initialize_array(file_objects_info *array, size_t size){
 }
 
 /*
-file_object_info Createfile_object_info(char * path, ino_t inode){
-    file_object_info file_object_info;
-    file_object_info.path = path;
-    file_object_info.inode = inode;
-    return file_object_info;
-}
-*/
-
-/*
     Inserts into the given array the given path and inode.  
     Before inserting elements into the given array, the array 
     must be initialized.
@@ -138,9 +114,6 @@ file_object_info Createfile_object_info(char * path, ino_t inode){
     array is postincremented.
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
-	////printf("Insert has been called for array: %X with path: %s and inode: %lu\n",&(*array), path, inode);
-	//printf("Insert has been called for path: %s\n", path);
-
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
@@ -169,23 +142,10 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
         //Initializing new elements of realocated array
 		memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
 
-
 	}
-
-    //file_object_info file_object_info = Createfile_object_info(path, inode);
-
-    //array->list[array->used].path = (const char *)malloc(strlen(path)+1);
-    //strcpy(array->list[array->used].path, path);
-
 	array->list[array->used].path = strdup(path);
 	array->list[array->used].inode = inode;
-
-
-
 	array->used++;
-
-
-
 }
 
 /*
@@ -257,21 +217,15 @@ void print_function_and_path(const char* func, const char* path){
 */
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
-	//path = sanitize_path(path);
-
 	path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(caller_function_name, path);
 
-	if(file_exists(path)){
+	if(file_does_exist(path)){
 		ino_t inode = get_inode(path);
 
 		int index = find_index_in_array(&g_array, path);
-
-		printf("->>>>>>>>>> FILE %s EXISTS:\n", path);
-
-		// /dev/tty breaks right here
-
+	
 		if(index < 0){
 			insert_in_array(&g_array, path, inode);
 		} else {
@@ -287,8 +241,9 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 				//printf("NODES ARE EQUAL!!! :) HAPPINESS");
 			}
 		}
-	//printf("######\n");
-	} // if file_exists
+	} else { // if file_does_exist
+		printf("File %s does not exist\n", path);
+	}
 }
 
 /*
@@ -310,14 +265,13 @@ void* dlsym_wrapper(const char *original_function){
 
 	return function_handler;
 }
+
 /*
     The open wrapper ensures old_open is initialized and is used
     by other inner functions in order to avoid open() recursivity
     and overhead.
 */
 int open_wrapper(const char *path, int flags, ...){
-	////printf("Array size is: %lu and used is:%lu\n", g_array.size, g_array.used);
-	//printf("Invoked open_wrapper for %s\n", path);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, flags);
@@ -376,29 +330,6 @@ ino_t get_inode(const char *path){
 	//printf("User invoked get_inode for %s \n", path);
 	return inode;
 }
-/* High chances are there for this function to be deleted since sanitize_and_get_absolute_path
-does the job without resolcing, expanding symbolic links. 
-const char* sanitize_path(const char *path){
-
-	If resolved_path is specified as NULL, then realpath() uses malloc(3)
-    to allocate a buffer of up to PATH_MAX bytes to hold the resolved
-    pathname, and returns a pointer to this buffer.  The caller should
-    deallocate this buffer using free(3).
-    https://linux.die.net/man/3/realpath
-    https://wiki.sei.cmu.edu/confluence/display/c/FIO02-C.+Canonicalize+path+names+originating+from+tainted+sources
-
-	printf("[+] BEFORE SANITIZATION -> RECEIVED PATH IS: %s\n", path);
-	const char *aux = realpath(path, NULL);
-	if(!aux){
-		
-		//perror("Real path");
-		//exit(EXIT_FAILURE);
-
-		return path;
-	}
-	return aux;
-}
-*/
 
 /*
 	Function to get full path of a given parameter without resolveing, expanding
@@ -522,8 +453,7 @@ void timestamp(){
 
 }
 
-int file_exists(const char *pathname){
-	printf("En file_Exists se ha recibido el pathname [%s]\n", pathname);
+int file_does_exist(const char *pathname){
 	if(!strcmp(pathname, "/dev/tty")){
 		return 1;
 	} else {
@@ -544,7 +474,7 @@ static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
 static void before_main(void){
-	printf("######### BEFORE MAIN!!!!\n");
+	//printf("######### BEFORE MAIN!!!!\n");
 }
 
 static void after_main(void){
