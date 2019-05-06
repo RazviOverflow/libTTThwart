@@ -221,7 +221,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 
 	path = sanitize_and_get_absolute_path(path);
 
-	//print_function_and_path(caller_function_name, path);
+	print_function_and_path(caller_function_name, path);
 
 	if(file_does_exist(path)){
 		ino_t inode = get_inode(path);
