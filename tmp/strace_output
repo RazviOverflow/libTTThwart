@@ -1,0 +1,57 @@
+execve("./fileCreation", ["./fileCreation"], [/* 41 vars */]) = 0
+brk(NULL)                               = 0x55b0d47a1000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+access("/etc/ld.so.preload", R_OK)      = 0
+open("/etc/ld.so.preload", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+close(3)                                = 0
+open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=59578, ...}) = 0
+mmap(NULL, 59578, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fe5e8740000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\4\2\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1689360, ...}) = 0
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fe5e873e000
+mmap(NULL, 3795296, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fe5e818d000
+mprotect(0x7fe5e8322000, 2097152, PROT_NONE) = 0
+mmap(0x7fe5e8522000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x195000) = 0x7fe5e8522000
+mmap(0x7fe5e8528000, 14688, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fe5e8528000
+close(3)                                = 0
+arch_prctl(ARCH_SET_FS, 0x7fe5e873f440) = 0
+mprotect(0x7fe5e8522000, 16384, PROT_READ) = 0
+mprotect(0x55b0d4244000, 4096, PROT_READ) = 0
+mprotect(0x7fe5e874f000, 4096, PROT_READ) = 0
+munmap(0x7fe5e8740000, 59578)           = 0
+open("file_OPEN.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3
+write(3, "File created with OPEN function\n"..., 40) = 40
+close(3)                                = 0
+open("/tmp/", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFDIR|S_ISVTX|0777, st_size=4096, ...}) = 0
+brk(NULL)                               = 0x55b0d47a1000
+brk(0x55b0d47ca000)                     = 0x55b0d47ca000
+openat(3, "file_OPENAT.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
+write(4, "File created with OPENAT functio"..., 40) = 40
+mknod("file_MKNOD.txt", S_IFREG|000)    = 0
+mknodat(3, "file_MKNODAT.txt", S_IFREG|000) = 0
+close(4)                                = 0
+creat("file_CREAT.txt", 0600)           = 4
+write(4, "File created with CREAT function"..., 40) = 40
+close(4)                                = 0
+link("file_CREAT.txt", "file_LINK_HARDLINK") = 0
+linkat(AT_FDCWD, "file_CREAT.txt", 3, "file_LINKAT_HARDLINK", AT_SYMLINK_FOLLOW) = 0
+symlink("file_CREAT.txt", "file_SYMLINK") = 0
+symlinkat("file_CREAT.txt", 3, "file_SYMLINKAT") = 0
+nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffee8ca74d0) = 0
+unlink("file_OPEN.txt")                 = 0
+unlink("file_MKNOD.txt")                = 0
+unlink("file_SYMLINK")                  = 0
+unlinkat(3, "file_SYMLINKAT", 0)        = 0
+unlinkat(3, "file_LINKAT_HARDLINK", 0)  = 0
+unlink("/tmp/file_OPENAT.txt")          = 0
+unlink("file_CREAT.txt")                = 0
+unlink("/tmp/file_MKNODAT.txt")         = 0
+unlink("file_LINK_HARDLINK")            = 0
+exit_group(0)                           = ?
++++ exited with 0 +++
