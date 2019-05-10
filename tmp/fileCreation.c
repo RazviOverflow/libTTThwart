@@ -1,28 +1,128 @@
+// RazviOverflow
 
 #include <sys/types.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <dirent.h>
 
+/*
+	Simple C program to test out every single way of changing the inode of a
+	given path. That is, creating and deleting file. The main purpose of this
+	file is to analize it with strace and ltrace in order to see what system
+	calls are actually invoked when the devolper calls these glibc functions. 
 
+	The set of functions tested is inspired by [1], [2]:
+
+	[1] http://profile.iiita.ac.in/bibhas.ghoshal/lab_files/System%20calls%20for%20files%20and%20directories%20in%20Linux.html
+	[2] http://linasm.sourceforge.net/docs/syscalls/filesystem.php
+*/
 int main(){
-
-	struct stat aux_stat;
-	FILE *fp;
-
-	fp=fopen("file_FOPEN.txt","w");
-	fprintf(fp, "Razvan");
-	fclose(fp);
-
-	remove("file_FOPEN.txt");
-
-	int fd=open("OPEN_file.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	
+	int fd, contentLength = 40;
+	/*
+		System call OPEN
+		This function returns the file descriptor or in case of an error -1.
+		The number of arguments that this function can have is two or three.
+		The third argument is used only when creating a new file
+	*/
+
+	fd = open("file_OPEN.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	write(fd, "File created with OPEN function\n", contentLength);
 	close(fd);
 
-	stat("OPEN_file.txt", &aux_stat);
-	unlink("OPEN_file.txt");
+
+	int directory_fd = dirfd(opendir("/tmp/"));
+
+
+	fd = openat(directory_fd, "file_OPENAT.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	write(fd, "File created with OPENAT function\n", contentLength);
+
+	// -------
+
+	/*
+		System call MKNOD
+		The system call mknod() creates a filesystem node (file, device
+       	special file, or named pipe) named pathname, with attributes
+       	specified by mode and dev.
+	*/
+
+	mknod("file_MKNOD.txt", S_IFREG, 0);
+
+	mknodat(fd, "file_MKNODAT.txt", S_IFREG, 0);
+
+	close(fd);
+
+	// -------
+
+	/*
+		System call CREAT
+		The function call: creat(pathname,mode) is equivalent to the call:
+		open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
+		Thus the file named by pathname is created, unless it already exists.
+		The file is then opened for writing only, and is truncated to zero length
+	*/ 
+
+	
+	fd = creat("file_CREAT.txt", S_IRUSR | S_IWUSR);
+	write(fd, "File created with CREAT function\n", contentLength);
+	close(fd);
+
+	// -------
+
+	/*	
+		System call LINK && LINKAT
+		To link an existing file to another directory (or to the same
+		directory) link can be used. 
+		The link system call creates a hard link. Creating symbolic links can
+		be done using symlink system call.
+	*/
+
+
+
+	link("file_CREAT.txt", "file_LINK");
+
+	linkat(directory_fd, "file_CREAT.txt", directory_fd, "file_LINKAT", AT_SYMLINK_FOLLOW) ;
+
+	// -------
+
+	/*	
+		System call SYMLINK && SYMLINKAT
+		To link an existing file to another directory (or to the same
+		directory) link can be used. 
+		The link system call creates a hard link. Creating symbolic links can
+		be done using symlink system call.
+	*/
+
+	symlink("file_CREAT.txt","file_SYMLINK");
+
+	symlinkat("file_CREAT.txt", directory_fd, "file_SYMLINKAT");
+
+
+	sleep(120);
+
+
+	// -------
+
+	/*
+		System call UNLINK && UNLINK AT
+		To delete a link (a path) in a directory we can use the unlink system call.
+		The function decrements the hard link counter in the i-node and
+		deletes the appropriate directory entry for the file whose link was
+		deleted. If the number of links of a file becomes 0 then the space
+		occupied by the file and its i-node will be freed
+	*/
+
+	unlink("file_OPEN.txt");
+
+	unlinkat(directory_fd, "file_SYMLINKAT", 0);
+
+	// -------
+
+	// REMOVE
+
+	remove("file_CREAT.txt");
 
 	return 0;
 }
