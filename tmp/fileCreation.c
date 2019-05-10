@@ -17,6 +17,22 @@
 
 	[1] http://profile.iiita.ac.in/bibhas.ghoshal/lab_files/System%20calls%20for%20files%20and%20directories%20in%20Linux.html
 	[2] http://linasm.sourceforge.net/docs/syscalls/filesystem.php
+
+	The present code creates the following files in the Current Working Directory (CWD):
+	- file_CREAT.txt
+	- file_LINK_HARDLINK (hard link to file_CREAT.txt)
+	- file_MKNOD.txt
+	- file_OPEN.txt
+	- file_SYMLINK (symbolic link to file_CREAT.txt)
+
+	It creates the following files in /tmp directory:
+	- file_LINKAT_HARDLINK (hard link to file_CREAT.txt)
+	- file_MKNODAT.txt
+	- file_OPENAT.txt
+	- file_SYMLINKAT (symbolic link to file_CREAT.txt)
+
+	It then sleep for 10 seconds and deletes all of the created files using different functions
+	like unlink, unlinkat and remove.
 */
 int main(){
 	
@@ -50,7 +66,7 @@ int main(){
 
 	mknod("file_MKNOD.txt", S_IFREG, 0);
 
-	mknodat(fd, "file_MKNODAT.txt", S_IFREG, 0);
+	mknodat(directory_fd, "file_MKNODAT.txt", S_IFREG, 0);
 
 	close(fd);
 
@@ -81,9 +97,9 @@ int main(){
 
 
 
-	link("file_CREAT.txt", "file_LINK");
+	link("file_CREAT.txt", "file_LINK_HARDLINK");
 
-	linkat(directory_fd, "file_CREAT.txt", directory_fd, "file_LINKAT", AT_SYMLINK_FOLLOW) ;
+	linkat(AT_FDCWD, "file_CREAT.txt", directory_fd, "file_LINKAT_HARDLINK", AT_SYMLINK_FOLLOW) ;
 
 	// -------
 
@@ -100,7 +116,7 @@ int main(){
 	symlinkat("file_CREAT.txt", directory_fd, "file_SYMLINKAT");
 
 
-	sleep(120);
+	sleep(10);
 
 
 	// -------
@@ -115,14 +131,19 @@ int main(){
 	*/
 
 	unlink("file_OPEN.txt");
+	unlink("file_MKNOD.txt");
+	unlink("file_SYMLINK");
 
 	unlinkat(directory_fd, "file_SYMLINKAT", 0);
+	unlinkat(directory_fd, "file_LINKAT_HARDLINK", 0);
 
 	// -------
 
 	// REMOVE
-
+	remove("/tmp/file_OPENAT.txt");
 	remove("file_CREAT.txt");
+	remove("/tmp/file_MKNODAT.txt");
+	remove("file_LINK_HARDLINK");
 
 	return 0;
 }
