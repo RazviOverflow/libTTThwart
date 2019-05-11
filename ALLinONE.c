@@ -29,12 +29,26 @@
 //#define O_RDONLY  00000000
 
 /// ########## Hooked functions ##########
-static int (*old_xstat)(int ver, const char *path, struct stat *buf) = NULL;
-static int (*old_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
-static int (*old_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
-static int (*old_open)(const char *path, int flags, ...) = NULL; 
-static int (*old_access)(const char *path, int mode) = NULL;
-static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
+static int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
+static int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
+static int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+static int (*original_access)(const char *path, int mode) = NULL;
+static FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
+
+static int (*original_open)(const char *path, int flags, ...) = NULL; 
+static int (*original_unlink)(const char *path) = NULL;
+static int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
+static int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
+static int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
+static int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath) = NULL;
+static int (*original_remove)(const char *path) = NULL;
+static int (*original_mknod)(const char *path, mode_t mode, dev_t dev) = NULL;
+static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
+static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
+static int (*original_link)(const char *oldpath, const char*newname) = NULL;
+static int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
+static int (*original_creat64)(const char *path, mode_t mode) = NULL;
+static int (*original_creat)(const char *path, mode_t mode) = NULL;
 /// ########## Hooked functions ##########
 
 /// <-------------------------------------------------> 
@@ -43,7 +57,8 @@ static FILE *(*old_fopen)(const char *path, const char *mode) = NULL;
 
 void check_parameters_properties(const char *, const char *);
 void* dlsym_wrapper(const char *);
-int open_wrapper(const char *, int, ...);
+int open_wrapper(const char *, int, va_list variable_arguments);
+int openat_wrapper(int, const char *, int, va_list argptr);
 ino_t get_inode(const char *);
 const char* sanitize_path(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
@@ -182,7 +197,6 @@ int find_index_in_array(file_objects_info *array, const char *path){
 		for(uint i = 0; i < array->used; i++){
 				if(!strcmp(array->list[i].path, path)){
 						returnValue = i;
-
 				break;
 			}
 		}
@@ -269,23 +283,32 @@ void* dlsym_wrapper(const char *original_function){
 }
 
 /*
-    The open wrapper ensures old_open is initialized and is used
+    The open wrapper ensures original_open is initialized and is used
     by other inner functions in order to avoid open() recursivity
-    and overhead.
+    and overhead. In adittion, it deals with ellipsis (variable 
+    arguments) since open is a variadic function.
 */
-int open_wrapper(const char *path, int flags, ...){
+int open_wrapper(const char *path, int flags, va_list variable_arguments){
 
-	va_list variable_arguments;
-	va_start(variable_arguments, flags);
-
-	if ( old_open == NULL ) {
-		old_open = dlsym_wrapper("open");
+	if ( original_open == NULL ) {
+		original_open = dlsym_wrapper("open");
 	}
 
-	int open_result = old_open(path, flags, variable_arguments);
-	va_end(variable_arguments);
+	return original_open(path, flags, variable_arguments);
+	
+}
 
-	return open_result;
+/*
+	Openat wrapper is exactly the same as open wrapper but for
+	 openat.
+*/
+int openat_wrapper(int dirfd, const char *path, int flags, va_list argptr){
+
+	if(original_openat == NULL){
+		original_openat = dlsym_wrapper("openat");
+	}
+
+	return original_openat(dirfd, path, flags, argptr);
 
 }
 
@@ -323,7 +346,7 @@ ino_t get_inode(const char *path){
 	}*/
 
 	// NO ERRORS CHECKING
-	fd = open_wrapper(path, O_RDONLY);
+	fd = open_wrapper(path, O_RDONLY, NULL);
 	struct stat file_stat;
 	fstat(fd, &file_stat);
 	inode = file_stat.st_ino;
@@ -396,12 +419,12 @@ const char * sanitize_and_get_absolute_path(const char * src) {
                 switch(len) {
                 case 2:
                         if (pointer[0] == '.' && pointer[1] == '.') {
-                        	// memrchr is like memchr, except that is searches 
+                        	// memrchr is like memchr, except that it searches 
                         	// backward from the end of the res_len bytes pointed
                         	// to by res instead of forward from the beginning
                                 const char * slash = memrchr(res, '/', res_len);
                                 if (slash != NULL) {
-                                	// This way the las node from the current
+                                	// This way the last node from the current
                                 	// directory is deleted. Lets say res starts
                                 	// @ 0x2 mem address and slash is @ 0x10.
                                 	// res_len would be 0x8 which is exactly
@@ -477,11 +500,21 @@ static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
 static void before_main(void){
-	//printf("######### BEFORE MAIN!!!!\n");
+	printf("######### BEFORE MAIN!!!!\n [+] I AM %s WITH PID %d and PPID %d [+]\n", program_invocation_name, getpid(), getppid());
 }
 
 static void after_main(void){
 	//printf("######### AFTER MAIN!!!!\n");
+
+	printf("Soy %s con PID: %d y PPID: %d\n", program_invocation_name, getpid(), getppid());
+	printf("Mi g_array tiene used: %lu y size: %lu\n", g_array.used, g_array.size);
+
+	printf("<<<< La dirección del array es: %X\nLos contenidos del array son:\n", &g_array);
+
+	for(unsigned int i = 0; i < g_array.used; i++){
+		printf("Path: %s\n", g_array.list[i].path);
+	}
+
 	free_array(&g_array);
 	//printf("Dirección de array: %X\n", &g_array);
 
@@ -500,12 +533,12 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 	check_parameters_properties(path, __func__);
 
-	if ( old_xstat == NULL ) {
-		old_xstat = dlsym_wrapper(__func__);
+	if ( original_xstat == NULL ) {
+		original_xstat = dlsym_wrapper(__func__);
 	}
 
   ////printf("xstat64 %s\n",path);
-	return old_xstat(ver, path, buf);
+	return original_xstat(ver, path, buf);
 } 
 
 int __lxstat(int ver, const char *path, struct stat *buf)
@@ -515,11 +548,11 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 	check_parameters_properties(path, __func__);
 
-	if ( old_lxstat == NULL ) {
-		old_lxstat = dlsym_wrapper(__func__);
+	if ( original_lxstat == NULL ) {
+		original_lxstat = dlsym_wrapper(__func__);
 	}
 
-	return old_lxstat(ver,path, buf);
+	return original_lxstat(ver,path, buf);
 }
 
 
@@ -530,12 +563,12 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	check_parameters_properties(path, __func__);
 
-	if ( old_xstat64 == NULL ) {
-		old_xstat64 = dlsym_wrapper(__func__);
+	if ( original_xstat64 == NULL ) {
+		original_xstat64 = dlsym_wrapper(__func__);
 	}
 
   ////printf("xstat64 %s\n",path);
-	return old_xstat64(ver, path, buf);
+	return original_xstat64(ver, path, buf);
 }
 
 int open(const char *path, int flags, ...)
@@ -545,18 +578,24 @@ int open(const char *path, int flags, ...)
 
 	check_parameters_properties(path, __func__);
 
-	return open_wrapper(path, flags); 
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+
+	int open_result = open_wrapper(path, flags, variable_arguments);
+
+	va_end(variable_arguments);
+	return open_result;
 }
 
 int access(const char *path, int mode){
 
 	check_parameters_properties(path, __func__);
 
-	if(old_access == NULL){
-		old_access = dlsym_wrapper(__func__);
+	if(original_access == NULL){
+		original_access = dlsym_wrapper(__func__);
 	}	
 
-	return old_access(path, mode);
+	return original_access(path, mode);
 
 }
 
@@ -564,14 +603,185 @@ FILE *fopen(const char *path, const char *mode){
 
 	check_parameters_properties(path, __func__);
 
-	if(old_fopen == NULL){
-		old_fopen = dlsym_wrapper(__func__);
+	if(original_fopen == NULL){
+		original_fopen = dlsym_wrapper(__func__);
 	}
 
-	return old_fopen(path, mode);
+	return original_fopen(path, mode);
 
 }
 
+int openat(int dirfd, const char *path, int flags, ...){
+	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+
+	int openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
+
+	va_end(variable_arguments);
+	return openat_result;
+
+}
+
+int unlink(const char *path){
+
+	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	if(original_unlink == NULL){
+		original_unlink = dlsym_wrapper(__func__);
+	}
+
+	return original_unlink(path);
+
+}
+
+int unlinkat(int dirfd, const char *path, int flags){
+	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	if(original_unlinkat == NULL){
+		original_unlinkat = dlsym_wrapper(__func__);
+	}
+
+	return original_unlinkat(dirfd, path, flags);
+
+}
+
+int symlink(const char *oldpath, const char *newpath){
+    printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+
+    if(original_symlink == NULL){
+    	original_symlink = dlsym_wrapper(__func__);
+    }
+
+    return original_symlink(oldpath, newpath);
+
+}
+
+int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
+	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+
+	if(original_symlinkat == NULL){
+		original_symlinkat = dlsym_wrapper(__func__);
+	}
+
+	return original_symlinkat(oldpath, newdirfd, newpath);
+
+}
+
+int remove(const char *path) {
+
+	printf("Program %s with PID: %d called remove for path: %s", program_invocation_name, getpid(), path);
+	
+	if(original_remove == NULL){
+    	original_remove = dlsym_wrapper(__func__);
+    }
+    
+    path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	int remove_result = original_remove(path);
+
+	int index = find_index_in_array(&g_array, path);
+
+	if(index >= 0){
+		g_array.list[index].inode = -1;
+	}
+
+    return remove_result;
+
+}
+
+int mknod(const char *path, mode_t mode, dev_t dev){
+    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+    if(original_mknod == NULL){
+    	original_mknod = dlsym_wrapper(__func__);
+    }
+
+    return original_mknod(path, mode, dev);
+
+}
+
+int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
+    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+    if(original_xmknod == NULL){
+    	original_xmknod = dlsym_wrapper(__func__);
+    }
+
+    return original_xmknod(ver, path, mode, dev);
+
+}
+
+int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
+	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	if(original_xmknodat == NULL){
+		original_xmknodat = dlsym_wrapper(__func__);
+	}
+
+	return original_xmknodat(ver, dirfd, path, mode, dev);
+
+}
+
+int link(const char *oldpath, const char *newname){
+   printf("Process %s with pid %d called %s for oldpath: %s and newname: %s\n", program_invocation_name, getpid(), __func__, oldpath, newname);
+
+   if(original_link == NULL){
+   		original_link = dlsym_wrapper(__func__);
+   }
+
+   return original_link(oldpath, newname);
+
+}
+
+int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
+	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+
+	if(original_linkat == NULL){
+		original_linkat = dlsym_wrapper(__func__);
+	}
+
+	return original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+
+}
+
+int creat64(const char *path, mode_t mode){
+    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+    if(original_creat64 == NULL){
+    	original_creat64 = dlsym_wrapper(__func__);
+    }
+
+    return original_creat64(path, mode);
+
+}
+
+int creat(const char *path, mode_t mode){
+
+	printf("Program %s with PID: %d called creat for path: %s", program_invocation_name, getpid(), path);
+    
+    if(original_creat == NULL){
+    	original_creat = dlsym_wrapper(__func__);
+    }
+
+    path = sanitize_and_get_absolute_path(path);
+
+    print_function_and_path(__func__, path);
+
+    int creat_result = original_creat(path, mode);
+
+    int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return creat_result;
+
+}
 
 //#########################
 /*

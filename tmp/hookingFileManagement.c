@@ -37,15 +37,15 @@ static void before_main(void){
 	printf("I'm process %s and my PID is %d\n", program_invocation_name, getpid());
 }
 
-int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
+int openat_wrapper(int dirfd, const char *path, int flags, va_list argptr){
 
 	if(original_openat == NULL){
-		original_openat = dlsym_wrapper("openat");
+		original_openat = = dlsym_wrapper("openat");
 	}
 
-	return original_openat(dirfd, path, flags, variable_arguments);
-}
+	return original_openat(dirfd, path, flags, argptr);
 
+}
 void check_dlsym_error(){
 	char * error = dlerror();
 	if(error != NULL){
