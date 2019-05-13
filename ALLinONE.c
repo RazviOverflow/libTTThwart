@@ -60,7 +60,6 @@ void* dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list variable_arguments);
 int openat_wrapper(int, const char *, int, va_list argptr);
 ino_t get_inode(const char *);
-const char* sanitize_path(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 void timestamp();
 int file_does_exist(const char *);
@@ -631,8 +630,20 @@ int unlink(const char *path){
 	if(original_unlink == NULL){
 		original_unlink = dlsym_wrapper(__func__);
 	}
+	
+	path = sanitize_and_get_absolute_path(path);
 
-	return original_unlink(path);
+   	print_function_and_path(__func__, path);
+
+	int unlink_result = original_unlink(path);
+
+	int index = find_index_in_array(&g_array, path);
+
+	if(index >= 0){
+		g_array.list[index].inode = -1;
+	}
+
+	return unlink_result;
 
 }
 
@@ -642,8 +653,20 @@ int unlinkat(int dirfd, const char *path, int flags){
 	if(original_unlinkat == NULL){
 		original_unlinkat = dlsym_wrapper(__func__);
 	}
+	
+	path = sanitize_and_get_absolute_path(path);
 
-	return original_unlinkat(dirfd, path, flags);
+   	print_function_and_path(__func__, path);
+
+   	int unlinkat_result = original_unlinkat(dirfd, path, flags);
+
+   	int index = find_index_in_array(&g_array, path);
+
+	if(index >= 0){
+		g_array.list[index].inode = -1;
+	}
+
+	return unlinkat_result;
 
 }
 
@@ -653,8 +676,20 @@ int symlink(const char *oldpath, const char *newpath){
     if(original_symlink == NULL){
     	original_symlink = dlsym_wrapper(__func__);
     }
+	
+    path = sanitize_and_get_absolute_path(path);
 
-    return original_symlink(oldpath, newpath);
+   	print_function_and_path(__func__, path);
+
+    int symlink_result = original_symlink(oldpath, newpath);
+
+    int index = find_index_in_array(&g_array, path);
+
+	if(index >= 0){
+		g_array.list[index].inode = -1;
+	}
+
+	return symlink_result;
 
 }
 
@@ -664,8 +699,20 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	if(original_symlinkat == NULL){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
+	
+	path = sanitize_and_get_absolute_path(path);
 
-	return original_symlinkat(oldpath, newdirfd, newpath);
+   	print_function_and_path(__func__, path);
+
+	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
+
+	int index = find_index_in_array(&g_array, path);
+
+	if(index >= 0){
+		g_array.list[index].inode = -1;
+	}
+
+	return symlinkat_result;
 
 }
 
@@ -699,8 +746,20 @@ int mknod(const char *path, mode_t mode, dev_t dev){
     if(original_mknod == NULL){
     	original_mknod = dlsym_wrapper(__func__);
     }
+	
+    path = sanitize_and_get_absolute_path(path);
 
-    return original_mknod(path, mode, dev);
+   	print_function_and_path(__func__, path);
+
+    int mknod_result = original_mknod(path, mode, dev);
+
+    int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return mknod_result;
 
 }
 
@@ -710,8 +769,20 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
     if(original_xmknod == NULL){
     	original_xmknod = dlsym_wrapper(__func__);
     }
+	
+    path = sanitize_and_get_absolute_path(path);
 
-    return original_xmknod(ver, path, mode, dev);
+   	print_function_and_path(__func__, path);
+
+    int mknod_result = original_xmknod(ver, path, mode, dev);
+
+    int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return mknod_result;
 
 }
 
@@ -721,9 +792,20 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 	if(original_xmknodat == NULL){
 		original_xmknodat = dlsym_wrapper(__func__);
 	}
+	
+	path = sanitize_and_get_absolute_path(path);
 
-	return original_xmknodat(ver, dirfd, path, mode, dev);
+   	print_function_and_path(__func__, path);
+	
+	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
+	int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return mknodat_result;
 }
 
 int link(const char *oldpath, const char *newname){
@@ -733,9 +815,23 @@ int link(const char *oldpath, const char *newname){
    		original_link = dlsym_wrapper(__func__);
    }
 
-   return original_link(oldpath, newname);
+	path = sanitize_and_get_absolute_path(path);
+
+   	print_function_and_path(__func__, path);
+
+   int link_result = original_link(oldpath, newname);
+
+   int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+   return link_result;
 
 }
+
+
 
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
 	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
@@ -744,7 +840,20 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		original_linkat = dlsym_wrapper(__func__);
 	}
 
-	return original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+	oldpath = sanitize_and_get_absolute_path(oldpath);
+	newpath = sanitize_and_get_absolute_path(newpath);
+
+    print_function_and_path(__func__, oldpath);
+
+    int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+
+    int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return linkat_result;
 
 }
 
@@ -755,7 +864,19 @@ int creat64(const char *path, mode_t mode){
     	original_creat64 = dlsym_wrapper(__func__);
     }
 
-    return original_creat64(path, mode);
+    path = sanitize_and_get_absolute_path(path);
+
+    print_function_and_path(__func__, path);
+
+    int creat64_result = original_creat64(path, mode);
+
+    int index = find_index_in_array(&g_array, path);
+
+    if(index >= 0){
+    	g_array.list[index].inode = get_inode(path);
+    }
+
+    return creat64_result;
 
 }
 
