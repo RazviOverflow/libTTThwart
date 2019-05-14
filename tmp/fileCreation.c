@@ -136,6 +136,8 @@ int main(){
 
 	unlinkat(directory_fd, "file_SYMLINKAT", 0);
 	unlinkat(directory_fd, "file_LINKAT_HARDLINK", 0);
+	unlinkat(directory_fd, "///////file_SYMLINKAT", 0);
+	unlinkat(directory_fd, "../file_LINKAT_HARDLINK", 0);
 
 	// -------
 

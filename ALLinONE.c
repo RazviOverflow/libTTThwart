@@ -61,6 +61,7 @@ int open_wrapper(const char *, int, va_list variable_arguments);
 int openat_wrapper(int, const char *, int, va_list argptr);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
+const char * sanitize_path(const char *);
 void timestamp();
 int file_does_exist(const char *);
 
@@ -357,8 +358,8 @@ ino_t get_inode(const char *path){
 }
 
 /*
-	Function to get full path of a given parameter without resolveing, expanding
-	symbolic links. That's why realpeth() is useless. 
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links. That's why realpath() is useless. 
 	https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
 */
 const char * sanitize_and_get_absolute_path(const char * src) {
@@ -399,6 +400,79 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 
         end_pointer = &src[src_len];
 
+
+        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
+                size_t len;
+
+                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
+                // to by pointer for the first instance of '/'
+                next_pointer = memchr(pointer, '/', end_pointer-pointer);
+
+                if (next_pointer == NULL) {
+                        next_pointer = end_pointer;
+                }
+
+
+                len = next_pointer-pointer;
+
+
+                switch(len) {
+                case 2:
+                        if (pointer[0] == '.' && pointer[1] == '.') {
+                        	// memrchr is like memchr, except that it searches 
+                        	// backward from the end of the res_len bytes pointed
+                        	// to by res instead of forward from the beginning
+                                const char * slash = memrchr(res, '/', res_len);
+                                if (slash != NULL) {
+                                	// This way the last node from the current
+                                	// directory is deleted. Lets say res starts
+                                	// @ 0x2 mem address and slash is @ 0x10.
+                                	// res_len would be 0x8 which is exactly
+                                	// the length between 0x2 and 0x10.
+                                        res_len = slash - res;
+                                }
+                                // Continue applies only to loop statements. 
+                                //That is, this jumps right to next for iteration,
+                                // skipping the remaining code.
+                                continue; 
+                        }
+                        break;
+                case 1:
+                        if (pointer[0] == '.') {
+                                continue;
+
+                        }
+                        break;
+                case 0:
+                        continue;
+                }
+                res[res_len++] = '/';
+                memcpy(&res[res_len], pointer, len);
+                res_len += len;
+        }
+
+        if (res_len == 0) {
+                res[res_len++] = '/';
+        }
+        // Marks the end of the new sanitized and absoluted path, thus discarding
+        // whatever follows res_len
+        res[res_len] = '\0';
+        return res;
+}
+
+/*
+	Function to sanitize the given path.
+	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
+*/
+const char * sanitize_path(const char * src) {
+
+		size_t res_len = 0;
+        size_t src_len = strlen(src);
+		char *res = malloc(src_len + 1);;
+        
+        const char *pointer;
+        const char *end_pointer = &src[src_len];
+        const char *next_pointer;
 
         for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
                 size_t len;
@@ -693,7 +767,11 @@ int unlinkat(int dirfd, const char *path, int flags){
 		original_unlinkat = dlsym_wrapper(__func__);
 	}
 	
-	path = sanitize_and_get_absolute_path(path);
+	/*
+		It simply gets sanitize (not absoluted) because it's a relative path to 
+		the directory pointed to by dirfd, not the current working dir. 
+	*/
+	path = sanitize_path(path);
 
    	print_function_and_path(__func__, path);
 
