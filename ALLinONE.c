@@ -57,13 +57,15 @@ static int (*original_creat)(const char *path, mode_t mode) = NULL;
 
 void check_parameters_properties(const char *, const char *);
 void* dlsym_wrapper(const char *);
-int open_wrapper(const char *, int, va_list variable_arguments);
-int openat_wrapper(int, const char *, int, va_list argptr);
+int open_wrapper(const char *, int, va_list);
+int openat_wrapper(int, const char *, int, va_list);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_path(const char *);
+const char * get_file_path_from_directory_fd(const char*, int);
 void timestamp();
 int file_does_exist(const char *);
+char * get_directory_from_fd(int);
 
 
 /// ########## Prototype declaration ##########
@@ -564,6 +566,46 @@ int file_does_exist(const char *pathname){
 	}
 }
 
+/*
+	Function used to retrieve as string the full directory path pointed to
+	by a given file descriptor. 
+*/
+char * get_directory_from_fd(int directory_fd){
+	char *original_working_dir = get_current_dir_name();
+
+	fchdir(directory_fd);
+
+	char *directory_fd_path = get_current_dir_name();
+
+	chdir(original_working_dir);
+
+	free (original_working_dir);
+
+	return directory_fd_path;
+}
+
+/*
+	Function used to retrieve as string the full path to a file given a
+	file descriptor pointing to a directory. It is assumed that the files 
+	is indeed within that directory. The file translates the file descriptor
+	into the actual directory (string).
+*/
+const char * get_file_path_from_directory_fd(const char *path, int dirfd){
+	
+	char *directory_fd_path = get_directory_from_fd(dirfd);
+
+   	// +2 for null-trailing byte and the "/" slash between them
+   	int path_length = strlen(directory_fd_path) + strlen(path) + 2;
+   	
+   	char aux_path[path_length];
+
+   	snprintf(aux_path, path_length, "%s/%s", directory_fd_path, path);
+
+   	free(directory_fd_path);
+
+   	return sanitize_and_get_absolute_path(aux_path);
+  }
+
 /// ########## Core and useful functions ##########
 
 /// <-------------------------------------------------> 
@@ -721,21 +763,6 @@ FILE *fopen(const char *path, const char *mode){
 
 }
 
-int openat(int dirfd, const char *path, int flags, ...){
-	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
-
-	path = sanitize_and_get_absolute_path(path);
-
-	va_list variable_arguments;
-	va_start(variable_arguments, flags);
-
-	int openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
-
-	va_end(variable_arguments);
-	return openat_result;
-
-}
-
 int unlink(const char *path){
 
 	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
@@ -768,22 +795,44 @@ int unlinkat(int dirfd, const char *path, int flags){
 	}
 	
 	/*
-		It simply gets sanitize (not absoluted) because it's a relative path to 
+		It simply gets sanitized (not absoluted) because it's a relative path to 
 		the directory pointed to by dirfd, not the current working dir. 
 	*/
 	path = sanitize_path(path);
 
-   	print_function_and_path(__func__, path);
+	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
 
+	print_function_and_path(__func__, full_path);
+
+	/*
+		Note that the original function gets passed only path, not full_path
+		since the retrieval of full_path is a mere operation in order to
+		keep g_array updated.
+	*/
    	int unlinkat_result = original_unlinkat(dirfd, path, flags);
 
-   	int index = find_index_in_array(&g_array, path);
+   	int index = find_index_in_array(&g_array, full_path);
 
 	if(index >= 0){
 		g_array.list[index].inode = -1;
 	}
 
 	return unlinkat_result;
+
+}
+
+int openat(int dirfd, const char *path, int flags, ...){
+	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	path = sanitize_and_get_absolute_path(path);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+
+	int openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
+
+	va_end(variable_arguments);
+	return openat_result;
 
 }
 
@@ -818,7 +867,7 @@ int symlink(const char *oldpath, const char *newpath){
 }
 
 /*
-	Creates a symbolic link to oldpath called newpath in the directory pointed to  by newdirfd.
+	Creates a symbolic link to oldpath called newpath in the directory pointed to by newdirfd.
 */
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
@@ -827,20 +876,22 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	
-	newpath = sanitize_and_get_absolute_path(newpath);
+	newpath = sanitize_path(newpath);
 
-   	print_function_and_path(__func__, newpath);
+	const char *full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+
+   	print_function_and_path(__func__, full_path);
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
-	int index = find_index_in_array(&g_array, newpath);
+	int index = find_index_in_array(&g_array, full_path);
 
-	ino_t inode = get_inode(newpath);
+	ino_t inode = get_inode(full_path);
 
 	if(index >= 0){
 		g_array.list[index].inode = inode;
 	} else {
-		insert_in_array(&g_array, newpath, inode);
+		insert_in_array(&g_array, full_path, inode);
 	}
 
 	return symlinkat_result;

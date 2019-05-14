@@ -31,7 +31,7 @@
 	- file_OPENAT.txt
 	- file_SYMLINKAT (symbolic link to file_CREAT.txt)
 
-	It then sleep for 10 seconds and deletes all of the created files using different functions
+	Then it sleeps for 10 seconds and deletes all of the created files using different functions
 	like unlink, unlinkat and remove.
 */
 int main(){
