@@ -45,7 +45,7 @@ static int (*original_remove)(const char *path) = NULL;
 static int (*original_mknod)(const char *path, mode_t mode, dev_t dev) = NULL;
 static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
-static int (*original_link)(const char *oldpath, const char*newname) = NULL;
+static int (*original_link)(const char *oldpath, const char*newpath) = NULL;
 static int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
 static int (*original_creat64)(const char *path, mode_t mode) = NULL;
 static int (*original_creat)(const char *path, mode_t mode) = NULL;
@@ -528,7 +528,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 {
 	//printf("I'VE RECEIVED PATH %s\n", path);
 
-	//path = sanitize_path(path);
+	path = sanitize_and_get_absolute_path(path);
 
 	check_parameters_properties(path, __func__);
 
@@ -543,7 +543,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
 
-	//path = sanitize_path(path);
+	path = sanitize_and_get_absolute_path(path);
 
 	check_parameters_properties(path, __func__);
 
@@ -558,7 +558,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
 
-	//path = sanitize_path(path);
+	path = sanitize_and_get_absolute_path(path);
 
 	check_parameters_properties(path, __func__);
 
@@ -570,10 +570,20 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 	return original_xstat64(ver, path, buf);
 }
 
+/*
+	Since open can also create files, we hook it and check whether a new file
+	has been created. In order to do so, we check if the file existed before
+	the actual call. If it hasn't, then we check if, after the call, the file
+	has been indeed created (via fstat). If it has, we simply update its 
+	corresponding array entry or insert it.
+*/
 int open(const char *path, int flags, ...)
 {
 
-	//path = sanitize_path(path);
+	path = sanitize_and_get_absolute_path(path);
+
+	bool path_exists_before = file_does_exist(path);
+	struct stat new_file;
 
 	check_parameters_properties(path, __func__);
 
@@ -583,10 +593,35 @@ int open(const char *path, int flags, ...)
 	int open_result = open_wrapper(path, flags, variable_arguments);
 
 	va_end(variable_arguments);
+
+	/*
+		If file didn't exist before actual open call (because otherwise it'd
+		have been treated in check_parameters_properties) and fstat returns
+		zero (success) a new file has been created.
+	*/
+	if(!path_exists_before && !fstat(open_result, &new_file)){
+		/*
+			New file has been just created. Now there are two options:
+				- There is already an entry in the array referencing the path
+					so only the inode must be updated.
+				- There is no entry in the array so just insert.
+		*/
+		int index = find_index_in_array(&g_array, path);
+		ino_t inode = get_inode(path);
+		if(index >= 0){
+			g_array.list[index].inode = inode;
+		} else {
+			insert_in_array(&g_array, path, inode);
+		}
+
+	}
+
 	return open_result;
 }
 
 int access(const char *path, int mode){
+
+	path = sanitize_and_get_absolute_path(path);
 
 	check_parameters_properties(path, __func__);
 
@@ -600,6 +635,8 @@ int access(const char *path, int mode){
 
 FILE *fopen(const char *path, const char *mode){
 
+	path = sanitize_and_get_absolute_path(path);
+
 	check_parameters_properties(path, __func__);
 
 	if(original_fopen == NULL){
@@ -612,6 +649,8 @@ FILE *fopen(const char *path, const char *mode){
 
 int openat(int dirfd, const char *path, int flags, ...){
 	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+
+	path = sanitize_and_get_absolute_path(path);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, flags);
@@ -670,6 +709,9 @@ int unlinkat(int dirfd, const char *path, int flags){
 
 }
 
+/*
+	Creates a symbolic link called newpath that poins to oldpath.
+*/
 int symlink(const char *oldpath, const char *newpath){
     printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
 
@@ -677,22 +719,29 @@ int symlink(const char *oldpath, const char *newpath){
     	original_symlink = dlsym_wrapper(__func__);
     }
 	
-    path = sanitize_and_get_absolute_path(path);
+    newpath = sanitize_and_get_absolute_path(newpath);
 
-   	print_function_and_path(__func__, path);
+   	print_function_and_path(__func__, newpath);
 
     int symlink_result = original_symlink(oldpath, newpath);
 
-    int index = find_index_in_array(&g_array, path);
+    int index = find_index_in_array(&g_array, newpath);
+
+    ino_t inode = get_inode(newpath);
 
 	if(index >= 0){
-		g_array.list[index].inode = -1;
+		g_array.list[index].inode = inode;
+	} else {
+		insert_in_array(&g_array, newpath, inode);
 	}
 
 	return symlink_result;
 
 }
 
+/*
+	Creates a symbolic link to oldpath called newpath in the directory pointed to  by newdirfd.
+*/
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
 
@@ -700,16 +749,20 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	
-	path = sanitize_and_get_absolute_path(path);
+	newpath = sanitize_and_get_absolute_path(newpath);
 
-   	print_function_and_path(__func__, path);
+   	print_function_and_path(__func__, newpath);
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
-	int index = find_index_in_array(&g_array, path);
+	int index = find_index_in_array(&g_array, newpath);
+
+	ino_t inode = get_inode(newpath);
 
 	if(index >= 0){
-		g_array.list[index].inode = -1;
+		g_array.list[index].inode = inode;
+	} else {
+		insert_in_array(&g_array, newpath, inode);
 	}
 
 	return symlinkat_result;
@@ -755,8 +808,12 @@ int mknod(const char *path, mode_t mode, dev_t dev){
 
     int index = find_index_in_array(&g_array, path);
 
+    ino_t inode = get_inode(path);
+
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
+    	g_array.list[index].inode = inode;
+    } else {
+    	insert_in_array(&g_array, path, inode);
     }
 
     return mknod_result;
@@ -778,8 +835,12 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
     int index = find_index_in_array(&g_array, path);
 
+    ino_t inode = get_inode(path);
+
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
+    	g_array.list[index].inode = inode;
+    } else {
+    	insert_in_array(&g_array, path, inode);
     }
 
     return mknod_result;
@@ -801,38 +862,53 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 
 	int index = find_index_in_array(&g_array, path);
 
+	ino_t inode = get_inode(path);
+
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
+    	g_array.list[index].inode = inode;
+    } else {
+    	insert_in_array(&g_array, path, inode);
     }
 
     return mknodat_result;
 }
 
-int link(const char *oldpath, const char *newname){
-   printf("Process %s with pid %d called %s for oldpath: %s and newname: %s\n", program_invocation_name, getpid(), __func__, oldpath, newname);
+
+/*
+	Creates a new hardlink called newpath that points to oldpath. 
+*/
+int link(const char *oldpath, const char *newpath){
+   printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
 
    if(original_link == NULL){
    		original_link = dlsym_wrapper(__func__);
    }
 
-	path = sanitize_and_get_absolute_path(path);
+	newpath = sanitize_and_get_absolute_path(newpath);
 
-   	print_function_and_path(__func__, path);
+   	print_function_and_path(__func__, newpath);
 
-   int link_result = original_link(oldpath, newname);
+   	int link_result = original_link(oldpath, newpath);
 
-   int index = find_index_in_array(&g_array, path);
+   	int index = find_index_in_array(&g_array, newpath);
 
-    if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
-    }
+   	ino_t inode = get_inode(newpath);
+
+	if(index >= 0){
+		g_array.list[index].inode = inode;
+	} else {
+		insert_in_array(&g_array, newpath, inode);
+	}
 
    return link_result;
 
 }
 
 
-
+/*
+	Creates a new hardlink called newpath in directory pointed to by newdirfd. The hardlink newpath
+	points to file oldpath, which is located in directroy pointed to by olddirfd. 
+*/
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
 	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
 
@@ -843,15 +919,19 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 	oldpath = sanitize_and_get_absolute_path(oldpath);
 	newpath = sanitize_and_get_absolute_path(newpath);
 
-    print_function_and_path(__func__, oldpath);
+    print_function_and_path(__func__, newpath);
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
-    int index = find_index_in_array(&g_array, path);
+    int index = find_index_in_array(&g_array, newpath);
+
+    ino_t inode = get_inode(newpath);
 
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
-    }
+    	g_array.list[index].inode = inode;
+    } else {
+		insert_in_array(&g_array, newpath, inode);
+	}
 
     return linkat_result;
 
@@ -872,9 +952,13 @@ int creat64(const char *path, mode_t mode){
 
     int index = find_index_in_array(&g_array, path);
 
+    ino_t inode = get_inode(path);
+
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
-    }
+    	g_array.list[index].inode = inode;
+    } else {
+		insert_in_array(&g_array, path, inode);
+	}
 
     return creat64_result;
 
@@ -896,9 +980,13 @@ int creat(const char *path, mode_t mode){
 
     int index = find_index_in_array(&g_array, path);
 
+    ino_t inode = get_inode(path);
+
     if(index >= 0){
-    	g_array.list[index].inode = get_inode(path);
-    }
+    	g_array.list[index].inode = inode;
+    } else {
+		insert_in_array(&g_array, path, inode);
+	}
 
     return creat_result;
 
