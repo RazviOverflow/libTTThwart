@@ -62,6 +62,7 @@ int openat_wrapper(int, const char *, int, va_list);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_path(const char *);
+const char * sanitize_relative_path(const char *);
 const char * get_file_path_from_directory_fd(const char*, int);
 void timestamp();
 int file_does_exist(const char *);
@@ -296,7 +297,19 @@ int open_wrapper(const char *path, int flags, va_list variable_arguments){
 		original_open = dlsym_wrapper("open");
 	}
 
-	return original_open(path, flags, variable_arguments);
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(aux_list, mode_t);
+
+		va_end(aux_list);
+
+		return original_open(path, flags, mode);
+
+	} else {
+		return original_open(path, flags);
+	}
 	
 }
 
@@ -304,13 +317,25 @@ int open_wrapper(const char *path, int flags, va_list variable_arguments){
 	Openat wrapper is exactly the same as open wrapper but for
 	 openat.
 */
-int openat_wrapper(int dirfd, const char *path, int flags, va_list argptr){
+int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
 
 	if(original_openat == NULL){
 		original_openat = dlsym_wrapper("openat");
 	}
 
-	return original_openat(dirfd, path, flags, argptr);
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(variable_arguments, mode_t);
+
+		va_end(aux_list);
+
+		return original_openat(dirfd, path, flags, mode);
+
+	} else {
+		return original_openat(dirfd, path, flags);
+	}
 
 }
 
@@ -466,7 +491,7 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 	Function to sanitize the given path.
 	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
 */
-const char * sanitize_path(const char * src) {
+const char * sanitize_path(const char *src) {
 
 		size_t res_len = 0;
         size_t src_len = strlen(src);
@@ -533,6 +558,21 @@ const char * sanitize_path(const char * src) {
         // whatever follows res_len
         res[res_len] = '\0';
         return res;
+}
+
+/*
+	Function used to sanitize a relative path. That is, sanitize an absoulte path
+	but without the first '/' slash character. That's why this function is as 
+	simple as calling sanitize_path and then simply make use of pointer arithmetics
+	in order to chop the sanitized path. If char *src = "/file" after src++ it will
+	become src = "file".
+*/
+const char * sanitize_relative_path(const char *src){
+
+	src = sanitize_path(src);
+
+	return ++src;
+
 }
 
 /*
@@ -798,7 +838,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 		It simply gets sanitized (not absoluted) because it's a relative path to 
 		the directory pointed to by dirfd, not the current working dir. 
 	*/
-	path = sanitize_path(path);
+	path = sanitize_relative_path(path);
 
 	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
 
@@ -824,7 +864,14 @@ int unlinkat(int dirfd, const char *path, int flags){
 int openat(int dirfd, const char *path, int flags, ...){
 	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
 
-	path = sanitize_and_get_absolute_path(path);
+	path = sanitize_relative_path(path);
+
+	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
+
+	bool path_exists_before = file_does_exist(path);
+	struct stat new_file;
+
+	check_parameters_properties(path, __func__);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, flags);
@@ -832,6 +879,19 @@ int openat(int dirfd, const char *path, int flags, ...){
 	int openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
 
 	va_end(variable_arguments);
+
+	if(!path_exists_before && !fstat(openat_result, &new_file)){
+
+		int index = find_index_in_array(&g_array, full_path);
+		ino_t inode = get_inode(full_path);
+		if(index >= 0){
+			g_array.list[index].inode = inode;
+		} else {
+			insert_in_array(&g_array, full_path, inode);
+		}
+
+	}
+
 	return openat_result;
 
 }
@@ -876,7 +936,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	
-	newpath = sanitize_path(newpath);
+	newpath = sanitize_relative_path(newpath);
 
 	const char *full_path = get_file_path_from_directory_fd(newpath, newdirfd);
 
@@ -898,6 +958,10 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 
 }
 
+/*
+	remove() deletes a name from the file system. 
+	It calls unlink(2) for files, and rmdir(2) for directories.	
+*/
 int remove(const char *path) {
 
 	printf("Program %s with PID: %d called remove for path: %s", program_invocation_name, getpid(), path);
@@ -922,6 +986,11 @@ int remove(const char *path) {
 
 }
 
+/*
+	The system call mknod() creates a filesystem node (file, device
+    special file, or named pipe) named pathname, with attributes
+    specified by mode and dev.
+*/
 int mknod(const char *path, mode_t mode, dev_t dev){
     printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
 
@@ -949,6 +1018,11 @@ int mknod(const char *path, mode_t mode, dev_t dev){
 
 }
 
+/*
+	The system call mknod() creates a filesystem node (file, device
+    special file, or named pipe) named pathname, with attributes
+    specified by mode and dev.
+*/
 int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
     printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
 
@@ -976,6 +1050,11 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
 }
 
+/*
+	The mknodat() system call operates in exactly the same way as mknod(2), 
+	except that it creates a speial or ordinary file relative to a 
+	directory file descriptor.
+*/
 int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
 
@@ -983,20 +1062,22 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		original_xmknodat = dlsym_wrapper(__func__);
 	}
 	
-	path = sanitize_and_get_absolute_path(path);
+	path = sanitize_relative_path(path);
 
-   	print_function_and_path(__func__, path);
-	
+	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
+
+   	print_function_and_path(__func__, full_path);
+
 	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
-	int index = find_index_in_array(&g_array, path);
+	int index = find_index_in_array(&g_array, full_path);
 
-	ino_t inode = get_inode(path);
+	ino_t inode = get_inode(full_path);
 
     if(index >= 0){
     	g_array.list[index].inode = inode;
     } else {
-    	insert_in_array(&g_array, path, inode);
+    	insert_in_array(&g_array, full_path, inode);
     }
 
     return mknodat_result;
@@ -1045,21 +1126,23 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		original_linkat = dlsym_wrapper(__func__);
 	}
 
-	oldpath = sanitize_and_get_absolute_path(oldpath);
-	newpath = sanitize_and_get_absolute_path(newpath);
+	oldpath = sanitize_relative_path(oldpath);
+	newpath = sanitize_relative_path(newpath);
 
-    print_function_and_path(__func__, newpath);
+	const char *full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
+
+    print_function_and_path(__func__, full_new_path);
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
-    int index = find_index_in_array(&g_array, newpath);
+    int index = find_index_in_array(&g_array, full_new_path);
 
-    ino_t inode = get_inode(newpath);
+    ino_t inode = get_inode(full_new_path);
 
     if(index >= 0){
     	g_array.list[index].inode = inode;
     } else {
-		insert_in_array(&g_array, newpath, inode);
+		insert_in_array(&g_array, full_new_path, inode);
 	}
 
     return linkat_result;
