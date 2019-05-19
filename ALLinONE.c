@@ -67,8 +67,6 @@ const char * get_file_path_from_directory_fd(const char*, int);
 void timestamp();
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
-
-
 /// ########## Prototype declaration ##########
 
 /// <-------------------------------------------------> 
@@ -84,6 +82,16 @@ typedef struct{
 	size_t used;
 	size_t size;
 } file_objects_info;
+
+// -- Array operations -- //
+void initialize_array(file_objects_info *, size_t);
+void insert_in_array(file_objects_info *, const char *, ino_t);
+void free_array(file_objects_info *);
+int find_infex_in_array(file_objects_info *, const char *);
+file_object_info get_from_array_at_index(file_objects_info *, int);
+void remove_from_array_at_index(file_objects_info *, int);
+void print_contents_of_array(file_objects_info *);
+
 
 /// ########## file_objects_info.c ##########
 
@@ -135,6 +143,8 @@ void initialize_array(file_objects_info *array, size_t size){
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If array has not been yet initialized, initialize it. 
+	printf("Request to insert in array path: %s with inode: %lu\n", path, inode);
+
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
 	}
@@ -153,7 +163,7 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
 		if(!aux){
-			//printf("Error trying to realloc size for array in Insert process.\n");
+			printf("Error trying to realloc size for array in Insert process.\n");
 			exit(EXIT_FAILURE);
 		} else {
 			array->list = aux;
@@ -174,7 +184,10 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
 */
 void free_array(file_objects_info *array){
 
+	print_contents_of_array(&g_array);
+
 	for(uint i = 0; i < array->used; i++){
+		printf("FREEING AFTERMAIN ITERATION %d\n",i);
 		free(array->list[i].path);
 		array->list[i].path = NULL;
 	}
@@ -215,6 +228,43 @@ int find_index_in_array(file_objects_info *array, const char *path){
 */
 file_object_info get_from_array_at_index(file_objects_info *array, int index){
 	return array->list[index];
+}
+
+/*
+	Removes the element at index index from the array. Please note it's index,
+	not position. Index starts at 0.
+*/
+void remove_from_array_at_index(file_objects_info *array, int index){
+
+	//printf("Called remove_from_array_at_index with index %d\n", index);
+	//print_contents_of_array(&g_array);
+
+	int number_elements = array->used;
+
+	print_contents_of_array(&g_array);
+
+	printf(" !![[[[---]]] Trying to remove index %d from a total elements of: %d\n", index, number_elements);
+
+	if(index < number_elements-1){
+
+		for(int i = index; i < number_elements-1; i++){
+			array->list[index] = array->list[index+1];
+		}
+
+	} 
+
+	array->used--;
+	//printf("AFTER DELETING!!!!!\n");
+	//print_contents_of_array(&g_array);
+}
+
+void print_contents_of_array(file_objects_info *array){
+
+	printf("Array used: %lu\nArray size: %lu\n", array->used, array->size);
+
+	for(uint i = 0; i < array->used; i++){
+		printf("[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
+	}
 }
 
 /// ########## Array management ##########
@@ -340,8 +390,8 @@ int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_argu
 }
 
 /*
-    Retrieves the corresponding inode of a give path while performing errors
-    checking.
+    Retrieves the corresponding inode of a given path. If path is a symlink
+    it retrieves the inode of the target rather than the symlink itself. 
 */
 ino_t get_inode(const char *path){
 	int fd;
@@ -353,7 +403,7 @@ ino_t get_inode(const char *path){
     // ERRORS CHECKiNG
     /*
 	if((fd = open_wrapper(path, O_RDONLY)) < 0){
-		//printf("Errors occured while trying to access %s.\nAborting.", path);
+		//printf("Errors occurred while trying to access %s.\nAborting.", path);
 		perror("Error1 is: ");
 		fflush(stdout);
         //exit(EXIT_FAILURE);
@@ -361,7 +411,7 @@ ino_t get_inode(const char *path){
 		//printf("Created fileDescriptor is: %d\n", fd);
 		struct stat file_stat;
 		if((ret = fstat(fd, &file_stat)) < 0 ){
-			//printf("Errors occured while trying to stat %d file descriptor.\nAborting.", fd);
+			//printf("Errors occurred while trying to stat %d file descriptor.\nAborting.", fd);
 			perror("Error2 is: ");
 			close(fd);
             //exit(EXIT_FAILURE);
@@ -372,8 +422,11 @@ ino_t get_inode(const char *path){
 		}
 	}*/
 
-	// NO ERRORS CHECKING
 	fd = open_wrapper(path, O_RDONLY, NULL);
+	if (fd < 0){
+		printf("Errors occurred while getting inode of %s\n", path);
+		printf("ERROR: %s\n", strerror(errno));
+	}
 	struct stat file_stat;
 	fstat(fd, &file_stat);
 	inode = file_stat.st_ino;
@@ -568,11 +621,16 @@ const char * sanitize_path(const char *src) {
 	become src = "file".
 */
 const char * sanitize_relative_path(const char *src){
+	bool absolute = (src[0] == '/');
 
 	src = sanitize_path(src);
-
-	return ++src;
-
+	if(absolute){
+		printf("\n it was absolute path %s\n", src);
+		return src;
+	} else {
+		printf("\n it was not absolute path%s\n", src);
+		return ++src;
+	}
 }
 
 /*
@@ -820,7 +878,8 @@ int unlink(const char *path){
 	int index = find_index_in_array(&g_array, path);
 
 	if(index >= 0){
-		g_array.list[index].inode = -1;
+		remove_from_array_at_index(&g_array, index);
+		//g_array.list[index].inode = -1;
 	}
 
 	return unlink_result;
@@ -854,7 +913,8 @@ int unlinkat(int dirfd, const char *path, int flags){
    	int index = find_index_in_array(&g_array, full_path);
 
 	if(index >= 0){
-		g_array.list[index].inode = -1;
+		remove_from_array_at_index(&g_array, index);
+		//g_array.list[index].inode = -1;
 	}
 
 	return unlinkat_result;
@@ -937,12 +997,17 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	}
 	
 	newpath = sanitize_relative_path(newpath);
+	oldpath = sanitize_relative_path(oldpath);
 
 	const char *full_path = get_file_path_from_directory_fd(newpath, newdirfd);
 
    	print_function_and_path(__func__, full_path);
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
+
+	if(symlinkat_result){
+		printf("SYMLINKAT ERROR: %s\n", strerror(errno));
+	}
 
 	int index = find_index_in_array(&g_array, full_path);
 
@@ -954,6 +1019,8 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		insert_in_array(&g_array, full_path, inode);
 	}
 
+	print_contents_of_array(&g_array);
+
 	return symlinkat_result;
 
 }
@@ -964,7 +1031,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 */
 int remove(const char *path) {
 
-	printf("Program %s with PID: %d called remove for path: %s", program_invocation_name, getpid(), path);
+	printf("Program %s with PID: %d called remove for path: %s\n", program_invocation_name, getpid(), path);
 	
 	if(original_remove == NULL){
     	original_remove = dlsym_wrapper(__func__);
@@ -976,10 +1043,17 @@ int remove(const char *path) {
 
 	int remove_result = original_remove(path);
 
+	if(remove_result){
+		printf("REMOVE ERROR: %s\n", strerror(errno));
+	}
+
 	int index = find_index_in_array(&g_array, path);
 
+	printf(" <<< >>>>> INDEX AFTER INVOKING REMOVE: %d\n", index);
+
 	if(index >= 0){
-		g_array.list[index].inode = -1;
+		remove_from_array_at_index(&g_array, index);
+		//g_array.list[index].inode = -1;
 	}
 
     return remove_result;
