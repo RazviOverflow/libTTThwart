@@ -51,6 +51,7 @@ int main(){
 	write(fd, "File created with OPEN function\n", contentLength);
 	close(fd);
 
+	/*
 	remove("file_OPEN.txt");
 
 	fd = open("file_OPEN1.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
@@ -66,6 +67,7 @@ int main(){
 
 	remove("file_OPEN2.txt");
 	remove("file_OPEN3.txt");
+	*/
 
 	int directory_fd = dirfd(opendir("/tmp/"));
 
@@ -138,9 +140,11 @@ int main(){
 	// +1 because of  in-between '/'
 	snprintf(aux_path, sizeof(aux_path)+1, "%s/%s", get_current_dir_name(), "file_CREAT.txt");
 
+	printf("THATS AUX_PATH: %s\n", aux_path);
+
 	symlinkat(aux_path, directory_fd, "file_SYMLINKAT");
 
-
+	fflush(stdout);
 	sleep(5);
 
 
@@ -171,6 +175,8 @@ int main(){
 	remove("file_CREAT.txt");
 	remove("/tmp/file_MKNODAT.txt");
 	remove("file_LINK_HARDLINK");
+
+	close(directory_fd);
 
 	return 0;
 }
