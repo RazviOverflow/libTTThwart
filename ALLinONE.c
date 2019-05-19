@@ -145,7 +145,6 @@ void initialize_array(file_objects_info *array, size_t size){
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If array has not been yet initialized, initialize it. 
-	printf("Request to insert in array path: %s with inode: %lu\n", path, inode);
 
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
@@ -189,7 +188,6 @@ void free_array(file_objects_info *array){
 	print_contents_of_array(&g_array);
 
 	for(uint i = 0; i < array->used; i++){
-		printf("FREEING AFTERMAIN ITERATION %d\n",i);
 		free(array->list[i].path);
 		array->list[i].path = NULL;
 	}
@@ -242,13 +240,6 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 	//print_contents_of_array(&g_array);
 
 	int number_elements = array->used;
-
-	printf("\n\n\n");
-	printf(" !![[[[---]]] Trying to remove index %d from a total elements of: %d\n", index, number_elements);
-	print_contents_of_array(&g_array);
-
-	
-
 	if(index < number_elements){
 
 		for(int i = index; i < number_elements; i++){
@@ -258,10 +249,6 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 	} 
 
 	array->used--;
-	
-	printf("\nAFTER DELETING!!!!!\n");
-	print_contents_of_array(&g_array);
-	printf("\n\n\n");
 }
 
 void print_contents_of_array(file_objects_info *array){
@@ -750,10 +737,8 @@ const char * sanitize_relative_path(const char *src){
 
 	src = sanitize_path(src);
 	if(absolute){
-		printf("\n it was absolute path %s\n", src);
 		return src;
 	} else {
-		printf("\n it was not absolute path%s\n", src);
 		return ++src;
 	}
 }
@@ -850,14 +835,8 @@ static void before_main(void){
 static void after_main(void){
 	//printf("######### AFTER MAIN!!!!\n");
 
-	printf("Soy %s con PID: %d y PPID: %d\n", program_invocation_name, getpid(), getppid());
-	printf("Mi g_array tiene used: %lu y size: %lu\n", g_array.used, g_array.size);
-
-	printf("<<<< La dirección del array es: %X\nLos contenidos del array son:\n", &g_array);
-
-	for(unsigned int i = 0; i < g_array.used; i++){
-		printf("Path: %s\n", g_array.list[i].path);
-	}
+	printf("##### AFTER MAIN\n I AM  %s PID: %d PPID: %d\n", program_invocation_name, getpid(), getppid());
+	printf("g_array used: %lu size: %lu\n", g_array.used, g_array.size);
 
 	free_array(&g_array);
 	//printf("Dirección de array: %X\n", &g_array);
@@ -1057,16 +1036,10 @@ int openat(int dirfd, const char *path, int flags, ...){
 
 	const char *full_path;
 	if(path_is_absolute(path)){
-		printf("ABSOLUTE PATH");
 		full_path = sanitize_and_get_absolute_path(path);
 	} else {
-		printf("RELATIVE PATH");
 		full_path = get_file_path_from_directory_fd(path, dirfd);
 	}
-	
-
-	printf("\n\n\n The dirfd received is: %d\nThe path received is:%s\nThe translated path is: %s\n\n\n", dirfd, path, full_path);
-
 
 	bool path_exists_before = file_does_exist(full_path);
 	struct stat new_file;
@@ -1188,8 +1161,6 @@ int remove(const char *path) {
 	}
 
 	int index = find_index_in_array(&g_array, path);
-
-	printf(" <<< >>>>> INDEX AFTER INVOKING REMOVE: %d\n", index);
 
 	if(index >= 0){
 		remove_from_array_at_index(&g_array, index);
