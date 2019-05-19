@@ -64,9 +64,11 @@ const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_path(const char *);
 const char * sanitize_relative_path(const char *);
 const char * get_file_path_from_directory_fd(const char*, int);
+const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *, int);
 void timestamp();
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
+bool path_is_absolute(const char *);
 /// ########## Prototype declaration ##########
 
 /// <-------------------------------------------------> 
@@ -241,21 +243,25 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 
 	int number_elements = array->used;
 
+	printf("\n\n\n");
+	printf(" !![[[[---]]] Trying to remove index %d from a total elements of: %d\n", index, number_elements);
 	print_contents_of_array(&g_array);
 
-	printf(" !![[[[---]]] Trying to remove index %d from a total elements of: %d\n", index, number_elements);
+	
 
-	if(index < number_elements-1){
+	if(index < number_elements){
 
-		for(int i = index; i < number_elements-1; i++){
-			array->list[index] = array->list[index+1];
+		for(int i = index; i < number_elements; i++){
+			array->list[i] = array->list[i+1];
 		}
 
 	} 
 
 	array->used--;
-	//printf("AFTER DELETING!!!!!\n");
-	//print_contents_of_array(&g_array);
+	
+	printf("\nAFTER DELETING!!!!!\n");
+	print_contents_of_array(&g_array);
+	printf("\n\n\n");
 }
 
 void print_contents_of_array(file_objects_info *array){
@@ -541,6 +547,117 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 }
 
 /*
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links but using a directory file descriptor as current working dir. 
+*/
+const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char * src, int directory_fd) {
+
+		char *res;
+        size_t res_len;
+        size_t src_len = strlen(src);
+
+        const char *pointer;
+        const char *end_pointer;
+        const char *next_pointer;
+
+        // changing current working directory
+        char *original_working_dir = get_current_dir_name();
+		fchdir(directory_fd);
+
+        // Relative path
+        if (src_len == 0 || src[0] != '/') {
+
+                char cwd[PATH_MAX];
+                size_t cwd_len;
+
+                // Copy into cwd the null-terminated current working 
+                // directory with a max length of sizeof(cwd)
+                if (getcwd(cwd, sizeof(cwd)) == NULL) {
+                        return NULL;
+                }
+
+                cwd_len = strlen(cwd);
+                res = malloc(cwd_len + 1 + src_len + 1);
+                // Copies cwd_len bytes from cwd to res
+                memcpy(res, cwd, cwd_len);
+                res_len = cwd_len;
+                
+        } else {
+        // Absolute path
+                //res = malloc((src_len > 0 ? src_len : 1) + 1);
+        		res = malloc(src_len + 1);
+                res_len = 0;
+                
+        }
+
+        end_pointer = &src[src_len];
+
+
+        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
+                size_t len;
+
+                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
+                // to by pointer for the first instance of '/'
+                next_pointer = memchr(pointer, '/', end_pointer-pointer);
+
+                if (next_pointer == NULL) {
+                        next_pointer = end_pointer;
+                }
+
+
+                len = next_pointer-pointer;
+
+
+                switch(len) {
+                case 2:
+                        if (pointer[0] == '.' && pointer[1] == '.') {
+                        	// memrchr is like memchr, except that it searches 
+                        	// backward from the end of the res_len bytes pointed
+                        	// to by res instead of forward from the beginning
+                                const char * slash = memrchr(res, '/', res_len);
+                                if (slash != NULL) {
+                                	// This way the last node from the current
+                                	// directory is deleted. Lets say res starts
+                                	// @ 0x2 mem address and slash is @ 0x10.
+                                	// res_len would be 0x8 which is exactly
+                                	// the length between 0x2 and 0x10.
+                                        res_len = slash - res;
+                                }
+                                // Continue applies only to loop statements. 
+                                //That is, this jumps right to next for iteration,
+                                // skipping the remaining code.
+                                continue; 
+                        }
+                        break;
+                case 1:
+                        if (pointer[0] == '.') {
+                                continue;
+
+                        }
+                        break;
+                case 0:
+                        continue;
+                }
+                res[res_len++] = '/';
+                memcpy(&res[res_len], pointer, len);
+                res_len += len;
+        }
+
+        if (res_len == 0) {
+                res[res_len++] = '/';
+        }
+        // Marks the end of the new sanitized and absoluted path, thus discarding
+        // whatever follows res_len
+        res[res_len] = '\0';
+
+        // Restoring working dir
+        chdir(original_working_dir);
+		free (original_working_dir);
+
+        return res;
+}
+
+/*
 	Function to sanitize the given path.
 	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
 */
@@ -614,6 +731,14 @@ const char * sanitize_path(const char *src) {
 }
 
 /*
+	Function used to determine whether a path is absolute. If it isn't it's, 
+	obviosuly, because it is relative.
+*/
+bool path_is_absolute(const char *path){
+	return (path[0] == '/');
+}
+
+/*
 	Function used to sanitize a relative path. That is, sanitize an absoulte path
 	but without the first '/' slash character. That's why this function is as 
 	simple as calling sanitize_path and then simply make use of pointer arithmetics
@@ -621,7 +746,7 @@ const char * sanitize_path(const char *src) {
 	become src = "file".
 */
 const char * sanitize_relative_path(const char *src){
-	bool absolute = (src[0] == '/');
+	bool absolute = path_is_absolute(src);
 
 	src = sanitize_path(src);
 	if(absolute){
@@ -690,6 +815,7 @@ char * get_directory_from_fd(int directory_fd){
 */
 const char * get_file_path_from_directory_fd(const char *path, int dirfd){
 	
+	/*
 	char *directory_fd_path = get_directory_from_fd(dirfd);
 
    	// +2 for null-trailing byte and the "/" slash between them
@@ -702,6 +828,11 @@ const char * get_file_path_from_directory_fd(const char *path, int dirfd){
    	free(directory_fd_path);
 
    	return sanitize_and_get_absolute_path(aux_path);
+
+	*/
+
+	return sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
+
   }
 
 /// ########## Core and useful functions ##########
@@ -924,14 +1055,23 @@ int unlinkat(int dirfd, const char *path, int flags){
 int openat(int dirfd, const char *path, int flags, ...){
 	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
 
-	path = sanitize_relative_path(path);
+	const char *full_path;
+	if(path_is_absolute(path)){
+		printf("ABSOLUTE PATH");
+		full_path = sanitize_and_get_absolute_path(path);
+	} else {
+		printf("RELATIVE PATH");
+		full_path = get_file_path_from_directory_fd(path, dirfd);
+	}
+	
 
-	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
+	printf("\n\n\n The dirfd received is: %d\nThe path received is:%s\nThe translated path is: %s\n\n\n", dirfd, path, full_path);
 
-	bool path_exists_before = file_does_exist(path);
+
+	bool path_exists_before = file_does_exist(full_path);
 	struct stat new_file;
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(full_path, __func__);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, flags);
