@@ -1,11 +1,14 @@
 // RazviOverflow
 
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <string.h>
 
 /*
 	Simple C program to test out every single way of changing the inode of a
@@ -48,6 +51,21 @@ int main(){
 	write(fd, "File created with OPEN function\n", contentLength);
 	close(fd);
 
+	remove("file_OPEN.txt");
+
+	fd = open("file_OPEN1.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	write(fd, "File created with OPEN function\n", contentLength);
+	close(fd);
+	remove("file_OPEN1.txt");
+	fd = open("file_OPEN2.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	write(fd, "File created with OPEN function\n", contentLength);
+	close(fd);
+	fd = open("file_OPEN3.txt", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	write(fd, "File created with OPEN function\n", contentLength);
+	close(fd);
+
+	remove("file_OPEN2.txt");
+	remove("file_OPEN3.txt");
 
 	int directory_fd = dirfd(opendir("/tmp/"));
 
@@ -113,10 +131,17 @@ int main(){
 
 	symlink("file_CREAT.txt","file_SYMLINK");
 
-	symlinkat("file_CREAT.txt", directory_fd, "file_SYMLINKAT");
+	// Symlinkat takes both arguments *oldpath and *newpath relatives to newdirfd
+
+	char aux_path[strlen(get_current_dir_name()) + strlen("file_CREAT.txt") + 1];
+
+	// +1 because of  in-between '/'
+	snprintf(aux_path, sizeof(aux_path)+1, "%s/%s", get_current_dir_name(), "file_CREAT.txt");
+
+	symlinkat(aux_path, directory_fd, "file_SYMLINKAT");
 
 
-	sleep(10);
+	sleep(5);
 
 
 	// -------
