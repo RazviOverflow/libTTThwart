@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -20,6 +21,9 @@ int main(){
 
 	fd = open("file_SYMLINKAT2", O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	close(fd);
+
+	system("mkdir temporal");
+	system("touch temporal/testing_symlinkat3.txt");
 
 	// Symlinkat takes both arguments *oldpath and *newpath relatives to newdirfd
 
