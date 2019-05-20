@@ -1052,18 +1052,26 @@ int openat(int dirfd, const char *path, int flags, ...){
 
 	va_end(variable_arguments);
 
-	if(!path_exists_before && !fstat(openat_result, &new_file)){
+	/*
+		On success, openat() returns a new file descriptor. On error, -1 is
+		returned and errno is set to indicate the error.
+	*/
+	if(openat_result == -1){
+		printf("OPENAT ERROR: %s\n", strerror(errno));
+	} else {
 
-		int index = find_index_in_array(&g_array, full_path);
-		ino_t inode = get_inode(full_path);
-		if(index >= 0){
-			g_array.list[index].inode = inode;
-		} else {
-			insert_in_array(&g_array, full_path, inode);
+		if(!path_exists_before && !fstat(openat_result, &new_file)){
+
+			int index = find_index_in_array(&g_array, full_path);
+			ino_t inode = get_inode(full_path);
+			if(index >= 0){
+				g_array.list[index].inode = inode;
+			} else {
+				insert_in_array(&g_array, full_path, inode);
+			}
+
 		}
-
 	}
-
 	return openat_result;
 
 }
@@ -1108,26 +1116,25 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	
-	newpath = sanitize_relative_path(newpath);
-	oldpath = sanitize_relative_path(oldpath);
-
-	const char *full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+	const char *full_path;
+	if(path_is_absolute(newpath)){
+		full_path = sanitize_and_get_absolute_path(newpath);
+	} else {
+		full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+	}
 
    	print_function_and_path(__func__, full_path);
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
-	if(symlinkat_result){
+	/*
+		On success, symlinkat() returns 0. On error, -1 is returned and errno
+		is set to indicate the error.
+	*/
+	if(symlinkat_result == -1){
 		printf("SYMLINKAT ERROR: %s\n", strerror(errno));
-	}
-
-	int index = find_index_in_array(&g_array, full_path);
-
-	ino_t inode = get_inode(full_path);
-
-	if(index >= 0){
-		g_array.list[index].inode = inode;
 	} else {
+		ino_t inode = get_inode(full_path);
 		insert_in_array(&g_array, full_path, inode);
 	}
 
@@ -1155,7 +1162,11 @@ int remove(const char *path) {
 
 	int remove_result = original_remove(path);
 
-	if(remove_result){
+	/*
+		On success, zero is returned. On error, -1 is returned, and errno is
+		set appropriately.
+	*/
+	if(remove_result == -1){
 		printf("REMOVE ERROR: %s\n", strerror(errno));
 	}
 
@@ -1246,21 +1257,25 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		original_xmknodat = dlsym_wrapper(__func__);
 	}
 	
-	path = sanitize_relative_path(path);
-
-	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
+	const char *full_path;
+	if(path_is_absolute(path)){
+		full_path = sanitize_and_get_absolute_path(path);
+	} else {
+		full_path = get_file_path_from_directory_fd(path, dirfd);
+	}
 
    	print_function_and_path(__func__, full_path);
 
 	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
-	int index = find_index_in_array(&g_array, full_path);
-
-	ino_t inode = get_inode(full_path);
-
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
-    } else {
+	/*
+		On success, mknodat() returns 0. On error, -1 is returned and errno is
+		set to indicate the error.
+	*/
+	if(mknodat_result == -1){
+		printf("MKNODAT ERROR: %s\n", strerror(errno));
+	} else {
+		ino_t inode = get_inode(full_path);
     	insert_in_array(&g_array, full_path, inode);
     }
 
@@ -1310,24 +1325,29 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		original_linkat = dlsym_wrapper(__func__);
 	}
 
-	oldpath = sanitize_relative_path(oldpath);
-	newpath = sanitize_relative_path(newpath);
+	const char *full_path;
+	if(path_is_absolute(newpath)){
+		full_path = sanitize_and_get_absolute_path(newpath);
+	} else {
+		full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+	}
 
-	const char *full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
-
-    print_function_and_path(__func__, full_new_path);
+    print_function_and_path(__func__, full_path);
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
-    int index = find_index_in_array(&g_array, full_new_path);
-
-    ino_t inode = get_inode(full_new_path);
-
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
+    /*
+		On success, linkat() returns 0. On error, -1 is returned and errno is
+		set to indicate the error.
+    */
+    if(linkat_result == -1){
+    	printf("LINKAT ERROR: %s\n", strerror(errno));
     } else {
-		insert_in_array(&g_array, full_new_path, inode);
-	}
+
+    	ino_t inode = get_inode(full_path);
+		insert_in_array(&g_array, full_path, inode);
+
+    }
 
     return linkat_result;
 
