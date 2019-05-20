@@ -1,0 +1,1 @@
+# Folder about to be deleted. Dummy, spurious testing-purpose-only files.
