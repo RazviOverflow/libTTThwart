@@ -1003,13 +1003,12 @@ int unlinkat(int dirfd, const char *path, int flags){
 		original_unlinkat = dlsym_wrapper(__func__);
 	}
 	
-	/*
-		It simply gets sanitized (not absoluted) because it's a relative path to 
-		the directory pointed to by dirfd, not the current working dir. 
-	*/
-	path = sanitize_relative_path(path);
-
-	const char *full_path = get_file_path_from_directory_fd(path, dirfd);
+	const char *full_path;
+	if(path_is_absolute(path)){
+		full_path = sanitize_and_get_absolute_path(path);
+	} else {
+		full_path = get_file_path_from_directory_fd(path, dirfd);
+	}
 
 	print_function_and_path(__func__, full_path);
 
