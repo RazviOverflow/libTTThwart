@@ -537,105 +537,14 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 	Function to get full path of a given parameter without resolving, expanding
 	symbolic links but using a directory file descriptor as current working dir. 
 */
-const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char * src, int directory_fd) {
+const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd) {
 
-		char *res;
-        size_t res_len;
-        size_t src_len = strlen(src);
-
-        const char *pointer;
-        const char *end_pointer;
-        const char *next_pointer;
-
-        // changing current working directory
+		// changing current working directory
         char *original_working_dir = get_current_dir_name();
 		fchdir(directory_fd);
 
-        // Relative path
-        if (src_len == 0 || src[0] != '/') {
 
-                char cwd[PATH_MAX];
-                size_t cwd_len;
-
-                // Copy into cwd the null-terminated current working 
-                // directory with a max length of sizeof(cwd)
-                if (getcwd(cwd, sizeof(cwd)) == NULL) {
-                        return NULL;
-                }
-
-                cwd_len = strlen(cwd);
-                res = malloc(cwd_len + 1 + src_len + 1);
-                // Copies cwd_len bytes from cwd to res
-                memcpy(res, cwd, cwd_len);
-                res_len = cwd_len;
-                
-        } else {
-        // Absolute path
-                //res = malloc((src_len > 0 ? src_len : 1) + 1);
-        		res = malloc(src_len + 1);
-                res_len = 0;
-                
-        }
-
-        end_pointer = &src[src_len];
-
-
-        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
-                size_t len;
-
-                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
-                // to by pointer for the first instance of '/'
-                next_pointer = memchr(pointer, '/', end_pointer-pointer);
-
-                if (next_pointer == NULL) {
-                        next_pointer = end_pointer;
-                }
-
-
-                len = next_pointer-pointer;
-
-
-                switch(len) {
-                case 2:
-                        if (pointer[0] == '.' && pointer[1] == '.') {
-                        	// memrchr is like memchr, except that it searches 
-                        	// backward from the end of the res_len bytes pointed
-                        	// to by res instead of forward from the beginning
-                                const char * slash = memrchr(res, '/', res_len);
-                                if (slash != NULL) {
-                                	// This way the last node from the current
-                                	// directory is deleted. Lets say res starts
-                                	// @ 0x2 mem address and slash is @ 0x10.
-                                	// res_len would be 0x8 which is exactly
-                                	// the length between 0x2 and 0x10.
-                                        res_len = slash - res;
-                                }
-                                // Continue applies only to loop statements. 
-                                //That is, this jumps right to next for iteration,
-                                // skipping the remaining code.
-                                continue; 
-                        }
-                        break;
-                case 1:
-                        if (pointer[0] == '.') {
-                                continue;
-
-                        }
-                        break;
-                case 0:
-                        continue;
-                }
-                res[res_len++] = '/';
-                memcpy(&res[res_len], pointer, len);
-                res_len += len;
-        }
-
-        if (res_len == 0) {
-                res[res_len++] = '/';
-        }
-        // Marks the end of the new sanitized and absoluted path, thus discarding
-        // whatever follows res_len
-        res[res_len] = '\0';
+		char *res = sanitize_and_get_absolute_path(src);
 
         // Restoring working dir
         chdir(original_working_dir);
@@ -652,7 +561,7 @@ const char * sanitize_path(const char *src) {
 
 		size_t res_len = 0;
         size_t src_len = strlen(src);
-		char *res = malloc(src_len + 1);;
+		char *res = malloc(src_len + 1);
         
         const char *pointer;
         const char *end_pointer = &src[src_len];
@@ -919,25 +828,34 @@ int open(const char *path, int flags, ...)
 	va_end(variable_arguments);
 
 	/*
+		open(), openat(), and creat() return the new file descriptor, or -1
+		if an error occurred (in which case, errno is set appropriately).
+	*/
+
+	if(open_result == -1){
+		printf("OPEN ERROR: %s\n", strerror(errno));
+	} else {
+		/*
 		If file didn't exist before actual open call (because otherwise it'd
 		have been treated in check_parameters_properties) and fstat returns
 		zero (success) a new file has been created.
-	*/
-	if(!path_exists_before && !fstat(open_result, &new_file)){
-		/*
-			New file has been just created. Now there are two options:
-				- There is already an entry in the array referencing the path
-					so only the inode must be updated.
-				- There is no entry in the array so just insert.
 		*/
-		int index = find_index_in_array(&g_array, path);
-		ino_t inode = get_inode(path);
-		if(index >= 0){
-			g_array.list[index].inode = inode;
-		} else {
-			insert_in_array(&g_array, path, inode);
-		}
+		if(!path_exists_before && !fstat(open_result, &new_file)){
+			/*
+				New file has been just created. Now there are two options:
+					- There is already an entry in the array referencing the path
+						so only the inode must be updated.
+					- There is no entry in the array so just insert.
+			*/
+			int index = find_index_in_array(&g_array, path);
+			ino_t inode = get_inode(path);
+			if(index >= 0){
+				g_array.list[index].inode = inode;
+			} else {
+				insert_in_array(&g_array, path, inode);
+			}
 
+		}
 	}
 
 	return open_result;
@@ -985,11 +903,18 @@ int unlink(const char *path){
 
 	int unlink_result = original_unlink(path);
 
-	int index = find_index_in_array(&g_array, path);
-
-	if(index >= 0){
-		remove_from_array_at_index(&g_array, index);
-		//g_array.list[index].inode = -1;
+	/*
+		On success, zero is returned. On error, -1 is returned, and errno is
+		set appropriately.
+	*/
+	if(unlink_result == -1){
+		printf("UNLINK ERROR: %s\n", strerror(errno));
+	} else {
+		int index = find_index_in_array(&g_array, path);
+		if(index >= 0){
+			remove_from_array_at_index(&g_array, index);
+			//g_array.list[index].inode = -1;
+		}
 	}
 
 	return unlink_result;
@@ -1019,11 +944,20 @@ int unlinkat(int dirfd, const char *path, int flags){
 	*/
    	int unlinkat_result = original_unlinkat(dirfd, path, flags);
 
-   	int index = find_index_in_array(&g_array, full_path);
+   	/*
+		On success, unlinkat() returns 0. On error, -1 is returned and errno
+		is set to indicate the error.
+   	*/
+   	if(unlinkat_result == -1){
+		printf("UNLINKAT ERROR: %s\n", strerror(errno));
+	} else {
 
-	if(index >= 0){
-		remove_from_array_at_index(&g_array, index);
-		//g_array.list[index].inode = -1;
+	   	int index = find_index_in_array(&g_array, full_path);
+
+		if(index >= 0){
+			remove_from_array_at_index(&g_array, index);
+			//g_array.list[index].inode = -1;
+		}
 	}
 
 	return unlinkat_result;
@@ -1092,14 +1026,22 @@ int symlink(const char *oldpath, const char *newpath){
 
     int symlink_result = original_symlink(oldpath, newpath);
 
-    int index = find_index_in_array(&g_array, newpath);
-
-    ino_t inode = get_inode(newpath);
-
-	if(index >= 0){
-		g_array.list[index].inode = inode;
+    /*
+		Upon successful completion, symlink() shall return 0; otherwise, it 
+		shall return -1 and set errno to indicate the error.
+    */
+    if(symlink_result == -1){
+		printf("SYMLINK ERROR: %s\n", strerror(errno));
 	} else {
-		insert_in_array(&g_array, newpath, inode);
+		int index = find_index_in_array(&g_array, newpath);
+
+	    ino_t inode = get_inode(newpath);
+
+		if(index >= 0){
+			g_array.list[index].inode = inode;
+		} else {
+			insert_in_array(&g_array, newpath, inode);
+		}
 	}
 
 	return symlink_result;
@@ -1168,13 +1110,13 @@ int remove(const char *path) {
 	*/
 	if(remove_result == -1){
 		printf("REMOVE ERROR: %s\n", strerror(errno));
-	}
+	} else {
+		int index = find_index_in_array(&g_array, path);
 
-	int index = find_index_in_array(&g_array, path);
-
-	if(index >= 0){
-		remove_from_array_at_index(&g_array, index);
-		//g_array.list[index].inode = -1;
+		if(index >= 0){
+			remove_from_array_at_index(&g_array, index);
+			//g_array.list[index].inode = -1;
+		}
 	}
 
     return remove_result;
@@ -1199,15 +1141,24 @@ int mknod(const char *path, mode_t mode, dev_t dev){
 
     int mknod_result = original_mknod(path, mode, dev);
 
-    int index = find_index_in_array(&g_array, path);
+    /*
+		mknod() and mknodat() return zero on success, or -1 if an error
+		occurred (in which case, errno is set appropriately).
+    */
 
-    ino_t inode = get_inode(path);
+    if(mknod_result == -1){
+		printf("MKNOD ERROR: %s\n", strerror(errno));
+	} else {
+		int index = find_index_in_array(&g_array, path);
 
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
-    } else {
-    	insert_in_array(&g_array, path, inode);
-    }
+	    ino_t inode = get_inode(path);
+
+	    if(index >= 0){
+	    	g_array.list[index].inode = inode;
+	    } else {
+	    	insert_in_array(&g_array, path, inode);
+	    }
+	}
 
     return mknod_result;
 
@@ -1231,15 +1182,23 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
     int mknod_result = original_xmknod(ver, path, mode, dev);
 
-    int index = find_index_in_array(&g_array, path);
+    /*
+		mknod() and mknodat() return zero on success, or -1 if an error
+		occurred (in which case, errno is set appropriately).
+    */
+    if(mknod_result == -1){
+		printf("MKNOD ERROR: %s\n", strerror(errno));
+	} else {
+		int index = find_index_in_array(&g_array, path);
 
-    ino_t inode = get_inode(path);
+	    ino_t inode = get_inode(path);
 
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
-    } else {
-    	insert_in_array(&g_array, path, inode);
-    }
+	    if(index >= 0){
+	    	g_array.list[index].inode = inode;
+	    } else {
+	    	insert_in_array(&g_array, path, inode);
+	    }
+	}
 
     return mknod_result;
 
@@ -1299,14 +1258,22 @@ int link(const char *oldpath, const char *newpath){
 
    	int link_result = original_link(oldpath, newpath);
 
-   	int index = find_index_in_array(&g_array, newpath);
-
-   	ino_t inode = get_inode(newpath);
-
-	if(index >= 0){
-		g_array.list[index].inode = inode;
+   	/*
+		Upon successful completion, 0 shall be returned. Otherwise, -1 shall
+		be returned and errno set to indicate the error.
+   	*/
+   	if(link_result == -1){
+		printf("LINK ERROR: %s\n", strerror(errno));
 	} else {
-		insert_in_array(&g_array, newpath, inode);
+	   	int index = find_index_in_array(&g_array, newpath);
+
+	   	ino_t inode = get_inode(newpath);
+
+		if(index >= 0){
+			g_array.list[index].inode = inode;
+		} else {
+			insert_in_array(&g_array, newpath, inode);
+		}
 	}
 
    return link_result;
@@ -1366,15 +1333,25 @@ int creat64(const char *path, mode_t mode){
 
     int creat64_result = original_creat64(path, mode);
 
-    int index = find_index_in_array(&g_array, path);
-
-    ino_t inode = get_inode(path);
-
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
+    /*
+		If successful, creat() and creat64() return a nonnegative integer, 
+		which is the lowest numbered unused valid file descriptor. On failure,
+		they return -1, do not create or modify any files, and set errno to 
+		one of the following values:
+    */
+    if(creat64_result == -1){
+    	printf("CREAT64 ERROR: %s\n", strerror(errno));
     } else {
-		insert_in_array(&g_array, path, inode);
-	}
+	 	int index = find_index_in_array(&g_array, path);
+
+	    ino_t inode = get_inode(path);
+
+	    if(index >= 0){
+	    	g_array.list[index].inode = inode;
+	    } else {
+			insert_in_array(&g_array, path, inode);
+		}
+    }
 
     return creat64_result;
 
@@ -1394,15 +1371,25 @@ int creat(const char *path, mode_t mode){
 
     int creat_result = original_creat(path, mode);
 
-    int index = find_index_in_array(&g_array, path);
-
-    ino_t inode = get_inode(path);
-
-    if(index >= 0){
-    	g_array.list[index].inode = inode;
+     /*
+		If successful, creat() and creat64() return a nonnegative integer, 
+		which is the lowest numbered unused valid file descriptor. On failure,
+		they return -1, do not create or modify any files, and set errno to 
+		one of the following values:
+    */
+    if(creat_result == -1){
+    	printf("CREAT ERROR: %s\n", strerror(errno));
     } else {
-		insert_in_array(&g_array, path, inode);
-	}
+    	int index = find_index_in_array(&g_array, path);
+
+	    ino_t inode = get_inode(path);
+
+	    if(index >= 0){
+	    	g_array.list[index].inode = inode;
+	    } else {
+			insert_in_array(&g_array, path, inode);
+		}
+    }
 
     return creat_result;
 
