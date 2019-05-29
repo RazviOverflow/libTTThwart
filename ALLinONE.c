@@ -544,7 +544,7 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 		fchdir(directory_fd);
 
 
-		char *res = sanitize_and_get_absolute_path(src);
+		const char *res = sanitize_and_get_absolute_path(src);
 
         // Restoring working dir
         chdir(original_working_dir);
