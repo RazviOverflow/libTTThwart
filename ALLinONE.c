@@ -23,6 +23,8 @@
 #include <limits.h>
 #include <time.h>
 
+#include <sys/mman.h>
+
 ////TODO implement logger and replace printf family with corresponding log level
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
@@ -130,6 +132,19 @@ void initialize_array(file_objects_info *array, size_t size){
 	}
 	array->used = 0;
 	array->size = size;
+
+ 	file_objects_info *shared_global_array = (file_objects_info *) mmap(NULL, sizeof(file_objects_info), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+
+ 	memcpy(shared_global_array , array, sizeof(file_objects_info));
+ 	g_array = *shared_global_array;
+
+ 	file_object_info *shared_list = (file_object_info *) mmap(NULL, sizeof(file_object_info) * array->size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+
+ 	memcpy(shared_list, array->list, sizeof(file_object_info) * array->size);
+
+ 	g_array.list = shared_list;
+
+ 	
     //Elements of array are contiguous
     //memset(&array->list[array->used], 0, sizeof(file_object_info) * initialSize);
 }
@@ -145,6 +160,10 @@ void initialize_array(file_objects_info *array, size_t size){
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If array has not been yet initialized, initialize it. 
+
+    printf("\n\n\nPROCESS %s with PID %d CALLED insertinarray FOR path: %s and inode: %lu\n", get_current_dir_name(), getpid(), path, inode);
+	print_contents_of_array(&g_array);
+	
 
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
@@ -177,6 +196,19 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
 	array->list[array->used].path = strdup(path);
 	array->list[array->used].inode = inode;
 	array->used++;
+
+ 	file_objects_info *array2 = (file_objects_info *) mmap(NULL, sizeof(array), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+
+ 	memcpy(array2, array, sizeof(file_objects_info));
+
+ 	array2->list = (file_object_info *) mmap(NULL, sizeof(file_object_info) * array->size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+
+ 	memcpy(array2->list, array->list, sizeof(file_object_info) * array->size);
+
+ 	printf("PROCESS %s with PID %d CALLED insertinarray FOR path: %s and inode: %lu\n", get_current_dir_name(), getpid(), path, inode);
+	print_contents_of_array(&g_array);
+	printf("\n\n\n");
+
 }
 
 /*
@@ -185,7 +217,11 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
 */
 void free_array(file_objects_info *array){
 
-	print_contents_of_array(&g_array);
+	print_contents_of_array(array);
+	fflush(stdout);
+
+	/*
+	
 
 	for(uint i = 0; i < array->used; i++){
 		free(array->list[i].path);
@@ -197,6 +233,8 @@ void free_array(file_objects_info *array){
 
 	array->used = 0;
 	array->size = 0;
+	*/
+
 
 }
 
@@ -849,6 +887,7 @@ int open(const char *path, int flags, ...)
 			*/
 			int index = find_index_in_array(&g_array, path);
 			ino_t inode = get_inode(path);
+
 			if(index >= 0){
 				g_array.list[index].inode = inode;
 			} else {

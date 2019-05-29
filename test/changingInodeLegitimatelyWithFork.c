@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 int process_filename(char *filename)
 {
@@ -25,7 +26,7 @@ int process_filename(char *filename)
             creat(filename, S_IRUSR | S_IWUSR);
         } else {
             // Parent
-            sleep(5);
+            wait(NULL);
 
             if((fd = open(filename, O_RDWR | O_APPEND)) == -1){
                 printf("[!] Error while trying to open %s.\n", filename);
