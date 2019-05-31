@@ -31,23 +31,33 @@
 //#define O_RDONLY  00000000
 
 /// ########## Hooked functions ##########
+// Left-handed functions
 static int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*original_access)(const char *path, int mode) = NULL;
+static int (*original_rmdir)(const char *path) = NULL;
+static int (*original_unlink)(const char *path) = NULL;
+static int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
+static int (*original_remove)(const char *path) = NULL;
+static ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz) = NULL; // readlink(2)
+static ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
+
+
+
 static FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
 
 static int (*original_open)(const char *path, int flags, ...) = NULL; 
-static int (*original_unlink)(const char *path) = NULL;
+
 static int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
-static int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
+
 static int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
 static int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath) = NULL;
-static int (*original_remove)(const char *path) = NULL;
+
 static int (*original_mknod)(const char *path, mode_t mode, dev_t dev) = NULL;
 static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
-static int (*original_link)(const char *oldpath, const char*newpath) = NULL;
+static int (*original_link)(const char *oldpath, const char *newpath) = NULL;
 static int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
 static int (*original_creat64)(const char *path, mode_t mode) = NULL;
 static int (*original_creat)(const char *path, mode_t mode) = NULL;
@@ -145,40 +155,50 @@ void initialize_array(file_objects_info *array, size_t size){
     file_object_info element, the size of the array gets doubled.
     After the element is inserted, "used" member of the given
     array is postincremented.
+    If the path already exists in the array, the function 
+    updates the corresponding inode instead of inserting new
+    element.
 */
 void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
 	}
-
+	// If element is already in array simply update its inode in case the
+	// the new inode is different from the one already existing in the array
+	if((int index = find_index_in_array(array, path)) => 0){
+		if(inode != array->list[index].inode){
+			array->list[index].inode = inode;
+		}
+	} else  {
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
-	if(array->used == array->size){
+		if(array->used == array->size){
 		////printf("Size of array %X is about to get doubled.\n", &(*array));
 		//printf("Size of array is about to get doubled\n");
-		array->size *= 2;
-		file_object_info *aux = (file_object_info *)realloc(array->list,
-			array->size * sizeof(file_object_info));
+			array->size *= 2;
+			file_object_info *aux = (file_object_info *)realloc(array->list,
+				array->size * sizeof(file_object_info));
 
         // It is never a good idea to do something like:
         // array->list = realloc... because if realloc fails you lose the
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
-		if(!aux){
-			printf("Error trying to realloc size for array in Insert process.\n");
-			exit(EXIT_FAILURE);
-		} else {
-			array->list = aux;
-		}
+			if(!aux){
+				printf("Error trying to realloc size for array in Insert process.\n");
+				exit(EXIT_FAILURE);
+			} else {
+				array->list = aux;
+			}
 
         //Initializing new elements of realocated array
-		memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
+			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
 
+		}
+		array->list[array->used].path = strdup(path);
+		array->list[array->used].inode = inode;
+		array->used++;
 	}
-	array->list[array->used].path = strdup(path);
-	array->list[array->used].inode = inode;
-	array->used++;
 }
 
 /*
@@ -189,7 +209,7 @@ void free_array(file_objects_info *array){
 
 	print_contents_of_array(array);
 	fflush(stdout);
-	
+
 	for(uint i = 0; i < array->used; i++){
 		free(array->list[i].path);
 		array->list[i].path = NULL;
@@ -768,7 +788,9 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 	path = sanitize_and_get_absolute_path(path);
 
-	check_parameters_properties(path, __func__);
+	print_function_and_path(__func__, path);
+
+	insert_in_array(&g_array, path);
 
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
@@ -783,7 +805,9 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 	path = sanitize_and_get_absolute_path(path);
 
-	check_parameters_properties(path, __func__);
+	print_function_and_path(__func__, path);
+
+	insert_in_array(&g_array, path);
 
 	if ( original_lxstat == NULL ) {
 		original_lxstat = dlsym_wrapper(__func__);
@@ -798,7 +822,9 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	path = sanitize_and_get_absolute_path(path);
 
-	check_parameters_properties(path, __func__);
+	print_function_and_path(__func__, path);
+
+	insert_in_array(&g_array, path);
 
 	if ( original_xstat64 == NULL ) {
 		original_xstat64 = dlsym_wrapper(__func__);
@@ -871,7 +897,9 @@ int access(const char *path, int mode){
 
 	path = sanitize_and_get_absolute_path(path);
 
-	check_parameters_properties(path, __func__);
+	print_function_and_path(__func__, path);
+
+	insert_in_array(&g_array, path);
 
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
@@ -1399,6 +1427,89 @@ int creat(const char *path, mode_t mode){
 
     return creat_result;
 
+}
+
+int rmdir(const char *path){
+
+	if(original_rmdir == NULL){
+    	original_rmdir = dlsym_wrapper(__func__);
+    }
+    
+    path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	int rmdir_result = original_rmdir(path);
+
+	/*
+		Upon successful completion, the function rmdir() shall return 0. 
+		Otherwise, -1 shall be returned, and errno set to indicate the error. 
+		If -1 is returned, the named directory shall not be changed.
+	*/
+	if(rmdir_result == -1){
+		printf("RMDIR ERROR: %s\n", strerror(errno));
+	} else {
+		int index = find_index_in_array(&g_array, path);
+
+		if(index >= 0){
+			rmdir_from_array_at_index(&g_array, index);
+			//g_array.list[index].inode = -1;
+		}
+	}
+
+    return rmdir_result;
+
+}
+
+ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	insert_in_array(&g_array, pathname);
+
+	if ( original_readlink == NULL ) {
+		original_readlink = dlsym_wrapper(__func__);
+	}
+
+	return original_readlink(pathname, buf, bufsiz);
+}
+
+ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
+
+
+	if(original_readlinkat == NULL){
+		original_readlinkat = dlsym_wrapper(__func__);
+	}
+
+	const char *full_path;
+	if(path_is_absolute(pathname)){
+		full_path = sanitize_and_get_absolute_path(pathname);
+	} else {
+		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+	}
+
+    print_function_and_path(__func__, full_path);
+
+    int readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
+
+    /*
+		On success, these calls return the number of bytes placed in buf.
+       	(If the returned value equals bufsiz, then truncation may have
+       	occurred.)  On error, -1 is returned and errno is set to indicate the
+       	error.
+    */
+    if(readlinkat_result == -1){
+    	printf("READLINKAT ERROR: %s\n", strerror(errno));
+    } else {
+
+    	ino_t inode = get_inode(full_path);
+		insert_in_array(&g_array, full_path, inode);
+
+    }
+
+    return readlinkat_result;
 }
 
 //#########################
