@@ -33,8 +33,9 @@
 /// ########## Hooked functions ##########
 // Left-handed functions
 static int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
-static int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+static int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
+static int (*original_lxstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
 static int (*original_access)(const char *path, int mode) = NULL;
 static int (*original_rmdir)(const char *path) = NULL;
 static int (*original_unlink)(const char *path) = NULL;
@@ -800,23 +801,6 @@ int __xstat(int ver, const char *path, struct stat *buf)
 	return original_xstat(ver, path, buf);
 } 
 
-int __lxstat(int ver, const char *path, struct stat *buf)
-{
-
-	path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path);
-
-	insert_in_array(&g_array, path);
-
-	if ( original_lxstat == NULL ) {
-		original_lxstat = dlsym_wrapper(__func__);
-	}
-
-	return original_lxstat(ver,path, buf);
-}
-
-
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
 
@@ -832,6 +816,22 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
   ////printf("xstat64 %s\n",path);
 	return original_xstat64(ver, path, buf);
+}
+
+int __lxstat64(int ver, const char *path, struct stat *buf)
+{
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	insert_in_array(&g_array, path);
+
+	if ( original_lxstat64 == NULL ) {
+		original_lxstat64 = dlsym_wrapper(__func__);
+	}
+
+	return original_lxstat64(ver,path, buf);
 }
 
 /*
