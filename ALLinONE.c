@@ -22,6 +22,8 @@
 
 #include <limits.h>
 #include <time.h>
+#include <utime.h>
+#include <sys/time.h>
 
 #include <sys/mman.h>
 
@@ -70,7 +72,7 @@ static int (*original_chmod)(const char *pathname, mode_t mode) = NULL;
 static int (*original_chown)(const char *pathname, uid_t owner, gid_t group) = NULL;
 static int (*original_truncate)(const char *path, off_t length) = NULL;
 static int (*original_truncate64)(const char *path, off64_t length) = NULL;
-static int (*original_utime)(const char *filename, const struct utimebuf *times) = NULL;
+static int (*original_utime)(const char *filename, const struct utimbuf *times) = NULL;
 static int (*original_utimes)(const char *filename, const struct timeval times[2]) = NULL;
 static long(*original_pathconf)(const char *path, int name) = NULL;
 static int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
@@ -86,7 +88,7 @@ static int (*original_chroot)(const char *path) = NULL;
 // doubts
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
 static int (*original_pclose)(FILE *stream) = NULL;
-static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned ling mountflags, const void *data) = NULL;
+static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 
 
 
@@ -130,7 +132,7 @@ typedef struct{
 } file_object_info;
 
 typedef struct{
-	file_object_info * list;
+	file_object_info *list;
 	size_t used;
 	size_t size;
 } file_objects_info;
@@ -139,7 +141,7 @@ typedef struct{
 void initialize_array(file_objects_info *, size_t);
 void insert_in_array(file_objects_info *, const char *, ino_t);
 void free_array(file_objects_info *);
-int find_infex_in_array(file_objects_info *, const char *);
+int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
 void print_contents_of_array(file_objects_info *);
@@ -203,8 +205,10 @@ void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
 		initialize_array(&g_array, 2);
 	}
 	// If element is already in array simply update its inode in case the
-	// the new inode is different from the one already existing in the array
-	if((int index = find_index_in_array(array, path)) => 0){
+	// the new inode is different from the one already existing
+	int index = find_index_in_array(array, path);
+
+	if(index >= 0){
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
 		}
@@ -274,9 +278,9 @@ int find_index_in_array(file_objects_info *array, const char *path){
 
 	if(array->size > 0){
 		for(uint i = 0; i < array->used; i++){
-				if(!strcmp(array->list[i].path, path)){
-						returnValue = i;
-				break;
+			if(!strcmp(array->list[i].path, path)){
+				returnValue = i;
+			break;
 			}
 		}
 		return returnValue;
@@ -321,6 +325,22 @@ void print_contents_of_array(file_objects_info *array){
 	for(uint i = 0; i < array->used; i++){
 		printf("[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
 	}
+}
+
+/*
+	Upsert is update + insert. If the element already exists, update it. 
+	Otherwise insert it.
+*/
+void upsert_entry_path(const char *oldpath, const char *newpath){
+	
+	int index = find_index_in_array(&g_array, oldpath);
+	if(index == -1){
+		ino_t inode = get_inode(newpath);
+		insert_in_array(&g_array, newpath, inode);
+	} else {
+		g_array.list[index].path = strdup(newpath);
+	}
+
 }
 
 /// ########## Array management ##########
@@ -415,6 +435,28 @@ int open_wrapper(const char *path, int flags, va_list variable_arguments){
 
 	} else {
 		return original_open(path, flags);
+	}
+	
+}
+
+int open64_wrapper(const char *path, int flags, va_list variable_arguments){
+
+	if ( original_open64 == NULL ) {
+		original_open64 = dlsym_wrapper("open64");
+	}
+
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(aux_list, mode_t);
+
+		va_end(aux_list);
+
+		return original_open64(path, flags, mode);
+
+	} else {
+		return original_open64(path, flags);
 	}
 	
 }
@@ -840,7 +882,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path);
+	insert_in_array(&g_array, path, get_inode(path));
 
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
@@ -857,7 +899,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path);
+	insert_in_array(&g_array, path, get_inode(path));
 
 	if ( original_xstat64 == NULL ) {
 		original_xstat64 = dlsym_wrapper(__func__);
@@ -867,14 +909,14 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 	return original_xstat64(ver, path, buf);
 }
 
-int __lxstat64(int ver, const char *path, struct stat *buf)
+int __lxstat64(int ver, const char *path, struct stat64 *buf)
 {
 
 	path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path);
+	insert_in_array(&g_array, path, get_inode(path));
 
 	if ( original_lxstat64 == NULL ) {
 		original_lxstat64 = dlsym_wrapper(__func__);
@@ -942,13 +984,65 @@ int open(const char *path, int flags, ...)
 	return open_result;
 }
 
+int open64(const char *path, int flags, ...)
+{
+
+	path = sanitize_and_get_absolute_path(path);
+
+	bool path_exists_before = file_does_exist(path);
+	struct stat new_file;
+
+	check_parameters_properties(path, __func__);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+
+	int open64_result = open64_wrapper(path, flags, variable_arguments);
+
+	va_end(variable_arguments);
+
+	/*
+		open(), openat(), and creat() return the new file descriptor, or -1
+		if an error occurred (in which case, errno is set appropriately).
+	*/
+
+	if(open64_result == -1){
+		printf("OPEN64 ERROR: %s\n", strerror(errno));
+	} else {
+		/*
+		If file didn't exist before actual open call (because otherwise it'd
+		have been treated in check_parameters_properties) and fstat returns
+		zero (success) a new file has been created.
+		*/
+		if(!path_exists_before && !fstat(open64_result, &new_file)){
+			/*
+				New file has been just created. Now there are two options:
+					- There is already an entry in the array referencing the path
+						so only the inode must be updated.
+					- There is no entry in the array so just insert.
+			*/
+			int index = find_index_in_array(&g_array, path);
+			ino_t inode = get_inode(path);
+
+			if(index >= 0){
+				g_array.list[index].inode = inode;
+			} else {
+				insert_in_array(&g_array, path, inode);
+			}
+
+		}
+	}
+
+	return open64_result;
+}
+
 int access(const char *path, int mode){
 
 	path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path);
+	insert_in_array(&g_array, path, get_inode(path));
 
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
@@ -1092,6 +1186,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 	return openat_result;
 
 }
+
 
 /*
 	Creates a symbolic link called newpath that poins to oldpath.
@@ -1501,7 +1596,7 @@ int rmdir(const char *path){
 		int index = find_index_in_array(&g_array, path);
 
 		if(index >= 0){
-			rmdir_from_array_at_index(&g_array, index);
+			remove_from_array_at_index(&g_array, index);
 			//g_array.list[index].inode = -1;
 		}
 	}
@@ -1516,7 +1611,7 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 	print_function_and_path(__func__, pathname);
 
-	insert_in_array(&g_array, pathname);
+	insert_in_array(&g_array, pathname, get_inode(pathname));
 
 	if ( original_readlink == NULL ) {
 		original_readlink = dlsym_wrapper(__func__);
@@ -1559,6 +1654,70 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
     }
 
     return readlinkat_result;
+}
+
+int rename(const char *oldpath, const char *newpath){
+
+	const char *full_oldpath = sanitize_and_get_absolute_path(oldpath);
+	const char *full_newpath = sanitize_and_get_absolute_path(newpath);
+
+	print_function_and_path(__func__, full_oldpath);
+
+	if(original_rename == NULL){
+		original_rename = dlsym_wrapper(__func__);
+	}
+
+	int rename_result = original_rename(oldpath, newpath);
+
+	/*
+		On success, zero is returned.  On error, -1 is returned, and errno is
+		set appropriately.
+	*/
+	if( rename_result == -1){
+		printf("RENAME ERROR: %s\n", strerror(errno));
+	} else {
+		upsert_entry_path(full_oldpath, full_newpath);
+	}
+
+	return rename_result;
+}
+
+int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath){
+
+	if(original_renameat == NULL){
+		original_renameat = dlsym_wrapper(__func__);
+	}
+
+	const char *full_old_path;
+	const char *full_new_path;
+
+	if(path_is_absolute(oldpath)){
+		full_old_path = sanitize_and_get_absolute_path(oldpath);
+	} else {
+		full_old_path = get_file_path_from_directory_fd(oldpath, olddirfd);
+	}	
+
+	if(path_is_absolute(newpath)){
+		full_new_path = sanitize_and_get_absolute_path(newpath);
+	} else {
+		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
+	}
+
+    print_function_and_path(__func__, full_old_path);
+
+    int renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
+
+    /*
+		On success, zero is returned.  On error, -1 is returned, and errno is 
+		set appropriately.
+    */
+    if(renameat_result == -1){
+    	printf("RENAMEAT ERROR: %s\n", strerror(errno));
+    } else {
+    	upsert_entry_path(full_old_path, full_new_path);
+    }
+
+    return renameat_result;
 }
 
 //#########################
