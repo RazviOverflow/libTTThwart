@@ -52,7 +52,7 @@ static int (*original_link)(const char *oldpath, const char *newpath) = NULL;
 static int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
 static int (*original_rename)(const char *oldpath, const char *newpath) = NULL;
 static int (*original_renameat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) = NULL;
-static int (*original_renameat2)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) = NULL;
+//static int (*original_renameat2)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) = NULL;
 static int (*original_creat64)(const char *path, mode_t mode) = NULL;
 static int (*original_creat)(const char *path, mode_t mode) = NULL;
 static int (*original_open)(const char *path, int flags, ...) = NULL; 
@@ -60,6 +60,7 @@ static int (*original_open64)(const char *path, int flags, ...) = NULL;
 static int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
 static FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
 static FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
+static FILE *(*original_fdopen)(int fd, const char *mode) = NULL;
 static int (*original_mknod)(const char *path, mode_t mode, dev_t dev) = NULL;
 static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
@@ -67,12 +68,27 @@ static int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
 static int (*original_mkfifoat)(int dirfd, const char *pathname, mode_t mode) = NULL;
 static int (*original_chmod)(const char *pathname, mode_t mode) = NULL;
 static int (*original_chown)(const char *pathname, uid_t owner, gid_t group) = NULL;
+static int (*original_truncate)(const char *path, off_t length) = NULL;
+static int (*original_truncate64)(const char *path, off64_t length) = NULL;
+static int (*original_utime)(const char *filename, const struct utimebuf *times) = NULL;
+static int (*original_utimes)(const char *filename, const struct timeval times[2]) = NULL;
+static long(*original_pathconf)(const char *path, int name) = NULL;
+static int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
+static int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode) = NULL;
+static int (*original_chdir)(const char *path) = NULL;
+static int (*original_chroot)(const char *path) = NULL;
+//static int (*original_pivot_root)(const char *new_root, const char *putold) = NULL;
+
+// execve, execl, execle, execlp, execv, execve, execvp
 
 
 
 // doubts
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
 static int (*original_pclose)(FILE *stream) = NULL;
+static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned ling mountflags, const void *data) = NULL;
+
+
 
 
 
@@ -92,6 +108,7 @@ void check_parameters_properties(const char *, const char *);
 void* dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list);
 int openat_wrapper(int, const char *, int, va_list);
+int chdir_wrapper(const char *);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_path(const char *);
@@ -375,8 +392,8 @@ void* dlsym_wrapper(const char *original_function){
 }
 
 /*
-    The open wrapper ensures original_open is initialized and is used
-    by other inner functions in order to avoid open() recursivity
+    The open wrapper guarantees, insures original_open is initialized.
+    It's used by other inner functions in order to avoid open() recursivity
     and overhead. In adittion, it deals with ellipsis (variable 
     arguments) since open is a variadic function.
 */
@@ -426,6 +443,18 @@ int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_argu
 		return original_openat(dirfd, path, flags);
 	}
 
+}
+
+/*
+	Same as open_wrapper.
+*/
+int chdir_wrapper(const char *path){
+	
+	if(original_chdir == NULL){
+		original_chdir = dlsym_wrapper("chdir");
+	}
+
+	return original_chdir(path);
 }
 
 /*
@@ -593,7 +622,7 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 		const char *res = sanitize_and_get_absolute_path(src);
 
         // Restoring working dir
-        chdir(original_working_dir);
+        chdir_wrapper(original_working_dir);
 		free (original_working_dir);
 
         return res;
@@ -740,7 +769,7 @@ char * get_directory_from_fd(int directory_fd){
 
 	char *directory_fd_path = get_current_dir_name();
 
-	chdir(original_working_dir);
+	chdir_wrapper(original_working_dir);
 
 	free (original_working_dir);
 
