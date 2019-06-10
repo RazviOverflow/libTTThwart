@@ -83,8 +83,6 @@ static int (*original_chroot)(const char *path) = NULL;
 
 // execve, execl, execle, execlp, execv, execve, execvp
 
-
-
 // doubts
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
 static int (*original_pclose)(FILE *stream) = NULL;
@@ -139,7 +137,8 @@ typedef struct{
 
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
-void insert_in_array(file_objects_info *, const char *, ino_t);
+void upsert_inode_in_array(file_objects_info *, const char *, ino_t);
+void upsert_path_in_array(const char *, const char *);
 void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
@@ -199,11 +198,12 @@ void initialize_array(file_objects_info *array, size_t size){
     updates the corresponding inode instead of inserting new
     element.
 */
-void insert_in_array(file_objects_info *array, const char *path, ino_t inode){
+void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t inode){
+    
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(&g_array, 2);
-	}
+	} 
 	// If element is already in array simply update its inode in case the
 	// the new inode is different from the one already existing
 	int index = find_index_in_array(array, path);
@@ -331,12 +331,12 @@ void print_contents_of_array(file_objects_info *array){
 	Upsert is update + insert. If the element already exists, update it. 
 	Otherwise insert it.
 */
-void upsert_entry_path(const char *oldpath, const char *newpath){
+void upsert_path_in_array(const char *oldpath, const char *newpath){
 	
 	int index = find_index_in_array(&g_array, oldpath);
 	if(index == -1){
 		ino_t inode = get_inode(newpath);
-		insert_in_array(&g_array, newpath, inode);
+		upsert_inode_in_array(&g_array, newpath, inode);
 	} else {
 		g_array.list[index].path = strdup(newpath);
 	}
@@ -372,7 +372,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 		int index = find_index_in_array(&g_array, path);
 	
 		if(index < 0){
-			insert_in_array(&g_array, path, inode);
+			upsert_inode_in_array(&g_array, path, inode);
 		} else {
 			file_object_info aux = get_from_array_at_index(&g_array,index);
 			if(aux.inode != inode){
@@ -882,7 +882,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path, get_inode(path));
+	upsert_inode_in_array(&g_array, path, get_inode(path));
 
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
@@ -899,7 +899,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path, get_inode(path));
+	upsert_inode_in_array(&g_array, path, get_inode(path));
 
 	if ( original_xstat64 == NULL ) {
 		original_xstat64 = dlsym_wrapper(__func__);
@@ -916,7 +916,7 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path, get_inode(path));
+	upsert_inode_in_array(&g_array, path, get_inode(path));
 
 	if ( original_lxstat64 == NULL ) {
 		original_lxstat64 = dlsym_wrapper(__func__);
@@ -968,22 +968,23 @@ int open(const char *path, int flags, ...)
 					- There is already an entry in the array referencing the path
 						so only the inode must be updated.
 					- There is no entry in the array so just insert.
+				Both actions are carreid out by upsert_inode_in_array
 			*/
-			int index = find_index_in_array(&g_array, path);
+			
 			ino_t inode = get_inode(path);
 
-			if(index >= 0){
-				g_array.list[index].inode = inode;
-			} else {
-				insert_in_array(&g_array, path, inode);
-			}
-
+			upsert_inode_in_array(&g_array, path, inode);
+			
 		}
 	}
 
 	return open_result;
 }
 
+/*
+	open64() behaves exactly in the same way as open(). Please
+	read open() docs.
+*/
 int open64(const char *path, int flags, ...)
 {
 
@@ -1009,27 +1010,13 @@ int open64(const char *path, int flags, ...)
 	if(open64_result == -1){
 		printf("OPEN64 ERROR: %s\n", strerror(errno));
 	} else {
-		/*
-		If file didn't exist before actual open call (because otherwise it'd
-		have been treated in check_parameters_properties) and fstat returns
-		zero (success) a new file has been created.
-		*/
+
 		if(!path_exists_before && !fstat(open64_result, &new_file)){
-			/*
-				New file has been just created. Now there are two options:
-					- There is already an entry in the array referencing the path
-						so only the inode must be updated.
-					- There is no entry in the array so just insert.
-			*/
-			int index = find_index_in_array(&g_array, path);
+			
 			ino_t inode = get_inode(path);
 
-			if(index >= 0){
-				g_array.list[index].inode = inode;
-			} else {
-				insert_in_array(&g_array, path, inode);
-			}
-
+			upsert_inode_in_array(&g_array, path, inode);
+			
 		}
 	}
 
@@ -1042,7 +1029,7 @@ int access(const char *path, int mode){
 
 	print_function_and_path(__func__, path);
 
-	insert_in_array(&g_array, path, get_inode(path));
+	upsert_inode_in_array(&g_array, path, get_inode(path));
 
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
@@ -1173,13 +1160,10 @@ int openat(int dirfd, const char *path, int flags, ...){
 
 		if(!path_exists_before && !fstat(openat_result, &new_file)){
 
-			int index = find_index_in_array(&g_array, full_path);
 			ino_t inode = get_inode(full_path);
-			if(index >= 0){
-				g_array.list[index].inode = inode;
-			} else {
-				insert_in_array(&g_array, full_path, inode);
-			}
+			
+			upsert_inode_in_array(&g_array, full_path, inode);
+			
 
 		}
 	}
@@ -1211,15 +1195,11 @@ int symlink(const char *oldpath, const char *newpath){
     if(symlink_result == -1){
 		printf("SYMLINK ERROR: %s\n", strerror(errno));
 	} else {
-		int index = find_index_in_array(&g_array, newpath);
 
 	    ino_t inode = get_inode(newpath);
 
-		if(index >= 0){
-			g_array.list[index].inode = inode;
-		} else {
-			insert_in_array(&g_array, newpath, inode);
-		}
+		upsert_inode_in_array(&g_array, newpath, inode);
+		
 	}
 
 	return symlink_result;
@@ -1255,7 +1235,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		printf("SYMLINKAT ERROR: %s\n", strerror(errno));
 	} else {
 		ino_t inode = get_inode(full_path);
-		insert_in_array(&g_array, full_path, inode);
+		upsert_inode_in_array(&g_array, full_path, inode);
 	}
 
 	print_contents_of_array(&g_array);
@@ -1327,15 +1307,11 @@ int mknod(const char *path, mode_t mode, dev_t dev){
     if(mknod_result == -1){
 		printf("MKNOD ERROR: %s\n", strerror(errno));
 	} else {
-		int index = find_index_in_array(&g_array, path);
 
 	    ino_t inode = get_inode(path);
 
-	    if(index >= 0){
-	    	g_array.list[index].inode = inode;
-	    } else {
-	    	insert_in_array(&g_array, path, inode);
-	    }
+	    upsert_inode_in_array(&g_array, path, inode);
+	    
 	}
 
     return mknod_result;
@@ -1367,15 +1343,11 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
     if(mknod_result == -1){
 		printf("MKNOD ERROR: %s\n", strerror(errno));
 	} else {
-		int index = find_index_in_array(&g_array, path);
 
 	    ino_t inode = get_inode(path);
 
-	    if(index >= 0){
-	    	g_array.list[index].inode = inode;
-	    } else {
-	    	insert_in_array(&g_array, path, inode);
-	    }
+	    upsert_inode_in_array(&g_array, path, inode);
+	    
 	}
 
     return mknod_result;
@@ -1413,7 +1385,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		printf("MKNODAT ERROR: %s\n", strerror(errno));
 	} else {
 		ino_t inode = get_inode(full_path);
-    	insert_in_array(&g_array, full_path, inode);
+    	upsert_inode_in_array(&g_array, full_path, inode);
     }
 
     return mknodat_result;
@@ -1443,15 +1415,11 @@ int link(const char *oldpath, const char *newpath){
    	if(link_result == -1){
 		printf("LINK ERROR: %s\n", strerror(errno));
 	} else {
-	   	int index = find_index_in_array(&g_array, newpath);
 
 	   	ino_t inode = get_inode(newpath);
 
-		if(index >= 0){
-			g_array.list[index].inode = inode;
-		} else {
-			insert_in_array(&g_array, newpath, inode);
-		}
+		upsert_inode_in_array(&g_array, newpath, inode);
+	
 	}
 
    return link_result;
@@ -1490,7 +1458,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
     } else {
 
     	ino_t inode = get_inode(full_path);
-		insert_in_array(&g_array, full_path, inode);
+		upsert_inode_in_array(&g_array, full_path, inode);
 
     }
 
@@ -1519,16 +1487,11 @@ int creat64(const char *path, mode_t mode){
     */
     if(creat64_result == -1){
     	printf("CREAT64 ERROR: %s\n", strerror(errno));
-    } else {
-	 	int index = find_index_in_array(&g_array, path);
+    } else {;
 
 	    ino_t inode = get_inode(path);
 
-	    if(index >= 0){
-	    	g_array.list[index].inode = inode;
-	    } else {
-			insert_in_array(&g_array, path, inode);
-		}
+		upsert_inode_in_array(&g_array, path, inode);
     }
 
     return creat64_result;
@@ -1558,15 +1521,11 @@ int creat(const char *path, mode_t mode){
     if(creat_result == -1){
     	printf("CREAT ERROR: %s\n", strerror(errno));
     } else {
-    	int index = find_index_in_array(&g_array, path);
 
 	    ino_t inode = get_inode(path);
 
-	    if(index >= 0){
-	    	g_array.list[index].inode = inode;
-	    } else {
-			insert_in_array(&g_array, path, inode);
-		}
+		upsert_inode_in_array(&g_array, path, inode);
+
     }
 
     return creat_result;
@@ -1611,7 +1570,7 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 	print_function_and_path(__func__, pathname);
 
-	insert_in_array(&g_array, pathname, get_inode(pathname));
+	upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
 
 	if ( original_readlink == NULL ) {
 		original_readlink = dlsym_wrapper(__func__);
@@ -1649,7 +1608,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
     } else {
 
     	ino_t inode = get_inode(full_path);
-		insert_in_array(&g_array, full_path, inode);
+		upsert_inode_in_array(&g_array, full_path, inode);
 
     }
 
@@ -1676,7 +1635,7 @@ int rename(const char *oldpath, const char *newpath){
 	if( rename_result == -1){
 		printf("RENAME ERROR: %s\n", strerror(errno));
 	} else {
-		upsert_entry_path(full_oldpath, full_newpath);
+		upsert_path_in_array(full_oldpath, full_newpath);
 	}
 
 	return rename_result;
@@ -1714,12 +1673,87 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
     if(renameat_result == -1){
     	printf("RENAMEAT ERROR: %s\n", strerror(errno));
     } else {
-    	upsert_entry_path(full_old_path, full_new_path);
+    	upsert_path_in_array(full_old_path, full_new_path);
     }
 
     return renameat_result;
 }
 
+FILE *fopen64(const char *path, const char *mode){
+
+	path = sanitize_and_get_absolute_path(path);
+
+	check_parameters_properties(path, __func__);
+
+	if(original_fopen64 == NULL){
+		original_fopen64 = dlsym_wrapper(__func__);
+	}
+
+	return original_fopen64(path, mode);
+
+}
+
+int mkfifo(const char *pathname, mode_t mode){
+
+	if(original_mkfifo == NULL){
+    	original_mkfifo = dlsym_wrapper(__func__);
+    }
+	
+    path = sanitize_and_get_absolute_path(pathname);
+
+   	print_function_and_path(__func__, path);
+
+    int mkfifo_result = original_mkfifo(path, mode);
+
+    /*
+		On success mkfifo() and mkfifoat() return 0.  In the case of an
+    	error, -1 is returned (in which case, errno is set appropriately).
+    */
+    if(mkfifo_result == -1){
+		printf("MKFIFO ERROR: %s\n", strerror(errno));
+	} else {
+
+	    ino_t inode = get_inode(path);
+
+	    upsert_inode_in_array(&g_array, path, inode);
+	}
+
+    return mkfifo_result;
+}
+
+int mkfifoat(int dirfd, const char *pathname, mode_t mode){
+	if(original_mkfifoat == NULL){
+		original_mkfifoat = dlsym_wrapper(__func__);
+	}
+
+	const char *full_path;
+	if(path_is_absolute(pathname)){
+		full_path = sanitize_and_get_absolute_path(pathname);
+	} else {
+		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+	}
+
+    print_function_and_path(__func__, full_path);
+
+    int mkfifoat_result = original_mkfifoat(dirfd, pathname, buf, bufsiz);
+
+    /*
+		On success, these calls return the number of bytes placed in buf.
+       	(If the returned value equals bufsiz, then truncation may have
+       	occurred.)  On error, -1 is returned and errno is set to indicate the
+       	error.
+    */
+    if(mkfifoat_result == -1){
+    	printf("READLINKAT ERROR: %s\n", strerror(errno));
+    } else {
+
+    	ino_t inode = get_inode(full_path);
+		upsert_inode_in_array(&g_array, full_path, inode);
+
+    }
+
+    return mkfifoat_result;
+}
 //#########################
 /*
 int
