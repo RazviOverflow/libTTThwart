@@ -362,9 +362,9 @@ void print_function_and_path(const char* func, const char* path){
 */
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
-	path = sanitize_and_get_absolute_path(path);
+	//path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(caller_function_name, path);
+	//print_function_and_path(caller_function_name, path);
 
 	if(file_does_exist(path)){
 		ino_t inode = get_inode(path);
@@ -1183,8 +1183,13 @@ int symlink(const char *oldpath, const char *newpath){
     }
 	
     newpath = sanitize_and_get_absolute_path(newpath);
+    oldpath = sanitize_and_get_absolute_path(oldpath);
 
    	print_function_and_path(__func__, newpath);
+
+   	if(find_index_in_array(&g_array, oldpath) >= 0){
+   		check_parameters_properties(oldpath, __func__);
+   	}
 
     int symlink_result = original_symlink(oldpath, newpath);
 
@@ -1216,14 +1221,20 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	
-	const char *full_path;
+	const char *full_new_path;
+	const char *full_old_path = sanitize_and_get_absolute_path(oldpath);
 	if(path_is_absolute(newpath)){
-		full_path = sanitize_and_get_absolute_path(newpath);
+		full_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
 	}
 
-   	print_function_and_path(__func__, full_path);
+
+   	print_function_and_path(__func__, full_new_path);
+
+   	if(find_index_in_array(&g_array, full_old_path) >= 0){
+   		check_parameters_properties(full_old_path, __func__);
+   	}
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
@@ -1234,11 +1245,11 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	if(symlinkat_result == -1){
 		printf("SYMLINKAT ERROR: %s\n", strerror(errno));
 	} else {
-		ino_t inode = get_inode(full_path);
-		upsert_inode_in_array(&g_array, full_path, inode);
+		ino_t inode = get_inode(full_new_path);
+		upsert_inode_in_array(&g_array, full_new_path, inode);
 	}
 
-	print_contents_of_array(&g_array);
+	//print_contents_of_array(&g_array);
 
 	return symlinkat_result;
 
@@ -1297,6 +1308,10 @@ int mknod(const char *path, mode_t mode, dev_t dev){
 
    	print_function_and_path(__func__, path);
 
+   	if(find_index_in_array(&g_array, path) >= 0){
+   		check_parameters_properties(path, __func__);
+   	}
+
     int mknod_result = original_mknod(path, mode, dev);
 
     /*
@@ -1333,6 +1348,10 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
     path = sanitize_and_get_absolute_path(path);
 
    	print_function_and_path(__func__, path);
+
+   	if(find_index_in_array(&g_array, path) >= 0){
+   		check_parameters_properties(path, __func__);
+   	}
 
     int mknod_result = original_xmknod(ver, path, mode, dev);
 
@@ -1375,6 +1394,10 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 
    	print_function_and_path(__func__, full_path);
 
+   	if(find_index_in_array(&g_array, full_path) >= 0){
+   		check_parameters_properties(full_path, __func__);
+   	}
+
 	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
 	/*
@@ -1403,8 +1426,13 @@ int link(const char *oldpath, const char *newpath){
    }
 
 	newpath = sanitize_and_get_absolute_path(newpath);
+	oldpath = sanitize_and_get_absolute_path(oldpath);
 
    	print_function_and_path(__func__, newpath);
+
+   	if(find_index_in_array(&g_array, oldpath) >= 0){
+   		check_parameters_properties(oldpath, __func__);
+   	}
 
    	int link_result = original_link(oldpath, newpath);
 
@@ -1438,14 +1466,25 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		original_linkat = dlsym_wrapper(__func__);
 	}
 
-	const char *full_path;
+	const char *full_new_path;
+	const char *full_old_path;
 	if(path_is_absolute(newpath)){
-		full_path = sanitize_and_get_absolute_path(newpath);
+		full_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_path = get_file_path_from_directory_fd(newpath, newdirfd);
+		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
 	}
 
-    print_function_and_path(__func__, full_path);
+	if(path_is_absolute(oldpath)){
+		full_old_path = sanitize_and_get_absolute_path(oldpath);
+	} else {
+		full_old_path = get_file_path_from_directory_fd(oldpath, olddirfd);
+	}
+
+    print_function_and_path(__func__, full_old_path);
+
+	if(find_index_in_array(&g_array, full_old_path) >= 0){
+		check_parameters_properties(full_old_path, __func__);
+	}
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
@@ -1457,8 +1496,8 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
     	printf("LINKAT ERROR: %s\n", strerror(errno));
     } else {
 
-    	ino_t inode = get_inode(full_path);
-		upsert_inode_in_array(&g_array, full_path, inode);
+    	ino_t inode = get_inode(full_new_path);
+		upsert_inode_in_array(&g_array, full_new_path, inode);
 
     }
 
@@ -1477,6 +1516,8 @@ int creat64(const char *path, mode_t mode){
 
     print_function_and_path(__func__, path);
 
+    check_parameters_properties(path, __func__);
+
     int creat64_result = original_creat64(path, mode);
 
     /*
@@ -1487,11 +1528,6 @@ int creat64(const char *path, mode_t mode){
     */
     if(creat64_result == -1){
     	printf("CREAT64 ERROR: %s\n", strerror(errno));
-    } else {;
-
-	    ino_t inode = get_inode(path);
-
-		upsert_inode_in_array(&g_array, path, inode);
     }
 
     return creat64_result;
@@ -1510,6 +1546,8 @@ int creat(const char *path, mode_t mode){
 
     print_function_and_path(__func__, path);
 
+    check_parameters_properties(path, __func__);
+
     int creat_result = original_creat(path, mode);
 
      /*
@@ -1520,13 +1558,7 @@ int creat(const char *path, mode_t mode){
     */
     if(creat_result == -1){
     	printf("CREAT ERROR: %s\n", strerror(errno));
-    } else {
-
-	    ino_t inode = get_inode(path);
-
-		upsert_inode_in_array(&g_array, path, inode);
-
-    }
+    } 
 
     return creat_result;
 
@@ -1617,25 +1649,36 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 
 int rename(const char *oldpath, const char *newpath){
 
-	const char *full_oldpath = sanitize_and_get_absolute_path(oldpath);
-	const char *full_newpath = sanitize_and_get_absolute_path(newpath);
+	const char *full_old_path = sanitize_and_get_absolute_path(oldpath);
+	const char *full_new_path = sanitize_and_get_absolute_path(newpath);
 
-	print_function_and_path(__func__, full_oldpath);
+	print_function_and_path(__func__, full_old_path);
 
 	if(original_rename == NULL){
 		original_rename = dlsym_wrapper(__func__);
 	}
 
+	bool found;
+
+	if(find_index_in_array(&g_array, full_old_path) >= 0){
+		check_parameters_properties(full_old_path, __func__);
+		found = true;
+	}
 	int rename_result = original_rename(oldpath, newpath);
 
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
-		set appropriately.
+    	set appropriately.
 	*/
-	if( rename_result == -1){
+
+	if(rename_result == -1){
 		printf("RENAME ERROR: %s\n", strerror(errno));
 	} else {
-		upsert_path_in_array(full_oldpath, full_newpath);
+		if(found){
+			upsert_path_in_array(full_old_path, full_new_path);
+		} else {
+			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
+		}
 	}
 
 	return rename_result;
@@ -1664,19 +1707,31 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 
     print_function_and_path(__func__, full_old_path);
 
-    int renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
+    bool found;
 
-    /*
-		On success, zero is returned.  On error, -1 is returned, and errno is 
-		set appropriately.
-    */
-    if(renameat_result == -1){
-    	printf("RENAMEAT ERROR: %s\n", strerror(errno));
-    } else {
-    	upsert_path_in_array(full_old_path, full_new_path);
-    }
+	if(find_index_in_array(&g_array, full_old_path) >= 0){
+		check_parameters_properties(full_old_path, __func__);
+		found = true;
+	}
 
-    return renameat_result;
+	int renameat_result = original_rename(oldpath, newpath);
+
+	/*
+		On success, zero is returned.  On error, -1 is returned, and errno is
+    	set appropriately.
+	*/
+
+	if(renameat_result == -1){
+		printf("RENAME ERROR: %s\n", strerror(errno));
+	} else {
+		if(found){
+			upsert_path_in_array(full_old_path, full_new_path);
+		} else {
+			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
+		}
+	}
+
+	return renameat_result;
 }
 
 FILE *fopen64(const char *path, const char *mode){
@@ -1699,11 +1754,13 @@ int mkfifo(const char *pathname, mode_t mode){
     	original_mkfifo = dlsym_wrapper(__func__);
     }
 	
-    path = sanitize_and_get_absolute_path(pathname);
+    pathname = sanitize_and_get_absolute_path(pathname);
 
-   	print_function_and_path(__func__, path);
+   	print_function_and_path(__func__, pathname);
 
-    int mkfifo_result = original_mkfifo(path, mode);
+   	check_parameters_properties(pathname, __func__);
+
+    int mkfifo_result = original_mkfifo(pathname, mode);
 
     /*
 		On success mkfifo() and mkfifoat() return 0.  In the case of an
@@ -1711,12 +1768,7 @@ int mkfifo(const char *pathname, mode_t mode){
     */
     if(mkfifo_result == -1){
 		printf("MKFIFO ERROR: %s\n", strerror(errno));
-	} else {
-
-	    ino_t inode = get_inode(path);
-
-	    upsert_inode_in_array(&g_array, path, inode);
-	}
+	} 
 
     return mkfifo_result;
 }
@@ -1735,7 +1787,9 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 
     print_function_and_path(__func__, full_path);
 
-    int mkfifoat_result = original_mkfifoat(dirfd, pathname, buf, bufsiz);
+    check_parameters_properties(full_path, __func__);
+
+    int mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 
     /*
 		On success, these calls return the number of bytes placed in buf.
@@ -1745,15 +1799,211 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
     */
     if(mkfifoat_result == -1){
     	printf("READLINKAT ERROR: %s\n", strerror(errno));
-    } else {
-
-    	ino_t inode = get_inode(full_path);
-		upsert_inode_in_array(&g_array, full_path, inode);
-
-    }
+    } 
 
     return mkfifoat_result;
 }
+
+int chmod(const char *pathname, mode_t mode){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	if(original_chmod == NULL){
+		original_chmod = dlsym_wrapper(__func__);
+	}
+
+	int chmod_result =  original_chmod(pathname, mode);
+
+	if(chmod_result == -1){
+		printf("CHMOD ERROR: %s\n", strerror(errno));
+	}
+
+	return chmod_result;
+
+}
+
+int chown(const char *pathname, uid_t owner, gid_t group){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	if(original_chown == NULL){
+		original_chown = dlsym_wrapper(__func__);
+	}
+
+	int chown_result =  original_chown(pathname, owner, group);
+
+	if(chown_result == -1){
+		printf("CHOWN ERROR: %s\n", strerror(errno));
+	}
+
+	return chown_result;
+
+}
+
+int truncate(const char *path, off_t length){
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	check_parameters_properties(path, __func__);
+
+	if(original_truncate == NULL){
+		original_truncate = dlsym_wrapper(__func__);
+	}
+
+	int truncate_result = original_truncate(path, length);
+
+	if(truncate_result == -1){
+		printf("TRUNCATE ERROR: %s\n", strerror(errno));
+	}
+
+	return truncate_result;
+}
+
+int truncate64(const char *path, off_t length){
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	check_parameters_properties(path, __func__);
+
+	if(original_truncate64 == NULL){
+		original_truncate64 = dlsym_wrapper(__func__);
+	}
+
+	int truncate64_result = original_truncate64(path, length);
+
+	if(truncate64_result == -1){
+		printf("TRUNCATE64 ERROR: %s\n", strerror(errno));
+	}
+
+	return truncate64_result;
+}
+
+int utime(const char *filename, const struct utimbuf *times){
+
+	filename = sanitize_and_get_absolute_path(filename);
+
+	print_function_and_path(__func__, filename);
+
+	check_parameters_properties(filename, __func__);
+
+	if(original_utime == NULL){
+		original_utime = dlsym_wrapper(__func__);
+	}
+
+	int utime_result = original_utime(filename, times);
+
+	if(utime_result == -1){
+		printf("UTIME ERROR: %s\n", strerror(errno));
+	}
+
+	return utime_result;
+}
+
+int utimes(const char *filename, const struct timeval *times){
+
+	filename = sanitize_and_get_absolute_path(filename);
+
+	print_function_and_path(__func__, filename);
+
+	check_parameters_properties(filename, __func__);
+
+	if(original_utimes == NULL){
+		original_utimes = dlsym_wrapper(__func__);
+	}
+
+	int utimes_result = original_utimes(filename, times);
+
+	if(utimes_result == -1){
+		printf("UTIMES ERROR: %s\n", strerror(errno));
+	}
+
+	return utimes_result;
+}
+
+long pathconf(const char *path, int name){
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	check_parameters_properties(path, __func__);
+
+	if(original_pathconf == NULL){
+		original_pathconf = dlsym_wrapper(__func__);
+	}
+
+	int pathconf_result = original_pathconf(path, name);
+
+	if(pathconf_result == -1){
+		printf("PATHCONF ERROR: %s\n", strerror(errno));
+	}
+
+	return pathconf_result;
+}
+
+int mkdir(const char *pathname, mode_t mode){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	if(original_mkdir == NULL){
+		original_mkdir = dlsym_wrapper(__func__);
+	}
+
+	int mkdir_result = original_mkdir(pathname, mode);
+
+	if(mkdir_result == -1){
+		printf("MKDIR ERROR: %s\n", strerror(errno));
+	}
+
+	return mkdir_result;
+}
+
+int mkdirat(int dirfd, const char *pathname, mode_t mode){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	const char *full_path;
+	if(path_is_absolute(pathname)){
+		full_path = sanitize_and_get_absolute_path(pathname);
+	} else {
+		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+	}
+
+	check_parameters_properties(full_path, __func__);
+
+	if(original_mkdirat == NULL){
+		original_mkdirat = dlsym_wrapper(__func__);
+	}
+
+	int mkdirat_result = original_mkdirat(dirfd, pathname, mode);
+
+	if(mkdirat_result == -1){
+		printf("MKDIRAT ERROR: %s\n", strerror(errno));
+	}
+
+	return mkdirat_result;
+}
+
+
+
 //#########################
 /*
 int
