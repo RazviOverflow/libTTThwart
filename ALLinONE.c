@@ -27,6 +27,8 @@
 
 #include <sys/mman.h>
 
+#define NONEXISTING_FILE_INODE -5555
+
 ////TODO implement logger and replace printf family with corresponding log level
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
@@ -105,7 +107,7 @@ static int (*original_mount)(const char *source, const char *target, const char 
 /// ########## Prototype declaration ##########
 
 void check_parameters_properties(const char *, const char *);
-void* dlsym_wrapper(const char *);
+void * dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list);
 int openat_wrapper(int, const char *, int, va_list);
 int chdir_wrapper(const char *);
@@ -138,7 +140,7 @@ typedef struct{
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
 void upsert_inode_in_array(file_objects_info *, const char *, ino_t);
-void upsert_path_in_array(const char *, const char *);
+void upsert_path_in_array(file_objects_info *, const char *, const char *);
 void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
@@ -211,6 +213,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	if(index >= 0){
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
+			printf("Updated inode (now %lu) of path %s\n", inode, path);
 		}
 	} else  {
     // If number of elements (used) in the array equals its size, it means
@@ -241,6 +244,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		array->list[array->used].inode = inode;
 		array->used++;
 	}
+
 }
 
 /*
@@ -331,14 +335,14 @@ void print_contents_of_array(file_objects_info *array){
 	Upsert is update + insert. If the element already exists, update it. 
 	Otherwise insert it.
 */
-void upsert_path_in_array(const char *oldpath, const char *newpath){
+void upsert_path_in_array(file_objects_info *array, const char *oldpath, const char *newpath){
 	
-	int index = find_index_in_array(&g_array, oldpath);
+	int index = find_index_in_array(array, oldpath);
 	if(index == -1){
 		ino_t inode = get_inode(newpath);
-		upsert_inode_in_array(&g_array, newpath, inode);
+		upsert_inode_in_array(array, newpath, inode);
 	} else {
-		g_array.list[index].path = strdup(newpath);
+		array->list[index].path = strdup(newpath);
 	}
 
 }
@@ -388,6 +392,8 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 		}
 	} else { // if file_does_exist
 		//printf("File %s does not exist\n", path);
+		printf("Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
+		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
 	}
 }
 
@@ -789,15 +795,13 @@ void timestamp(){
 }
 
 int file_does_exist(const char *pathname){
-	if(!strcmp(pathname, "/dev/tty")){
-		return 1;
+	
+	if(open_wrapper(pathname, O_RDONLY, NULL) < 0){
+		return 0;
 	} else {
-		if(open_wrapper(pathname, O_RDONLY, NULL) < 0){
-			return 0;
-		} else {
-			return 1;
-		}
+		return 1;
 	}
+	
 }
 
 /*
@@ -878,6 +882,9 @@ int __xstat(int ver, const char *path, struct stat *buf)
 {
 	//printf("I'VE RECEIVED PATH %s\n", path);
 
+	printf("Used of array is: %lu\n", g_array.used);
+	print_contents_of_array(&g_array);
+
 	path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path);
@@ -907,6 +914,22 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
   ////printf("xstat64 %s\n",path);
 	return original_xstat64(ver, path, buf);
+}
+
+int __lxstat(int ver, const char *path, struct stat *buf)
+{
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	upsert_inode_in_array(&g_array, path, get_inode(path));
+
+	if ( original_lxstat == NULL ) {
+		original_lxstat = dlsym_wrapper(__func__);
+	}
+
+	return original_lxstat(ver,path, buf);
 }
 
 int __lxstat64(int ver, const char *path, struct stat64 *buf)
@@ -1528,6 +1551,8 @@ int creat64(const char *path, mode_t mode){
     */
     if(creat64_result == -1){
     	printf("CREAT64 ERROR: %s\n", strerror(errno));
+    } else {
+    	upsert_inode_in_array(&g_array, path, get_inode(path));
     }
 
     return creat64_result;
@@ -1558,7 +1583,9 @@ int creat(const char *path, mode_t mode){
     */
     if(creat_result == -1){
     	printf("CREAT ERROR: %s\n", strerror(errno));
-    } 
+    } else {
+    	upsert_inode_in_array(&g_array, path, get_inode(path));
+    }
 
     return creat_result;
 
@@ -1602,13 +1629,24 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 	print_function_and_path(__func__, pathname);
 
-	upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
-
 	if ( original_readlink == NULL ) {
 		original_readlink = dlsym_wrapper(__func__);
 	}
 
-	return original_readlink(pathname, buf, bufsiz);
+	int readlink_result = original_readlink(pathname, buf, bufsiz);
+
+	upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+
+	if(readlink_result == -1){
+    	printf("READLINK ERROR: %s\n", strerror(errno));
+    } else {
+
+    	ino_t inode = get_inode(pathname);
+		upsert_inode_in_array(&g_array, pathname, inode);
+
+    }
+
+	return readlink_result;
 }
 
 ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
@@ -1675,7 +1713,7 @@ int rename(const char *oldpath, const char *newpath){
 		printf("RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		if(found){
-			upsert_path_in_array(full_old_path, full_new_path);
+			upsert_path_in_array(&g_array, full_old_path, full_new_path);
 		} else {
 			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
 		}
@@ -1725,7 +1763,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		printf("RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		if(found){
-			upsert_path_in_array(full_old_path, full_new_path);
+			upsert_path_in_array(&g_array, full_old_path, full_new_path);
 		} else {
 			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
 		}
@@ -1758,8 +1796,8 @@ int mkfifo(const char *pathname, mode_t mode){
 
    	print_function_and_path(__func__, pathname);
 
-   	check_parameters_properties(pathname, __func__);
-
+	check_parameters_properties(pathname, __func__);
+	
     int mkfifo_result = original_mkfifo(pathname, mode);
 
     /*
@@ -1768,7 +1806,11 @@ int mkfifo(const char *pathname, mode_t mode){
     */
     if(mkfifo_result == -1){
 		printf("MKFIFO ERROR: %s\n", strerror(errno));
-	} 
+	} else {
+		
+		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+		
+	}
 
     return mkfifo_result;
 }
@@ -1787,7 +1829,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 
     print_function_and_path(__func__, full_path);
 
-    check_parameters_properties(full_path, __func__);
+	check_parameters_properties(full_path, __func__);
 
     int mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 
@@ -1799,7 +1841,11 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
     */
     if(mkfifoat_result == -1){
     	printf("READLINKAT ERROR: %s\n", strerror(errno));
-    } 
+    } else {
+
+		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
+
+	}
 
     return mkfifoat_result;
 }
@@ -1969,6 +2015,8 @@ int mkdir(const char *pathname, mode_t mode){
 
 	if(mkdir_result == -1){
 		printf("MKDIR ERROR: %s\n", strerror(errno));
+	} else {
+		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
 	}
 
 	return mkdir_result;
@@ -1997,6 +2045,8 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
 	if(mkdirat_result == -1){
 		printf("MKDIRAT ERROR: %s\n", strerror(errno));
+	} else {
+		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
 	}
 
 	return mkdirat_result;
