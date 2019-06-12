@@ -1210,9 +1210,9 @@ int symlink(const char *oldpath, const char *newpath){
 
    	print_function_and_path(__func__, newpath);
 
-   	if(find_index_in_array(&g_array, oldpath) >= 0){
-   		check_parameters_properties(oldpath, __func__);
-   	}
+   
+   	check_parameters_properties(newpath, __func__);
+   	
 
     int symlink_result = original_symlink(oldpath, newpath);
 
@@ -1255,9 +1255,8 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 
    	print_function_and_path(__func__, full_new_path);
 
-   	if(find_index_in_array(&g_array, full_old_path) >= 0){
-   		check_parameters_properties(full_old_path, __func__);
-   	}
+   	check_parameters_properties(full_new_path, __func__);
+   	
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
@@ -1331,9 +1330,7 @@ int mknod(const char *path, mode_t mode, dev_t dev){
 
    	print_function_and_path(__func__, path);
 
-   	if(find_index_in_array(&g_array, path) >= 0){
-   		check_parameters_properties(path, __func__);
-   	}
+   	check_parameters_properties(path, __func__);
 
     int mknod_result = original_mknod(path, mode, dev);
 
@@ -1372,9 +1369,9 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
    	print_function_and_path(__func__, path);
 
-   	if(find_index_in_array(&g_array, path) >= 0){
-   		check_parameters_properties(path, __func__);
-   	}
+
+   	check_parameters_properties(path, __func__);
+   	
 
     int mknod_result = original_xmknod(ver, path, mode, dev);
 
@@ -1417,9 +1414,8 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 
    	print_function_and_path(__func__, full_path);
 
-   	if(find_index_in_array(&g_array, full_path) >= 0){
-   		check_parameters_properties(full_path, __func__);
-   	}
+
+   	check_parameters_properties(full_path, __func__);
 
 	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
@@ -1453,9 +1449,9 @@ int link(const char *oldpath, const char *newpath){
 
    	print_function_and_path(__func__, newpath);
 
-   	if(find_index_in_array(&g_array, oldpath) >= 0){
-   		check_parameters_properties(oldpath, __func__);
-   	}
+
+   	check_parameters_properties(oldpath, __func__);
+
 
    	int link_result = original_link(oldpath, newpath);
 
@@ -1505,9 +1501,9 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 
     print_function_and_path(__func__, full_old_path);
 
-	if(find_index_in_array(&g_array, full_old_path) >= 0){
-		check_parameters_properties(full_old_path, __func__);
-	}
+
+	check_parameters_properties(full_old_path, __func__);
+	
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
