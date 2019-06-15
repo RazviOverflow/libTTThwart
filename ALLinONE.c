@@ -2035,7 +2035,7 @@ int chdir(const char *path){
 
 	print_function_and_path(__func__, path);
 
-	f(original_chdir == NULL){
+	if(original_chdir == NULL){
 		original_chdir = dlsym_wrapper(__func__);
 	}
 
@@ -2055,7 +2055,7 @@ int chroot(const char *path){
 
 	print_function_and_path(__func__, path);
 
-	f(original_chroot == NULL){
+	if(original_chroot == NULL){
 		original_chroot = dlsym_wrapper(__func__);
 	}
 
