@@ -116,17 +116,18 @@ void check_parameters_properties(const char *, const char *);
 void * dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list);
 int openat_wrapper(int, const char *, int, va_list);
+int execlX_wrapper(int, const char *, const char *, va_list);
 int chdir_wrapper(const char *);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_path(const char *);
 const char * sanitize_relative_path(const char *);
-const char * get_file_path_from_directory_fd(const char*, int);
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *, int);
 void timestamp();
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
 bool path_is_absolute(const char *);
+
 /// ########## Prototype declaration ##########
 
 /// <-------------------------------------------------> 
@@ -511,6 +512,78 @@ int chdir_wrapper(const char *path){
 	return original_chdir(path);
 }
 
+int get_number_of_variable_arguments_char_pointer_type(va_list variable_arguments){
+	ptrdiff_t number_of_arguments;
+
+	for(number_of_arguments = 1; va_arg(variable_arguments, const char *); number_of_arguments++){
+		if(number_of_arguments == INT_MAX){
+			va_end(variable_arguments);
+			errno = E2BIG;
+			return -1;
+		}
+	}
+
+	return number_of_arguments;
+}
+
+/*
+	Wrapper for all execlX functions family. This wrapper treats the variable
+	arguments and calls the corresponding execlX function according to:
+	[function argument value] : [execlX function]
+	0 : execl https://code.woboq.org/userspace/glibc/posix/execl.c.html
+	1 : execlp https://code.woboq.org/userspace/glibc/posix/execlp.c.html
+	2 : execle https://code.woboq.org/userspace/glibc/posix/execle.c.html
+
+	Additional info: https://code.woboq.org/userspace/glibc/posix/execl.c.html
+*/
+int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
+	int execlX_result;
+
+	switch (function){
+		case 0: //execl
+			if(original_execl == NULL){
+				original_execl = dlsym_wrapper("execl");
+			}
+
+			va_list aux_list;
+			va_copy(aux_list, variable_arguments);
+			int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+			if(number_of_arguments == -1){
+				printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			}
+
+			// This is done to reset aux_list and start from the very beginbing
+			// when using va_arg
+			va_end(aux_list);
+			va_copy(aux_list, variable_arguments);
+
+			char *argv[number_of_arguments + 1];
+			argv[0] = (char *) argc;
+			ptrdiff_t i;
+			for(i = 1; i<= number_of_arguments; i++){
+				argv[i] = va_arg(aux_list, char *);
+			}
+
+			va_end(aux_list);
+
+			execlX_result = execv(pathname, argv);
+
+		break;
+
+		case 1: //execlp
+
+
+		break;
+
+		case 2: //execle
+
+
+		break;
+	} 
+
+	return execlX_result;
+}
+
 /*
     Retrieves the corresponding inode of a given path. If path is a symlink
     it retrieves the inode of the target rather than the symlink itself. 
@@ -642,7 +715,9 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 
 /*
 	Function to get full path of a given parameter without resolving, expanding
-	symbolic links but using a directory file descriptor as current working dir. 
+	symbolic links but using a directory file descriptor as current working dir. It is assumed that the file 
+	is indeed within that directory. The function translates the file descriptor
+	into the actual directory (string).
 */
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd) {
 
@@ -805,34 +880,6 @@ char * get_directory_from_fd(int directory_fd){
 
 	return directory_fd_path;
 }
-
-/*
-	Function used to retrieve as string the full path to a file given a
-	file descriptor pointing to a directory. It is assumed that the files 
-	is indeed within that directory. The file translates the file descriptor
-	into the actual directory (string).
-*/
-const char * get_file_path_from_directory_fd(const char *path, int dirfd){
-	
-	/*
-	char *directory_fd_path = get_directory_from_fd(dirfd);
-
-   	// +2 for null-trailing byte and the "/" slash between them
-   	int path_length = strlen(directory_fd_path) + strlen(path) + 2;
-   	
-   	char aux_path[path_length];
-
-   	snprintf(aux_path, path_length, "%s/%s", directory_fd_path, path);
-
-   	free(directory_fd_path);
-
-   	return sanitize_and_get_absolute_path(aux_path);
-
-	*/
-
-	return sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
-
-  }
 
 /// ########## Core and useful functions ##########
 
@@ -1100,7 +1147,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 	if(path_is_absolute(path)){
 		full_path = sanitize_and_get_absolute_path(path);
 	} else {
-		full_path = get_file_path_from_directory_fd(path, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
 	}
 
 	print_function_and_path(__func__, full_path);
@@ -1139,7 +1186,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 	if(path_is_absolute(path)){
 		full_path = sanitize_and_get_absolute_path(path);
 	} else {
-		full_path = get_file_path_from_directory_fd(path, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
 	}
 
 	bool path_exists_before = file_does_exist(full_path);
@@ -1230,7 +1277,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	if(path_is_absolute(newpath)){
 		full_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
+		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
 
@@ -1390,7 +1437,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 	if(path_is_absolute(path)){
 		full_path = sanitize_and_get_absolute_path(path);
 	} else {
-		full_path = get_file_path_from_directory_fd(path, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
 	}
 
    	print_function_and_path(__func__, full_path);
@@ -1471,13 +1518,13 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 	if(path_is_absolute(newpath)){
 		full_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
+		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
 	if(path_is_absolute(oldpath)){
 		full_old_path = sanitize_and_get_absolute_path(oldpath);
 	} else {
-		full_old_path = get_file_path_from_directory_fd(oldpath, olddirfd);
+		full_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, olddirfd);
 	}
 
     print_function_and_path(__func__, full_old_path);
@@ -1637,7 +1684,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 	if(path_is_absolute(pathname)){
 		full_path = sanitize_and_get_absolute_path(pathname);
 	} else {
-		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
 	}
 
     print_function_and_path(__func__, full_path);
@@ -1711,13 +1758,13 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 	if(path_is_absolute(oldpath)){
 		full_old_path = sanitize_and_get_absolute_path(oldpath);
 	} else {
-		full_old_path = get_file_path_from_directory_fd(oldpath, olddirfd);
+		full_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, olddirfd);
 	}	
 
 	if(path_is_absolute(newpath)){
 		full_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_new_path = get_file_path_from_directory_fd(newpath, newdirfd);
+		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
     print_function_and_path(__func__, full_old_path);
@@ -1801,7 +1848,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 	if(path_is_absolute(pathname)){
 		full_path = sanitize_and_get_absolute_path(pathname);
 	} else {
-		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
 	}
 
     print_function_and_path(__func__, full_path);
@@ -2009,7 +2056,7 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 	if(path_is_absolute(pathname)){
 		full_path = sanitize_and_get_absolute_path(pathname);
 	} else {
-		full_path = get_file_path_from_directory_fd(pathname, dirfd);
+		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
 	}
 
 	check_parameters_properties(full_path, __func__);
@@ -2035,17 +2082,15 @@ int chdir(const char *path){
 
 	print_function_and_path(__func__, path);
 
-	if(original_chdir == NULL){
-		original_chdir = dlsym_wrapper(__func__);
-	}
-
 	check_parameters_properties(path, __func__);
 
-	int chdir_result = original_chdir(path);
+	int chdir_result = chdir_wrapper(path);
 
 	if(chdir_result == -1){
 		printf("CHDIR ERROR: %s\n", strerror(errno));
 	}
+
+	return chdir_result;
 
 }
 
@@ -2061,11 +2106,41 @@ int chroot(const char *path){
 
 	check_parameters_properties(path, __func__);
 
-	int chroot_result = original_chdir(path);
+	int chroot_result = original_chroot(path);
 
 	if(chroot_result == -1){
 		printf("CHROOT ERROR: %s\n", strerror(errno));
 	}
+
+	return chroot_result;
+
+}
+
+int execl(const char *pathname, const char *arg, ){
+
+}
+
+int execlp(const char *file, const char *arg, ){
+
+}
+
+int execle(const char *pathname, const char *arg, ){
+
+}
+
+int execv(const char *pathname, char *const argv[]){
+
+}
+
+int execvp(const char *file, char *const argv[]){
+
+}
+
+int execve(const char *pathname, char *const argv[], char *const envp[]){
+
+}
+
+int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 }
 
