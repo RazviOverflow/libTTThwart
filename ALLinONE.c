@@ -83,7 +83,13 @@ static int (*original_chdir)(const char *path) = NULL;
 static int (*original_chroot)(const char *path) = NULL;
 //static int (*original_pivot_root)(const char *new_root, const char *putold) = NULL;
 
-// execve, execl, execle, execlp, execv, execve, execvp
+static int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
+static int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
+static int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
+static int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
+static int (*original_execvp)(const char *file, char *const argv[]) = NULL;
+static int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
+static int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
 
 // doubts
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
@@ -516,28 +522,6 @@ ino_t get_inode(const char *path){
     // Parenthesis are needed because of operator precedence.
     // https://en.cppreference.com/w/c/language/operator_precedence
 
-    // ERRORS CHECKiNG
-    /*
-	if((fd = open_wrapper(path, O_RDONLY)) < 0){
-		//printf("Errors occurred while trying to access %s.\nAborting.", path);
-		perror("Error1 is: ");
-		fflush(stdout);
-        //exit(EXIT_FAILURE);
-	} else {
-		//printf("Created fileDescriptor is: %d\n", fd);
-		struct stat file_stat;
-		if((ret = fstat(fd, &file_stat)) < 0 ){
-			//printf("Errors occurred while trying to stat %d file descriptor.\nAborting.", fd);
-			perror("Error2 is: ");
-			close(fd);
-            //exit(EXIT_FAILURE);
-		} else {
-			inode = file_stat.st_ino;
-            //After opening a FD, it must be closed
-			close(fd);
-		}
-	}*/
-
 	fd = open_wrapper(path, O_RDONLY, NULL);
 	if (fd < 0){
 		printf("Errors occurred while getting inode of %s\n", path);
@@ -881,9 +865,6 @@ static void after_main(void){
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 	//printf("I'VE RECEIVED PATH %s\n", path);
-
-	printf("Used of array is: %lu\n", g_array.used);
-	print_contents_of_array(&g_array);
 
 	path = sanitize_and_get_absolute_path(path);
 
@@ -2048,7 +2029,45 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 	return mkdirat_result;
 }
 
+int chdir(const char *path){
 
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	f(original_chdir == NULL){
+		original_chdir = dlsym_wrapper(__func__);
+	}
+
+	check_parameters_properties(path, __func__);
+
+	int chdir_result = original_chdir(path);
+
+	if(chdir_result == -1){
+		printf("CHDIR ERROR: %s\n", strerror(errno));
+	}
+
+}
+
+int chroot(const char *path){
+
+	path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path);
+
+	f(original_chroot == NULL){
+		original_chroot = dlsym_wrapper(__func__);
+	}
+
+	check_parameters_properties(path, __func__);
+
+	int chroot_result = original_chdir(path);
+
+	if(chroot_result == -1){
+		printf("CHROOT ERROR: %s\n", strerror(errno));
+	}
+
+}
 
 //#########################
 /*
