@@ -84,9 +84,11 @@ static int (*original_chdir)(const char *path) = NULL;
 static int (*original_chroot)(const char *path) = NULL;
 //static int (*original_pivot_root)(const char *new_root, const char *putold) = NULL;
 
-static int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
-static int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
-static int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
+/* execl* family is being hooked but there is no need for particular pointers 
+	to functions since they internally call execv, execvp and execve respectively*/
+//static int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
+//static int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
+//static int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
 static int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
 static int (*original_execvp)(const char *file, char *const argv[]) = NULL;
 static int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
@@ -520,6 +522,8 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 	return number_of_arguments;
 }
 
+
+
 /*
 	Wrapper for all execlX functions family. This wrapper treats the variable
 	arguments and calls the corresponding execlX function according to:
@@ -533,11 +537,7 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
 	int execlX_result;
 
-	if(function == 0){
-		if(original_execl == NULL){
-			original_execl = dlsym_wrapper("execl");
-		}
-
+	if(function == 0 || function == 1 ){
 		va_list aux_list;
 		va_copy(aux_list, variable_arguments);
 		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
@@ -558,42 +558,16 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		}
 
 		va_end(aux_list);
-
-		execlX_result = execv_wrapper(pathname, argv);
-
-	} else if(function == 1){
-
-		if(original_execlp == NULL){
-			original_execlp = dlsym_wrapper("execlp");
+		switch(function){
+			case 0:
+				execlX_result = execv_wrapper(pathname, argv);
+				break;
+			case 1:
+				execlX_result = execvp_wrapper(pathname, argv);
+				break;
 		}
 
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
-		if(number_of_arguments == -1){
-			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
-		}
-
-			// This is done to reset aux_list and start from the very beginning
-			// when using va_arg
-		va_end(aux_list);
-		va_copy(aux_list, variable_arguments);
-
-		char *argv[number_of_arguments + 1];
-		argv[0] = (char *) arg;
-		ptrdiff_t i;
-		for(i = 1; i<= number_of_arguments; i++){
-			argv[i] = va_arg(aux_list, char *);
-		}
-
-		va_end(aux_list);
-
-		execlX_result = execvp_wrapper(pathname, argv);
 	} else if(function == 2){
-
-		if(original_execle == NULL){
-			original_execle = dlsym_wrapper("execle");
-		}
 
 		va_list aux_list;
 		va_copy(aux_list, variable_arguments);
