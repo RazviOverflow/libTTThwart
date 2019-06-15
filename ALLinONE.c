@@ -97,15 +97,6 @@ static int (*original_pclose)(FILE *stream) = NULL;
 static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 
 
-
-
-
-
-
-
-
-
-
 /// ########## Hooked functions ##########
 
 /// <-------------------------------------------------> 
@@ -117,11 +108,13 @@ void * dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list);
 int openat_wrapper(int, const char *, int, va_list);
 int execlX_wrapper(int, const char *, const char *, va_list);
+int execv_wrapper(const char *, char *);
+int execvp_wrapper(const char *, char *);
+int execve_wrapper(const char *, char *, char *);
+int execvpe_wrapper(const char *, char *, char *);
 int chdir_wrapper(const char *);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
-const char * sanitize_path(const char *);
-const char * sanitize_relative_path(const char *);
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *, int);
 void timestamp();
 int file_does_exist(const char *);
@@ -552,7 +545,7 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 				printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
 			}
 
-			// This is done to reset aux_list and start from the very beginbing
+			// This is done to reset aux_list and start from the very beginning
 			// when using va_arg
 			va_end(aux_list);
 			va_copy(aux_list, variable_arguments);
@@ -566,7 +559,7 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 
 			va_end(aux_list);
 
-			execlX_result = execv(pathname, argv);
+			execlX_result = execv_wrapper(pathname, argv);
 
 		break;
 
@@ -582,6 +575,38 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 	} 
 
 	return execlX_result;
+}
+
+int execv_wrapper(const char *pathname, char *const argv[]){
+	if ( original_execv == NULL ) {
+		original_execv = dlsym_wrapper("execv");
+	}
+
+	return original_execv(pathname, argv);
+}
+
+int execvp_wrapper(const char *file, char *const argv[]){
+	if ( original_execvp == NULL ) {
+		original_execvp = dlsym_wrapper("execvp");
+	}
+
+	return original_execvp(file, argv);
+}
+
+int execve_wrapper(const char *pathname, char *const argv[], char *const envp[]){
+	if ( original_execve == NULL ) {
+		original_execve = dlsym_wrapper("execve");
+	}
+
+	return original_execve(pathname, argv, envp);
+}
+
+int execvpe_wrapper(const char *file, char *const argv[], char *const envp[]){
+	if ( original_execvpe == NULL ) {
+		original_execvpe = dlsym_wrapper("execvpe");
+	}
+
+	return original_execvpe(file, argv, envp);
 }
 
 /*
@@ -613,7 +638,7 @@ ino_t get_inode(const char *path){
 /*
 	Function to get full path of a given parameter without resolving, expanding
 	symbolic links. That's why realpath() is useless. 
-	https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
+	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
 */
 const char * sanitize_and_get_absolute_path(const char * src) {
 
@@ -736,102 +761,11 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 }
 
 /*
-	Function to sanitize the given path.
-	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
-*/
-const char * sanitize_path(const char *src) {
-
-		size_t res_len = 0;
-        size_t src_len = strlen(src);
-		char *res = malloc(src_len + 1);
-        
-        const char *pointer;
-        const char *end_pointer = &src[src_len];
-        const char *next_pointer;
-
-        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
-                size_t len;
-
-                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
-                // to by pointer for the first instance of '/'
-                next_pointer = memchr(pointer, '/', end_pointer-pointer);
-
-                if (next_pointer == NULL) {
-                        next_pointer = end_pointer;
-                }
-
-
-                len = next_pointer-pointer;
-
-
-                switch(len) {
-                case 2:
-                        if (pointer[0] == '.' && pointer[1] == '.') {
-                        	// memrchr is like memchr, except that it searches 
-                        	// backward from the end of the res_len bytes pointed
-                        	// to by res instead of forward from the beginning
-                                const char * slash = memrchr(res, '/', res_len);
-                                if (slash != NULL) {
-                                	// This way the last node from the current
-                                	// directory is deleted. Lets say res starts
-                                	// @ 0x2 mem address and slash is @ 0x10.
-                                	// res_len would be 0x8 which is exactly
-                                	// the length between 0x2 and 0x10.
-                                        res_len = slash - res;
-                                }
-                                // Continue applies only to loop statements. 
-                                //That is, this jumps right to next for iteration,
-                                // skipping the remaining code.
-                                continue; 
-                        }
-                        break;
-                case 1:
-                        if (pointer[0] == '.') {
-                                continue;
-
-                        }
-                        break;
-                case 0:
-                        continue;
-                }
-                res[res_len++] = '/';
-                memcpy(&res[res_len], pointer, len);
-                res_len += len;
-        }
-
-        if (res_len == 0) {
-                res[res_len++] = '/';
-        }
-        // Marks the end of the new sanitized and absoluted path, thus discarding
-        // whatever follows res_len
-        res[res_len] = '\0';
-        return res;
-}
-
-/*
 	Function used to determine whether a path is absolute. If it isn't it's, 
 	obviosuly, because it is relative.
 */
 bool path_is_absolute(const char *path){
 	return (path[0] == '/');
-}
-
-/*
-	Function used to sanitize a relative path. That is, sanitize an absoulte path
-	but without the first '/' slash character. That's why this function is as 
-	simple as calling sanitize_path and then simply make use of pointer arithmetics
-	in order to chop the sanitized path. If char *src = "/file" after src++ it will
-	become src = "file".
-*/
-const char * sanitize_relative_path(const char *src){
-	bool absolute = path_is_absolute(src);
-
-	src = sanitize_path(src);
-	if(absolute){
-		return src;
-	} else {
-		return ++src;
-	}
 }
 
 /*
@@ -2117,6 +2051,8 @@ int chroot(const char *path){
 }
 
 int execl(const char *pathname, const char *arg, ){
+
+	pathname = sanitize_and_get_absolute_path();
 
 }
 
