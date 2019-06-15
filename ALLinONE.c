@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <stddef.h>
 
 #include <limits.h>
 #include <time.h>
@@ -108,10 +109,10 @@ void * dlsym_wrapper(const char *);
 int open_wrapper(const char *, int, va_list);
 int openat_wrapper(int, const char *, int, va_list);
 int execlX_wrapper(int, const char *, const char *, va_list);
-int execv_wrapper(const char *, char *);
-int execvp_wrapper(const char *, char *);
-int execve_wrapper(const char *, char *, char *);
-int execvpe_wrapper(const char *, char *, char *);
+int execv_wrapper(const char *, char * const *);
+int execvp_wrapper(const char *, char * const *);
+int execve_wrapper(const char *, char * const *, char * const *);
+int execvpe_wrapper(const char *, char * const *, char * const *);
 int chdir_wrapper(const char *);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
@@ -532,46 +533,91 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
 	int execlX_result;
 
-	switch (function){
-		case 0: //execl
-			if(original_execl == NULL){
-				original_execl = dlsym_wrapper("execl");
-			}
+	if(function == 0){
+		if(original_execl == NULL){
+			original_execl = dlsym_wrapper("execl");
+		}
 
-			va_list aux_list;
-			va_copy(aux_list, variable_arguments);
-			int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
-			if(number_of_arguments == -1){
-				printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
-			}
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+		if(number_of_arguments == -1){
+			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+		}
 
 			// This is done to reset aux_list and start from the very beginning
 			// when using va_arg
-			va_end(aux_list);
-			va_copy(aux_list, variable_arguments);
+		va_end(aux_list);
+		va_copy(aux_list, variable_arguments);
 
-			char *argv[number_of_arguments + 1];
-			argv[0] = (char *) argc;
-			ptrdiff_t i;
-			for(i = 1; i<= number_of_arguments; i++){
-				argv[i] = va_arg(aux_list, char *);
-			}
+		char *argv[number_of_arguments + 1];
+		argv[0] = (char *) arg;
+		ptrdiff_t i;
+		for(i = 1; i<= number_of_arguments; i++){
+			argv[i] = va_arg(aux_list, char *);
+		}
 
-			va_end(aux_list);
+		va_end(aux_list);
 
-			execlX_result = execv_wrapper(pathname, argv);
+		execlX_result = execv_wrapper(pathname, argv);
 
-		break;
+	} else if(function == 1){
 
-		case 1: //execlp
+		if(original_execlp == NULL){
+			original_execlp = dlsym_wrapper("execlp");
+		}
 
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+		if(number_of_arguments == -1){
+			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+		}
 
-		break;
+			// This is done to reset aux_list and start from the very beginning
+			// when using va_arg
+		va_end(aux_list);
+		va_copy(aux_list, variable_arguments);
 
-		case 2: //execle
+		char *argv[number_of_arguments + 1];
+		argv[0] = (char *) arg;
+		ptrdiff_t i;
+		for(i = 1; i<= number_of_arguments; i++){
+			argv[i] = va_arg(aux_list, char *);
+		}
 
+		va_end(aux_list);
 
-		break;
+		execlX_result = execvp_wrapper(pathname, argv);
+	} else if(function == 2){
+
+		if(original_execle == NULL){
+			original_execle = dlsym_wrapper("execle");
+		}
+
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+		if(number_of_arguments == -1){
+			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+		}
+
+			// This is done to reset aux_list and start from the very beginning
+			// when using va_arg
+		va_end(aux_list);
+		va_copy(aux_list, variable_arguments);
+
+		char *argv[number_of_arguments + 1];
+		char **envp;
+		argv[0] = (char *) arg;
+		ptrdiff_t i;
+		for(i = 1; i<= number_of_arguments; i++){
+			argv[i] = va_arg(aux_list, char *);
+		}
+		envp = va_arg(variable_arguments, char **);
+		va_end(aux_list);
+
+		execlX_result = execve_wrapper(pathname, argv, envp);
 	} 
 
 	return execlX_result;
@@ -1050,6 +1096,8 @@ int unlink(const char *path){
 
    	print_function_and_path(__func__, path);
 
+   	check_parameters_properties(path, __func__);
+
 	int unlink_result = original_unlink(path);
 
 	/*
@@ -1085,6 +1133,8 @@ int unlinkat(int dirfd, const char *path, int flags){
 	}
 
 	print_function_and_path(__func__, full_path);
+
+	check_parameters_properties(full_path, __func__);
 
 	/*
 		Note that the original function gets passed only path, not full_path
@@ -1173,7 +1223,7 @@ int symlink(const char *oldpath, const char *newpath){
    	print_function_and_path(__func__, newpath);
 
    
-   	check_parameters_properties(newpath, __func__);
+   	check_parameters_properties(oldpath, __func__);
    	
 
     int symlink_result = original_symlink(oldpath, newpath);
@@ -1217,7 +1267,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 
    	print_function_and_path(__func__, full_new_path);
 
-   	check_parameters_properties(full_new_path, __func__);
+   	check_parameters_properties(full_old_path, __func__);
    	
 
 	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
@@ -1254,6 +1304,8 @@ int remove(const char *path) {
     path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path);
+
+	check_parameters_properties(path, __func__);
 
 	int remove_result = original_remove(path);
 
@@ -1558,6 +1610,8 @@ int rmdir(const char *path){
     path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path);
+
+	check_parameters_properties(path, __func__);
 
 	int rmdir_result = original_rmdir(path);
 
@@ -2050,33 +2104,157 @@ int chroot(const char *path){
 
 }
 
-int execl(const char *pathname, const char *arg, ){
+int execl(const char *pathname, const char *arg, ...){
 
-	pathname = sanitize_and_get_absolute_path();
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, arg);
+
+	int execl_result = execlX_wrapper(0, pathname, arg, variable_arguments);
+
+	// If execl succeeds this code will never be executed
+
+	va_end(variable_arguments);
+
+	if(execl_result == -1){
+		printf("EXECL ERROR: %s\n", strerror(errno));
+	}
+
+	return execl_result;
 
 }
 
-int execlp(const char *file, const char *arg, ){
+int execlp(const char *file, const char *arg, ...){
+
+	file = sanitize_and_get_absolute_path(file);
+
+	print_function_and_path(__func__, file);
+
+	check_parameters_properties(file, __func__);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, arg);
+
+	int execlp_result = execlX_wrapper(1, file, arg, variable_arguments);
+
+	// If execlp succeeds this code will never be executed
+
+	va_end(variable_arguments);
+
+	if(execlp_result == -1){
+		printf("EXECLP ERROR: %s\n", strerror(errno));
+	}
+
+	return execlp_result;
 
 }
 
-int execle(const char *pathname, const char *arg, ){
+int execle(const char *pathname, const char *arg, ...){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	va_list variable_arguments;
+	va_start(variable_arguments, arg);
+
+	int execle_result = execlX_wrapper(2, pathname, arg, variable_arguments);
+
+	// If execle succeeds this code will never be executed
+
+	va_end(variable_arguments);
+
+	if(execle_result == -1){
+		printf("EXECLE ERROR: %s\n", strerror(errno));
+	}
+
+	return execle_result;
 
 }
 
 int execv(const char *pathname, char *const argv[]){
 
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	int execv_result = execv_wrapper(pathname, argv);
+
+	// If execv succeeds this code will never be executed
+
+	if(execv_result == -1){
+		printf("EXECV ERROR: %s\n", strerror(errno));
+	}
+
+	return execv_result;
 }
 
 int execvp(const char *file, char *const argv[]){
+
+	file = sanitize_and_get_absolute_path(file);
+
+	print_function_and_path(__func__, file);
+
+	check_parameters_properties(file, __func__);
+
+	int execvp_result = execvp_wrapper(file, argv);
+
+	// If execv succeeds this code will never be executed
+
+	if(execvp_result == -1){
+		printf("EXECVP ERROR: %s\n", strerror(errno));
+	}
+
+	return execvp_result;
 
 }
 
 int execve(const char *pathname, char *const argv[], char *const envp[]){
 
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	print_function_and_path(__func__, pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	int execve_result = execve_wrapper(pathname, argv, envp);
+
+	// If execv succeeds this code will never be executed
+
+	if(execve_result == -1){
+		printf("EXECVE ERROR: %s\n", strerror(errno));
+	}
+
+	return execve_result;
+
 }
 
 int execvpe(const char *file, char *const argv[], char *const envp[]){
+
+	file = sanitize_and_get_absolute_path(file);
+
+	print_function_and_path(__func__, file);
+
+	check_parameters_properties(file, __func__);
+
+	int execve_result = execvpe_wrapper(file, argv, envp);
+
+	// If execv succeeds this code will never be executed
+
+	if(execve_result == -1){
+		printf("EXECVPE ERROR: %s\n", strerror(errno));
+	}
+
+	return execve_result;
 
 }
 
