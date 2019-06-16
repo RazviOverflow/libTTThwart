@@ -36,6 +36,7 @@
 //#define O_RDONLY  00000000
 
 /// ########## Hooked functions ##########
+
 // Left-handed functions
 static int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
 static int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
@@ -89,6 +90,7 @@ static int (*original_chroot)(const char *path) = NULL;
 //static int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
 //static int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
 //static int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
+
 static int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
 static int (*original_execvp)(const char *file, char *const argv[]) = NULL;
 static int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
@@ -166,7 +168,6 @@ file_objects_info g_array;
 void check_dlsym_error(){
 	char * error = dlerror();
 	if(error != NULL){
-		//printf("There were errors while retrieving the original function from the dynamic linker/loader.\nDlsym error: %s\n", error);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -177,18 +178,14 @@ void check_dlsym_error(){
     the corresponding memory.
 */
 void initialize_array(file_objects_info *array, size_t size){
-	////printf("Initialize has been called for array: %X and size: %lu\n", &(*array), size);
-	//printf("Initialize array has been called\n");
+
 	array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
 	if(!array->list){
-		//printf("Error allocating memory for array in Initialize process.\n");
 		exit(EXIT_FAILURE);
 	}
 	array->used = 0;
 	array->size = size;
 
-    //Elements of array are contiguous
-    //memset(&array->list[array->used], 0, sizeof(file_object_info) * initialSize);
 }
 
 /*
@@ -280,7 +277,7 @@ void free_array(file_objects_info *array){
     initialized, so there is no way the element could be found. 
 */
 int find_index_in_array(file_objects_info *array, const char *path){
-	//printf("Invoked find index in array\n");
+
 	int returnValue = -1;
 
 	if(array->size > 0){
@@ -309,9 +306,6 @@ file_object_info get_from_array_at_index(file_objects_info *array, int index){
 	not position. Index starts at 0.
 */
 void remove_from_array_at_index(file_objects_info *array, int index){
-
-	//printf("Called remove_from_array_at_index with index %d\n", index);
-	//print_contents_of_array(&g_array);
 
 	int number_elements = array->used;
 	if(index < number_elements){
@@ -369,10 +363,6 @@ void print_function_and_path(const char* func, const char* path){
 */
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
-	//path = sanitize_and_get_absolute_path(path);
-
-	//print_function_and_path(caller_function_name, path);
-
 	if(file_does_exist(path)){
 		ino_t inode = get_inode(path);
 
@@ -394,7 +384,6 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			}
 		}
 	} else { // if file_does_exist
-		//printf("File %s does not exist\n", path);
 		printf("Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
 		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
 	}
@@ -522,8 +511,6 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 	return number_of_arguments;
 }
 
-
-
 /*
 	Wrapper for all execlX functions family. This wrapper treats the variable
 	arguments and calls the corresponding execlX function according to:
@@ -545,8 +532,7 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
 		}
 
-			// This is done to reset aux_list and start from the very beginning
-			// when using va_arg
+		// Reset aux_list and start from the very beginning when using va_arg
 		va_end(aux_list);
 		va_copy(aux_list, variable_arguments);
 
@@ -576,8 +562,7 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
 		}
 
-			// This is done to reset aux_list and start from the very beginning
-			// when using va_arg
+		// Reset aux_list and start from the very beginning when using va_arg
 		va_end(aux_list);
 		va_copy(aux_list, variable_arguments);
 
@@ -636,9 +621,6 @@ int execvpe_wrapper(const char *file, char *const argv[], char *const envp[]){
 ino_t get_inode(const char *path){
 	int fd;
 	ino_t inode;
-	//printf("User invoked get_inode for %s\n", path);
-    // Parenthesis are needed because of operator precedence.
-    // https://en.cppreference.com/w/c/language/operator_precedence
 
 	fd = open_wrapper(path, O_RDONLY, NULL);
 	if (fd < 0){
@@ -650,8 +632,6 @@ ino_t get_inode(const char *path){
 	inode = file_stat.st_ino;
 	close(fd);
 
-	////printf("User invoked get_inode for %s and it's %lu\n", path, inode);
-	//printf("User invoked get_inode for %s \n", path);
 	return inode;
 }
 
@@ -843,18 +823,18 @@ char * get_directory_from_fd(int directory_fd){
 static void before_main(void) __attribute__((constructor));
 static void after_main(void) __attribute__((destructor));
 
+//TODO think about before and after main functionality
+
 static void before_main(void){
 	printf("######### BEFORE MAIN!!!!\n [+] I AM %s WITH PID %d and PPID %d [+]\n", program_invocation_name, getpid(), getppid());
 }
 
 static void after_main(void){
-	//printf("######### AFTER MAIN!!!!\n");
 
 	printf("##### AFTER MAIN\n I AM  %s PID: %d PPID: %d\n", program_invocation_name, getpid(), getppid());
 	printf("g_array used: %lu size: %lu\n", g_array.used, g_array.size);
 
 	free_array(&g_array);
-	//printf("Dirección de array: %X\n", &g_array);
 
 }
 /// ########## Coconstructor and Destructor ##########
@@ -865,7 +845,6 @@ static void after_main(void){
 
 int __xstat(int ver, const char *path, struct stat *buf)
 {
-	//printf("I'VE RECEIVED PATH %s\n", path);
 
 	path = sanitize_and_get_absolute_path(path);
 
@@ -877,7 +856,6 @@ int __xstat(int ver, const char *path, struct stat *buf)
 		original_xstat = dlsym_wrapper(__func__);
 	}
 
-  ////printf("xstat64 %s\n",path);
 	return original_xstat(ver, path, buf);
 } 
 
@@ -894,7 +872,6 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 		original_xstat64 = dlsym_wrapper(__func__);
 	}
 
-  ////printf("xstat64 %s\n",path);
 	return original_xstat64(ver, path, buf);
 }
 
