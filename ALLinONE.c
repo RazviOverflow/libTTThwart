@@ -67,7 +67,6 @@ static int (*original_openat)(int dirfd, const char *path, int flags, ...) = NUL
 static FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
 static FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
 static FILE *(*original_fdopen)(int fd, const char *mode) = NULL;
-static int (*original_mknod)(const char *path, mode_t mode, dev_t dev) = NULL;
 static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
@@ -98,7 +97,7 @@ static int (*original_execvpe)(const char *file, char *const argv[], char *const
 
 // doubts
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
-static int (*original_pclose)(FILE *stream) = NULL;
+//static int (*original_pclose)(FILE *stream) = NULL;
 static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 
 
@@ -635,6 +634,8 @@ ino_t get_inode(const char *path){
 	return inode;
 }
 
+
+
 /*
 	Function to get full path of a given parameter without resolving, expanding
 	symbolic links. That's why realpath() is useless. 
@@ -940,9 +941,8 @@ int open(const char *path, int flags, ...)
 		printf("OPEN ERROR: %s\n", strerror(errno));
 	} else {
 		/*
-		If file didn't exist before actual open call (because otherwise it'd
-		have been treated in check_parameters_properties) and fstat returns
-		zero (success) a new file has been created.
+		If file didn't exist before actual open call and fstat returns
+		zero (success), a new file has been created.
 		*/
 		if(!path_exists_before && !fstat(open_result, &new_file)){
 			/*
@@ -1061,7 +1061,6 @@ int unlink(const char *path){
 		int index = find_index_in_array(&g_array, path);
 		if(index >= 0){
 			remove_from_array_at_index(&g_array, index);
-			//g_array.list[index].inode = -1;
 		}
 	}
 
@@ -1106,7 +1105,6 @@ int unlinkat(int dirfd, const char *path, int flags){
 
 		if(index >= 0){
 			remove_from_array_at_index(&g_array, index);
-			//g_array.list[index].inode = -1;
 		}
 	}
 
@@ -1234,8 +1232,6 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		upsert_inode_in_array(&g_array, full_new_path, inode);
 	}
 
-	//print_contents_of_array(&g_array);
-
 	return symlinkat_result;
 
 }
@@ -1271,50 +1267,10 @@ int remove(const char *path) {
 
 		if(index >= 0){
 			remove_from_array_at_index(&g_array, index);
-			//g_array.list[index].inode = -1;
 		}
 	}
 
     return remove_result;
-
-}
-
-/*
-	The system call mknod() creates a filesystem node (file, device
-    special file, or named pipe) named pathname, with attributes
-    specified by mode and dev.
-*/
-int mknod(const char *path, mode_t mode, dev_t dev){
-    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
-
-    if(original_mknod == NULL){
-    	original_mknod = dlsym_wrapper(__func__);
-    }
-	
-    path = sanitize_and_get_absolute_path(path);
-
-   	print_function_and_path(__func__, path);
-
-   	check_parameters_properties(path, __func__);
-
-    int mknod_result = original_mknod(path, mode, dev);
-
-    /*
-		mknod() and mknodat() return zero on success, or -1 if an error
-		occurred (in which case, errno is set appropriately).
-    */
-
-    if(mknod_result == -1){
-		printf("MKNOD ERROR: %s\n", strerror(errno));
-	} else {
-
-	    ino_t inode = get_inode(path);
-
-	    upsert_inode_in_array(&g_array, path, inode);
-	    
-	}
-
-    return mknod_result;
 
 }
 
@@ -1414,8 +1370,11 @@ int link(const char *oldpath, const char *newpath){
 
    	print_function_and_path(__func__, newpath);
 
-
-   	check_parameters_properties(oldpath, __func__);
+   	/*
+		We need to check whether the link about to be created, its path, 
+		already exists in the array. If it does exist
+   	*/
+   	check_parameters_properties(newpath, __func__);
 
 
    	int link_result = original_link(oldpath, newpath);
@@ -1467,7 +1426,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
     print_function_and_path(__func__, full_old_path);
 
 
-	check_parameters_properties(full_old_path, __func__);
+	check_parameters_properties(full_new_path, __func__);
 	
 
     int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
@@ -1653,7 +1612,7 @@ int rename(const char *oldpath, const char *newpath){
 	const char *full_old_path = sanitize_and_get_absolute_path(oldpath);
 	const char *full_new_path = sanitize_and_get_absolute_path(newpath);
 
-	print_function_and_path(__func__, full_old_path);
+	print_function_and_path(__func__, full_new_path);
 
 	if(original_rename == NULL){
 		original_rename = dlsym_wrapper(__func__);
@@ -1661,8 +1620,8 @@ int rename(const char *oldpath, const char *newpath){
 
 	bool found;
 
-	if(find_index_in_array(&g_array, full_old_path) >= 0){
-		check_parameters_properties(full_old_path, __func__);
+	if(find_index_in_array(&g_array, full_new_path) >= 0){
+		check_parameters_properties(full_new_path, __func__);
 		found = true;
 	}
 	int rename_result = original_rename(oldpath, newpath);
@@ -1706,12 +1665,12 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
-    print_function_and_path(__func__, full_old_path);
+    print_function_and_path(__func__, full_new_path);
 
     bool found;
 
-	if(find_index_in_array(&g_array, full_old_path) >= 0){
-		check_parameters_properties(full_old_path, __func__);
+	if(find_index_in_array(&g_array, full_new_path) >= 0){
+		check_parameters_properties(full_new_path, __func__);
 		found = true;
 	}
 
@@ -2209,537 +2168,46 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 }
 
+FILE * popen(const char *command, const char *type){
+
+	print_function_and_path(__func__, command);
+
+	check_parameters_properties(command, __func__);
+
+	if(original_popen == NULL){
+		original_popen = dlsym_wrapper(__func__);
+	}
+
+	FILE *file = original_popen(command, type);
+
+	if(file == NULL){
+		printf("POPEN ERROR: %s\n", strerror(errno));
+	}
+
+	return file;
+
+}
+
+int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data){
+
+	print_function_and_path(__func__, target);
+
+	target = sanitize_and_get_absolute_path(target);
+
+	check_parameters_properties(target, __func__);
+
+	if(original_mount == NULL){
+		original_mount = dlsym_wrapper(__func__);
+	}
+
+	int target_result = original_mount(source, target, filesystemtype, mountflags, data);
+
+	if(target_result == -1){
+		printf("MOUNT ERROR: %s\n", strerror(errno));
+	}
+
+	return target_result;
+
+}
+
 //#########################
-/*
-int
-creat64(const char *pathname, mode_t mode)
-{
-    intercept("creat64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-creat(const char *pathname, mode_t mode)
-{
-    intercept("creat", 2);
-    set_errno();
-    return -1;
-}
-
-int
-close(int fd)
-{
-    intercept("close", 2);
-    set_errno();
-    return -1;
-}
-
-int
-open64(const char *pathname, int flags, ...)
-{
-    intercept("open64", 2);
-    set_errno();
-    return -1;
-}
-
-
-
-ssize_t
-read(int fd, void *buf, size_t count)
-{
-    intercept("read", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-readv(int fd, const struct iovec *vector, int count)
-{
-    intercept("readv", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-pread(int fd, void *buf, size_t count, unsigned long offset)
-{
-    intercept("pread", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-pread64(int fd, void *buf, size_t count, uint64_t offset)
-{
-    intercept("pread64", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-write(int fd, const void *buf, size_t count)
-{
-    intercept("write", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-writev(int fd, const struct iovec *vector, int count)
-{
-    intercept("writev", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-pwrite(int fd, const void *buf, size_t count, unsigned long offset)
-{
-    intercept("pwrite", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-pwrite64(int fd, const void *buf, size_t count, uint64_t offset)
-{
-    intercept("pwrite64", 2);
-    set_errno();
-    return -1;
-}
-
-off_t
-lseek(int fildes, unsigned long offset, int whence)
-{
-    intercept("lseek", 2);
-    set_errno();
-    return -1;
-}
-
-off_t
-lseek64(int fildes, uint64_t offset, int whence)
-{
-    intercept("lseek64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-dup(int fd)
-{
-    intercept("dup", 2);
-    set_errno();
-    return -1;
-}
-
-int
-dup2(int oldfd, int newfd)
-{
-    intercept("dup2", 2);
-    set_errno();
-    return -1;
-}
-
-int
-mkdir(const char *pathname, mode_t mode)
-{
-    intercept("mkdir", 2);
-    set_errno();
-    return -1;
-}
-
-int
-rmdir(const char *pathname)
-{
-    intercept("rmdir", 2);
-    set_errno();
-    return -1;
-}
-
-int
-chmod(const char *pathname, mode_t mode)
-{
-    intercept("chmod", 2);
-    set_errno();
-    return -1;
-}
-
-int
-chown(const char *pathname, uid_t owner, gid_t group)
-{
-    intercept("chown", 2);
-    set_errno();
-    return -1;
-}
-
-int
-fchmod(int fd, mode_t mode)
-{
-    intercept("fchmod", 2);
-    set_errno();
-    return -1;
-}
-
-int
-fchown(int fd, uid_t uid, gid_t gid)
-{
-    intercept("fchown", 2);
-    set_errno();
-    return -1;
-}
-
-int
-fsync(int fd)
-{
-    intercept("fsync", 2);
-    set_errno();
-    return -1;
-}
-
-int
-ftruncate(int fd, off_t length)
-{
-    intercept("ftruncate", 1);
-    set_errno();
-    return -1;
-}
-
-int
-ftruncate64(int fd, off_t length)
-{
-    intercept("ftruncate64", 1);
-    set_errno();
-    return -1;
-}
-
-int
-link(const char *oldpath, const char *newname)
-{
-    intercept("link", 2);
-    set_errno();
-    return -1;
-}
-
-int
-rename(const char *oldpath, const char *newpath)
-{
-    intercept("rename", 2);
-    set_errno();
-    return -1;
-}
-
-int
-utimes(const char *path, const struct timeval times[2])
-{
-    intercept("utimes", 2);
-    set_errno();
-    return -1;
-}
-
-int
-futimes(int fd, const struct timeval times[2])
-{
-    intercept("futimes", 2);
-    set_errno();
-    return -1;
-}
-
-int
-utime(const char *path, const struct utimbuf *buf)
-{
-    intercept("utime", 2);
-    set_errno();
-    return -1;
-}
-
-int
-mknod(const char *path, mode_t mode, dev_t dev)
-{
-    intercept("mknod", 2);
-    set_errno();
-    return -1;
-}
-
-int
-__xmknod(int ver, const char *path, mode_t mode, dev_t *dev)
-{
-    intercept("__xmknod", 2);
-    set_errno();
-    return -1;
-}
-
-int
-mkfifo(const char *path, mode_t mode)
-{
-    intercept("mkfifo", 2);
-    set_errno();
-    return -1;
-}
-
-int
-unlink(const char *path)
-{
-    intercept("unlink", 2);
-    set_errno();
-    return -1;
-}
-
-int
-symlink(const char *oldpath, const char *newpath)
-{
-    intercept("symlink", 2);
-    set_errno();
-    return -1;
-}
-
-int
-readlink(const char *path, char *buf, size_t bufsize)
-{
-    intercept("readlink", 1);
-    set_errno();
-    return -1;
-}
-
-char *
-realpath(const char *path, char *resolved)
-{
-    intercept("realpath", 1);
-    set_errno();
-    return NULL;
-}
-
-DIR *
-opendir(const char *path)
-{
-    intercept("opendir", 2);
-    set_errno();
-    return NULL;
-}
-
-struct dirent *
-readdir(DIR *dir)
-{
-    intercept("readdir\t", 2);
-    set_errno();
-    return NULL;
-}
-
-struct dirent *
-readdir64(DIR *dir)
-{
-    intercept("readdir64", 2);
-    set_errno();
-    return NULL;
-}
-
-int
-readdir_r(DIR *dir, struct dirent *entry, struct dirent **result)
-{
-    intercept("readdir_r", 1);
-    set_errno();
-    return -1;
-}
-
-int
-readdir64_r(DIR *dir, struct dirent *entry, struct dirent **result)
-{
-    intercept("readdir64_r", 1);
-    set_errno();
-    return -1;
-}
-
-int
-closedir(DIR *dh)
-{
-    intercept("closedir", 1);
-    set_errno();
-    return -1;
-}
-
-int
-stat(const char *path, struct stat *buf)
-{
-    intercept("stat", 2);
-    set_errno();
-    return -1;
-}
-
-int
-stat64(const char *path, struct stat *buf)
-{
-    intercept("stat64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-__fxstat(int ver, int fd, struct stat *buf)
-{
-    intercept("__fxstat\t", 2);
-    set_errno();
-    return -1;
-}
-
-int
-__fxstat64(int ver, int fd, struct stat *buf)
-{
-    intercept("__fxstat64", 2);
-    set_errno();
-    return -1;
-}
-
-
-int
-fstat(int fd, struct stat *buf)
-{
-    intercept("fstat", 2);
-    set_errno();
-    return -1;
-}
-
-int
-fstat64(int fd, struct stat *buf)
-{
-    intercept("fstat64", 2);
-    set_errno();
-    return -1;
-}
-
-
-int
-__lxstat64(int ver, const char *path, struct stat *buf)
-{
-    intercept("__lxstat64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-lstat(const char *path, struct stat *buf)
-{
-    intercept("lstat", 2);
-    set_errno();
-    return -1;
-}
-
-int
-lstat64(const char *path, struct stat *buf)
-{
-    //printf("USER INVOKED LSTAT64 ON: %s !!!!! ", path);
-    intercept("lstat64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-statfs(const char *path, struct statfs *buf)
-{
-    intercept("statfs", 2);
-    set_errno();
-    return -1;
-}
-
-int
-statfs64(const char *path, struct statfs *buf)
-{
-    intercept("statfs64", 2);
-    set_errno();
-    return -1;
-}
-
-int
-statvfs(const char *path, struct statvfs *buf)
-{
-    intercept("statvfs\t", 2);
-    set_errno();
-    return -1;
-}
-
-int
-statvfs64(const char *path, struct statvfs *buf)
-{
-    intercept("statvfs64", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-getxattr(const char *path, const char *name, void *value, size_t size)
-{
-    intercept("getxattr", 1);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-lgetxattr(const char *path, const char *name, void *value, size_t size)
-{
-    intercept("lgetxattr", 1);
-    set_errno();
-    return -1;
-}
-
-int
-remove(const char *path)
-{
-    intercept("remove", 2);
-    set_errno();
-    return -1;
-}
-
-int
-lchown(const char *path, uid_t owner, gid_t group)
-{
-    intercept("lchown", 2);
-    set_errno();
-    return -1;
-}
-
-void
-rewinddir(DIR *dirp)
-{
-    intercept("rewinddir", 1);
-    set_errno();
-    return;
-}
-
-void
-seekdir(DIR *dirp, off_t offset)
-{
-    intercept("seekdir", 2);
-    set_errno();
-    return;
-}
-
-off_t
-telldir(DIR *dirp)
-{
-    intercept("telldir", 2);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
-{
-    intercept("sendfile\t", 1);
-    set_errno();
-    return -1;
-}
-
-ssize_t
-sendfile64(int out_fd, int in_fd, off_t *offset, size_t count)
-{
-    intercept("sendfile64", 1);
-    set_errno();
-    return -1;
-}
-
-int
-fcntl(int fd, int cmd, ...)
-{
-    intercept("fcntl", 2);
-    set_errno();
-    return -1;
-}*/
