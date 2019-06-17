@@ -28,6 +28,9 @@
 
 #include <sys/mman.h>
 
+// Logger
+#include "zlog.h"
+
 #define NONEXISTING_FILE_INODE -5555
 
 #undef GET_PROGRAM_NAME
@@ -830,8 +833,8 @@ static void before_main(void){
 
 	//+1 because strlen excludes the terminating null byte
 	int program_name_length = strlen(GET_PROGRAM_NAME()) + 1;
-	// there is no need of +1 because in the resulting 
-	// log_file_absolute_path string will be only one null-
+	// there is no need for +1 because in the resulting 
+	// log_file_absolute_path string, there will be only one null-
 	// trailing byte.  
 	int program_directory_length = strlen("/var/log/.log");
 	int log_file_absolute_path_length = program_name_length + program_directory_length;
