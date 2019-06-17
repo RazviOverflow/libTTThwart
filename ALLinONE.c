@@ -30,7 +30,14 @@
 
 #define NONEXISTING_FILE_INODE -5555
 
-////TODO implement logger and replace printf family with corresponding log level
+#undef GET_PROGRAM_NAME
+#ifdef __GLIBC__
+#   define GET_PROGRAM_NAME() program_invocation_short_name
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+#   define GET_PROGRAM_NAME() getprogname()
+#else 
+#	define GET_PROGRAM_NAME() "?";
+#endif
 
 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 //#define O_RDONLY  00000000
@@ -49,7 +56,6 @@ static int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
 static int (*original_remove)(const char *path) = NULL;
 static ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz) = NULL; // readlink(2)
 static ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
-
 
 // Both-handed functions
 static int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
@@ -105,6 +111,13 @@ static int (*original_mount)(const char *source, const char *target, const char 
 
 /// <-------------------------------------------------> 
 
+/// ########## Coconstructor and Destructor ##########
+static void before_main(void) __attribute__((constructor));
+static void after_main(void) __attribute__((destructor));
+/// ########## Coconstructor and Destructor ##########
+
+/// <-------------------------------------------------> 
+
 /// ########## Prototype declaration ##########
 
 void check_parameters_properties(const char *, const char *);
@@ -157,7 +170,6 @@ void print_contents_of_array(file_objects_info *);
 /// <-------------------------------------------------> 
 
 /// ########## GLOBAL VARIABLES ##########
-extern char *program_invocation_name;
 file_objects_info g_array;
 /// ########## GLOBAL VARIABLES ##########
 
@@ -265,8 +277,6 @@ void free_array(file_objects_info *array){
 
 	array->used = 0;
 	array->size = 0;
-	
-
 
 }
 
@@ -349,7 +359,7 @@ void upsert_path_in_array(file_objects_info *array, const char *oldpath, const c
 
 /// ########## Core and useful functions ##########
 void print_function_and_path(const char* func, const char* path){
-	printf("User invoked %s via process %s on: %s\n", func, program_invocation_name, path);
+	printf("User invoked %s via process %s on: %s\n", func, GET_PROGRAM_NAME(), path);
 }
 
 /*
@@ -816,29 +826,35 @@ char * get_directory_from_fd(int directory_fd){
 	return directory_fd_path;
 }
 
-/// ########## Core and useful functions ##########
-
-/// <-------------------------------------------------> 
-
-/// ########## Coconstructor and Destructor ##########
-static void before_main(void) __attribute__((constructor));
-static void after_main(void) __attribute__((destructor));
-
-//TODO think about before and after main functionality
-
 static void before_main(void){
-	printf("######### BEFORE MAIN!!!!\n [+] I AM %s WITH PID %d and PPID %d [+]\n", program_invocation_name, getpid(), getppid());
+
+	//+1 because strlen excludes the terminating null byte
+	int program_name_length = strlen(GET_PROGRAM_NAME()) + 1;
+	// there is no need of +1 because in the resulting 
+	// log_file_absolute_path string will be only one null-
+	// trailing byte.  
+	int program_directory_length = strlen("/var/log/.log");
+	int log_file_absolute_path_length = program_name_length + program_directory_length;
+
+	char log_file_absolute_path[log_file_absolute_path_length]; 
+	snprintf(log_file_absolute_path, log_file_absolute_path_length, "/var/log/%s.log", GET_PROGRAM_NAME());
+
+	//zlog_init(log_file_absolute_path);
+
+	printf("THE NAME RESULTED IN: %s\n", log_file_absolute_path);
+	printf("######### BEFORE MAIN!!!!\n [+] I AM %s WITH PID %d and PPID %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 }
 
 static void after_main(void){
 
-	printf("##### AFTER MAIN\n I AM  %s PID: %d PPID: %d\n", program_invocation_name, getpid(), getppid());
+	printf("##### AFTER MAIN\n I AM  %s PID: %d PPID: %d\n", GET_PROGRAM_NAME(), getpid(), getppid());
 	printf("g_array used: %lu size: %lu\n", g_array.used, g_array.size);
 
 	free_array(&g_array);
 
 }
-/// ########## Coconstructor and Destructor ##########
+
+/// ########## Core and useful functions ##########
 
 /// <-------------------------------------------------> 
 
@@ -1037,7 +1053,7 @@ FILE *fopen(const char *path, const char *mode){
 
 int unlink(const char *path){
 
-	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_unlink == NULL){
 		original_unlink = dlsym_wrapper(__func__);
@@ -1069,7 +1085,7 @@ int unlink(const char *path){
 }
 
 int unlinkat(int dirfd, const char *path, int flags){
-	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_unlinkat == NULL){
 		original_unlinkat = dlsym_wrapper(__func__);
@@ -1113,7 +1129,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 }
 
 int openat(int dirfd, const char *path, int flags, ...){
-	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	const char *full_path;
 	if(path_is_absolute(path)){
@@ -1160,7 +1176,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 	Creates a symbolic link called newpath that poins to oldpath.
 */
 int symlink(const char *oldpath, const char *newpath){
-    printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+    printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
     if(original_symlink == NULL){
     	original_symlink = dlsym_wrapper(__func__);
@@ -1199,7 +1215,7 @@ int symlink(const char *oldpath, const char *newpath){
 	Creates a symbolic link to oldpath called newpath in the directory pointed to by newdirfd.
 */
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
-	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
 	if(original_symlinkat == NULL){
 		original_symlinkat = dlsym_wrapper(__func__);
@@ -1242,7 +1258,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 */
 int remove(const char *path) {
 
-	printf("Program %s with PID: %d called remove for path: %s\n", program_invocation_name, getpid(), path);
+	printf("Program %s with PID: %d called remove for path: %s\n", GET_PROGRAM_NAME(), getpid(), path);
 	
 	if(original_remove == NULL){
     	original_remove = dlsym_wrapper(__func__);
@@ -1280,7 +1296,7 @@ int remove(const char *path) {
     specified by mode and dev.
 */
 int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
-    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+    printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
     if(original_xmknod == NULL){
     	original_xmknod = dlsym_wrapper(__func__);
@@ -1320,7 +1336,7 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 	directory file descriptor.
 */
 int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
-	printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_xmknodat == NULL){
 		original_xmknodat = dlsym_wrapper(__func__);
@@ -1359,7 +1375,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 	Creates a new hardlink called newpath that points to oldpath. 
 */
 int link(const char *oldpath, const char *newpath){
-   printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+   printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
    if(original_link == NULL){
    		original_link = dlsym_wrapper(__func__);
@@ -1403,7 +1419,7 @@ int link(const char *oldpath, const char *newpath){
 	points to file oldpath, which is located in directroy pointed to by olddirfd. 
 */
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
-	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", program_invocation_name, getpid(), __func__, oldpath, newpath);
+	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
 	if(original_linkat == NULL){
 		original_linkat = dlsym_wrapper(__func__);
@@ -1449,7 +1465,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 }
 
 int creat64(const char *path, mode_t mode){
-    printf("Process %s with pid %d called %s for path %s\n", program_invocation_name, getpid(), __func__, path);
+    printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
     if(original_creat64 == NULL){
     	original_creat64 = dlsym_wrapper(__func__);
@@ -1481,7 +1497,7 @@ int creat64(const char *path, mode_t mode){
 
 int creat(const char *path, mode_t mode){
 
-	printf("Program %s with PID: %d called creat for path: %s", program_invocation_name, getpid(), path);
+	printf("Program %s with PID: %d called creat for path: %s", GET_PROGRAM_NAME(), getpid(), path);
     
     if(original_creat == NULL){
     	original_creat = dlsym_wrapper(__func__);
