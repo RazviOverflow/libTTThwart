@@ -75,3 +75,9 @@ sudo chmod u+s vulnerable
 *If you want to see every output, edit the script and dont redirect its output. Then simply execute ./exploit.sh r00t.file*
 
 6. Now simply wait for the script to finish. Sooner or later r00t.file will be edited via a *user* created file that's been replaced by a symbolic link at the right moment. Since TOCTTOU vulnerability is a non-deterministic one, we cannot know beforehand how long it will take to actually exploit the vulnerability. There are many factors to take into account, such as CPU performance, OS, enviroment variables, OS preempting, context switches, etc...
+
+## Logging
+
+Logging is carried out by Zlog, a C in-memory logging library. It allocates a buffer in memory for logging, and flush the buffer to the log file (or stdout) when the buffer is full, or it is instructed explicitly by the program or flushing thread. 
+
+Zlog is originally written by Zhiqiang Ma and it was modified to fulfill the project needs. You can find the modified library here (https://github.com/RazviOverflow/zlog) and the original here (https://github.com/zma/zlog). 
