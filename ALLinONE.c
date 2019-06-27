@@ -75,7 +75,7 @@ static int (*original_open64)(const char *path, int flags, ...) = NULL;
 static int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
 static FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
 static FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
-static FILE *(*original_fdopen)(int fd, const char *mode) = NULL;
+static FILE *(*original_freopen)(const char *pathname, const char *mode, FILE *stream) = NULL;
 static int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
 static int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
@@ -1727,6 +1727,20 @@ FILE *fopen64(const char *path, const char *mode){
 
 }
 
+FILE *freopen(const char *pathname, const char *mode, FILE *stream){
+
+	pathname = sanitize_and_get_absolute_path(pathname);
+
+	check_parameters_properties(pathname, __func__);
+
+	if(original_freopen == NULL){
+		original_freopen = dlsym_wrapper(__func__);
+	}
+
+	return original_freopen(pathname, mode, stream);
+
+}
+
 int mkfifo(const char *pathname, mode_t mode){
 
 	if(original_mkfifo == NULL){
@@ -2209,23 +2223,23 @@ FILE * popen(const char *command, const char *type){
 
 int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data){
 
-	print_function_and_path(__func__, target);
+	print_function_and_path(__func__, source);
 
-	target = sanitize_and_get_absolute_path(target);
+	source = sanitize_and_get_absolute_path(source);
 
-	check_parameters_properties(target, __func__);
+	check_parameters_properties(source, __func__);
 
 	if(original_mount == NULL){
 		original_mount = dlsym_wrapper(__func__);
 	}
 
-	int target_result = original_mount(source, target, filesystemtype, mountflags, data);
+	int mount_result = original_mount(source, target, filesystemtype, mountflags, data);
 
-	if(target_result == -1){
+	if(mount_result == -1){
 		printf("MOUNT ERROR: %s\n", strerror(errno));
 	}
 
-	return target_result;
+	return mount_result;
 
 }
 
