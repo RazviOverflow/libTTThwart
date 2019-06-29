@@ -149,6 +149,7 @@ bool path_is_absolute(const char *);
 typedef struct{
 	char *path;
 	ino_t inode;
+	int fd_number;
 } file_object_info;
 
 typedef struct{
@@ -166,6 +167,8 @@ int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
 void print_contents_of_array(file_objects_info *);
+void increment_file_descriptor_number(file_objects_info *, const char *);
+void decrement_file_descriptor_numer(file_objects_info *, const char *);
 
 
 /// ########## file_objects_info.c ##########
@@ -256,6 +259,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		}
 		array->list[array->used].path = strdup(path);
 		array->list[array->used].inode = inode;
+		array->list[array->used].fd_number = 0;
 		array->used++;
 	}
 
@@ -356,6 +360,20 @@ void upsert_path_in_array(file_objects_info *array, const char *oldpath, const c
 
 }
 
+void increment_file_descriptor_number(file_objects_info *array, const char *pathname){
+	int index = find_index_in_array(array, pathname);
+	if(index >= 0){
+		array->list[index].fd_number++;
+	}
+}
+
+void decrement_file_descriptor_numer(file_objects_info *array, const char *pathname){
+	int index = find_index_in_array(array, pathname);
+	if(index >= 0){
+		array->list[index].fd_number--;
+	}
+}
+
 /// ########## Array management ##########
 
 /// <-------------------------------------------------> 
@@ -387,7 +405,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			if(aux.inode != inode){
 			//printf("FILE %s EXISTS: %d\n", path, exists);
 				timestamp();
-				printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. It was previously <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
+				printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
 				fflush(stdout);
 				exit(EXIT_FAILURE);
 			} else {
@@ -641,7 +659,7 @@ ino_t get_inode(const char *path){
 	}
 	struct stat file_stat;
 	fstat(fd, &file_stat);
-	inode = file_stat.st_ino;
+	inode = file_stat.st_ino; 
 	close(fd);
 
 	return inode;
@@ -977,6 +995,9 @@ int open(const char *path, int flags, ...)
 			upsert_inode_in_array(&g_array, path, inode);
 			
 		}
+
+		increment_file_descriptor_number(&g_array, path);
+
 	}
 
 	return open_result;
@@ -1019,6 +1040,8 @@ int open64(const char *path, int flags, ...)
 			upsert_inode_in_array(&g_array, path, inode);
 			
 		}
+
+		increment_file_descriptor_number(&g_array, path);
 	}
 
 	return open64_result;
@@ -1050,7 +1073,15 @@ FILE *fopen(const char *path, const char *mode){
 		original_fopen = dlsym_wrapper(__func__);
 	}
 
-	return original_fopen(path, mode);
+	FILE *fopen_result = original_fopen(path, mode);
+
+	if(fopen_result == NULL){
+		printf("FOPEN ERROR: %s\n", strerror(errno));
+	} else {
+		increment_file_descriptor_number(&g_array, path);
+	}
+
+	return fopen_result;
 
 }
 
@@ -1169,6 +1200,8 @@ int openat(int dirfd, const char *path, int flags, ...){
 			
 
 		}
+
+		increment_file_descriptor_number(&g_array, full_path);
 	}
 	return openat_result;
 
@@ -1492,6 +1525,7 @@ int creat64(const char *path, mode_t mode){
     	printf("CREAT64 ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, path, get_inode(path));
+    	increment_file_descriptor_number(&g_array, path);
     }
 
     return creat64_result;
@@ -1524,6 +1558,7 @@ int creat(const char *path, mode_t mode){
     	printf("CREAT ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, path, get_inode(path));
+    	increment_file_descriptor_number(&g_array, path);
     }
 
     return creat_result;
