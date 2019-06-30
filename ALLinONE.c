@@ -25,8 +25,9 @@
 #include <time.h>
 #include <utime.h>
 #include <sys/time.h>
+#include <dirent.h>
 
-#include <sys/mman.h>
+
 
 // Logger
 #include "zlog.h"
@@ -140,6 +141,9 @@ void timestamp();
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
 bool path_is_absolute(const char *);
+void create_log_dir();
+void create_log_file();
+void start_logger(const char *);
 
 /// ########## Prototype declaration ##########
 
@@ -177,7 +181,71 @@ void decrement_file_descriptor_numer(file_objects_info *, const char *);
 
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
+char *log_dir = "/tmp/libTOCTTOUlog/";
 /// ########## GLOBAL VARIABLES ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## Logger ##########
+
+void create_log_dir(){
+	
+	DIR *dir = opendir(log_dir);
+	if(dir){ //Directory exists
+		closedir(dir);
+	} else if(errno == ENOENT){ //Directory does not exist; create
+		if(mkdir(log_dir, 0777) == -1){
+			fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ABORTING.\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	
+}
+
+
+void create_log_file(){
+	time_t ltime;
+	ltime = time(NULL);
+	char char_pid[10];
+	char date_and_time[80];
+
+	struct tm *tm_struct = localtime(&ltime);
+
+	sprintf(char_pid, "%d", getpid());
+
+	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
+	
+	//+1 because strlen excludes the terminating null byte
+	int program_name_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + strlen(date_and_time) + strlen(".log") + 1;
+	
+	// +2 because of "_"
+	int log_file_absolute_path_length = strlen(log_dir) + program_name_length + 2;
+
+	char log_file_absolute_path[log_file_absolute_path_length]; 
+	snprintf(log_file_absolute_path, log_file_absolute_path_length, "%s%s_%s_%s.log", log_dir, GET_PROGRAM_NAME(), char_pid, date_and_time);
+
+	if ( original_open == NULL ) {
+		original_open = dlsym_wrapper("open");
+	}
+
+ 	if(original_open(log_file_absolute_path, O_CREAT | O_EXCL, 0644) == -1){
+ 		fprintf(stderr, "[!] ERROR CREATING LOG FILE.\n[!] ERROR: %s\n[!] ABORTING.\n", strerror(errno));
+		exit(EXIT_FAILURE);
+ 	}
+
+ 	start_logger(log_file_absolute_path);
+
+}
+
+void start_logger(const char* log_file_name){
+	zlog_init(log_file_name);
+}
+
+/// ########## Logger ##########
 
 /// <-------------------------------------------------> 
 
@@ -815,7 +883,7 @@ void timestamp(){
 	struct timespec spec;
 	clock_gettime(CLOCK_REALTIME, &spec);
 
-	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min + 1, tm_struct->tm_sec, spec.tv_nsec);
+	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min, tm_struct->tm_sec, spec.tv_nsec);
 
 }
 
@@ -849,21 +917,14 @@ char * get_directory_from_fd(int directory_fd){
 
 static void before_main(void){
 
-	//+1 because strlen excludes the terminating null byte
-	int program_name_length = strlen(GET_PROGRAM_NAME()) + 1;
-	// there is no need for +1 because in the resulting 
-	// log_file_absolute_path string, there will be only one null-
-	// trailing byte.  
-	int program_directory_length = strlen("/var/log/.log");
-	int log_file_absolute_path_length = program_name_length + program_directory_length;
+	create_log_dir();
+	create_log_file();
 
-	char log_file_absolute_path[log_file_absolute_path_length]; 
-	snprintf(log_file_absolute_path, log_file_absolute_path_length, "/var/log/%s.log", GET_PROGRAM_NAME());
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "zlog is initialized (debug)\n");
+    zlogf_time(ZLOG_INFO_LOG_MSG, "zlog is initialized (info)\n");
 
-	//zlog_init(log_file_absolute_path);
-
-	printf("THE NAME RESULTED IN: %s\n", log_file_absolute_path);
-	printf("######### BEFORE MAIN!!!!\n [+] I AM %s WITH PID %d and PPID %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s WITH PID %d and PPID %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlog_flush_buffer();
 }
 
 static void after_main(void){

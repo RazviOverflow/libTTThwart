@@ -19,7 +19,7 @@ $(TARGET): $(SRCS) $(DEPS)
 ALLINONESRCS= ALLinONE.c src/zlog.c
 
 allinone: 
-	gcc -shared -fpic -Wall -Wextra $(ALLINONESRCS) -I$(INCLUDEDIR) -o ALLinONE.so -ldl -lpthread 
+	gcc -shared -fpic -Wall -Wextra $(ALLINONESRCS) -I$(INCLUDEDIR) -o ALLinONE.so -ldl -lpthread -D DEBUG
 
 .PHONY: clean
 
