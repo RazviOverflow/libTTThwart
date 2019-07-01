@@ -142,7 +142,7 @@ int file_does_exist(const char *);
 char * get_directory_from_fd(int);
 bool path_is_absolute(const char *);
 void create_log_dir();
-void create_log_file();
+void create_log_file_and_start_logger();
 void start_logger(const char *);
 
 /// ########## Prototype declaration ##########
@@ -182,6 +182,7 @@ void decrement_file_descriptor_numer(file_objects_info *, const char *);
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
 char *log_dir = "/tmp/libTOCTTOUlog/";
+//extern char **environ;
 /// ########## GLOBAL VARIABLES ##########
 
 /// <-------------------------------------------------> 
@@ -207,7 +208,7 @@ void create_log_dir(){
 }
 
 
-void create_log_file(){
+void create_log_file_and_start_logger(){
 	time_t ltime;
 	ltime = time(NULL);
 	char char_pid[10];
@@ -647,10 +648,10 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		va_end(aux_list);
 		switch(function){
 			case 0:
-				execlX_result = execv_wrapper(pathname, argv);
+				execlX_result = execve_wrapper(pathname, argv, __environ);
 				break;
 			case 1:
-				execlX_result = execvp_wrapper(pathname, argv);
+				execlX_result = execvpe_wrapper(pathname, argv, __environ);
 				break;
 		}
 
@@ -685,19 +686,13 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 }
 
 int execv_wrapper(const char *pathname, char *const argv[]){
-	if ( original_execv == NULL ) {
-		original_execv = dlsym_wrapper("execv");
-	}
 
-	return original_execv(pathname, argv);
+	return execve_wrapper(pathname, argv, __environ);
 }
 
 int execvp_wrapper(const char *file, char *const argv[]){
-	if ( original_execvp == NULL ) {
-		original_execvp = dlsym_wrapper("execvp");
-	}
 
-	return original_execvp(file, argv);
+	return execvpe_wrapper(file, argv, __environ);
 }
 
 int execve_wrapper(const char *pathname, char *const argv[], char *const envp[]){
@@ -921,8 +916,11 @@ char * get_directory_from_fd(int directory_fd){
 
 static void before_main(void){
 
+	printf("PATH Variable environment: %s\n", getenv("PATH"));
+	printf("ENVIRON: %s\n", *__environ);
+
 	create_log_dir();
-	create_log_file();
+	create_log_file_and_start_logger();
 
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 	zlog_flush_buffer();
@@ -2270,15 +2268,15 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 	check_parameters_properties(file, __func__);
 
-	int execve_result = execvpe_wrapper(file, argv, envp);
+	int execvpe_result = execvpe_wrapper(file, argv, envp);
 
 	// If execv succeeds this code will never be executed
 
-	if(execve_result == -1){
+	if(execvpe_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECVPE ERROR: %s\n", strerror(errno));
 	}
 
-	return execve_result;
+	return execvpe_result;
 
 }
 
