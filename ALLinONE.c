@@ -137,7 +137,7 @@ int chdir_wrapper(const char *);
 ino_t get_inode(const char *);
 const char * sanitize_and_get_absolute_path(const char *);
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *, int);
-void timestamp();
+//void timestamp();
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
 bool path_is_absolute(const char *);
@@ -242,7 +242,8 @@ void create_log_file(){
 }
 
 void start_logger(const char* log_file_name){
-	zlog_init(log_file_name);
+	//zlog_init(log_file_name);
+	zlog_init_stdout();
 }
 
 /// ########## Logger ##########
@@ -298,7 +299,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	if(index >= 0){
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
-			printf("Updated inode (now %lu) of path %s\n", inode, path);
+			zlogf_time(ZLOG_INFO_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
 		}
 	} else  {
     // If number of elements (used) in the array equals its size, it means
@@ -315,7 +316,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
 			if(!aux){
-				printf("Error trying to realloc size for array in Insert process.\n");
+				fprintf(stderr, "Error trying to realloc size for array in upsert inode process.\n");
 				exit(EXIT_FAILURE);
 			} else {
 				array->list = aux;
@@ -405,10 +406,10 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 
 void print_contents_of_array(file_objects_info *array){
 
-	printf("Array used: %lu\nArray size: %lu\n", array->used, array->size);
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Array used: %lu\n[+] Array size: %lu\n", array->used, array->size);
 
 	for(uint i = 0; i < array->used; i++){
-		printf("[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
 	}
 }
 
@@ -448,7 +449,7 @@ void decrement_file_descriptor_numer(file_objects_info *array, const char *pathn
 
 /// ########## Core and useful functions ##########
 void print_function_and_path(const char* func, const char* path){
-	printf("User invoked %s via process %s on: %s\n", func, GET_PROGRAM_NAME(), path);
+	zlogf_time(ZLOG_INFO_LOG_MSG, "User invoked %s via process %s on: %s\n", func, GET_PROGRAM_NAME(), path);
 }
 
 /*
@@ -472,17 +473,18 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			file_object_info aux = get_from_array_at_index(&g_array,index);
 			if(aux.inode != inode){
 			//printf("FILE %s EXISTS: %d\n", path, exists);
-				timestamp();
-				printf("[+][!] WARNING! TOCTTOU DETECTED!. Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n", path, caller_function_name, aux.inode, inode);
+				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode);
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM ABORTED [#]\n[#] Check logs for more info [#]\n");
 				fflush(stdout);
+				zlog_flush_buffer();
 				exit(EXIT_FAILURE);
 			} else {
 				// #### EMPTY BLOCK TODO!
-				//printf("NODES ARE EQUAL!!! :) HAPPINESS");
+				//printf("NODES ARE EQUAL!!! :) HAPPINESS");d
 			}
 		}
 	} else { // if file_does_exist
-		printf("Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
+		zlogf_time(ZLOG_INFO_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
 		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
 	}
 }
@@ -627,7 +629,8 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		va_copy(aux_list, variable_arguments);
 		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
 		if(number_of_arguments == -1){
-			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
 		}
 
 		// Reset aux_list and start from the very beginning when using va_arg
@@ -657,7 +660,8 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		va_copy(aux_list, variable_arguments);
 		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
 		if(number_of_arguments == -1){
-			printf("Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);		
 		}
 
 		// Reset aux_list and start from the very beginning when using va_arg
@@ -722,8 +726,7 @@ ino_t get_inode(const char *path){
 
 	fd = open_wrapper(path, O_RDONLY, NULL);
 	if (fd < 0){
-		printf("Errors occurred while getting inode of %s\n", path);
-		printf("ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] Errors occurred while getting inode of %s. ERROR: %s\n", path, strerror(errno));
 	}
 	struct stat file_stat;
 	fstat(fd, &file_stat);
@@ -873,7 +876,7 @@ bool path_is_absolute(const char *path){
 	DD mm dd hh:MM:ss yyyy [hh:MM:ss.nanoseconds]
 	Example: <Wed May  1 13:44:17 2019
  				[13:45:17.676232682]>
-*/
+
 void timestamp(){
 	time_t ltime;
 	ltime = time(NULL);
@@ -886,6 +889,7 @@ void timestamp(){
 	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min, tm_struct->tm_sec, spec.tv_nsec);
 
 }
+*/
 
 int file_does_exist(const char *pathname){
 	
@@ -920,18 +924,14 @@ static void before_main(void){
 	create_log_dir();
 	create_log_file();
 
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "zlog is initialized (debug)\n");
-    zlogf_time(ZLOG_INFO_LOG_MSG, "zlog is initialized (info)\n");
-
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s WITH PID %d and PPID %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 	zlog_flush_buffer();
 }
 
 static void after_main(void){
 
-	printf("##### AFTER MAIN\n I AM  %s PID: %d PPID: %d\n", GET_PROGRAM_NAME(), getpid(), getppid());
-	printf("g_array used: %lu size: %lu\n", g_array.used, g_array.size);
-
+	zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlog_flush_buffer();
 	free_array(&g_array);
 
 }
@@ -1036,7 +1036,7 @@ int open(const char *path, int flags, ...)
 	*/
 
 	if(open_result == -1){
-		printf("OPEN ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] OPEN ERROR: %s\n", strerror(errno));
 	} else {
 		/*
 		If file didn't exist before actual open call and fstat returns
@@ -1091,7 +1091,7 @@ int open64(const char *path, int flags, ...)
 	*/
 
 	if(open64_result == -1){
-		printf("OPEN64 ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] OPEN64 ERROR: %s\n", strerror(errno));
 	} else {
 
 		if(!path_exists_before && !fstat(open64_result, &new_file)){
@@ -1137,7 +1137,7 @@ FILE *fopen(const char *path, const char *mode){
 	FILE *fopen_result = original_fopen(path, mode);
 
 	if(fopen_result == NULL){
-		printf("FOPEN ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] FOPEN ERROR: %s\n", strerror(errno));
 	} else {
 		increment_file_descriptor_number(&g_array, path);
 	}
@@ -1147,8 +1147,6 @@ FILE *fopen(const char *path, const char *mode){
 }
 
 int unlink(const char *path){
-
-	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_unlink == NULL){
 		original_unlink = dlsym_wrapper(__func__);
@@ -1167,7 +1165,7 @@ int unlink(const char *path){
 		set appropriately.
 	*/
 	if(unlink_result == -1){
-		printf("UNLINK ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] UNLINK ERROR: %s\n", strerror(errno));
 	} else {
 		int index = find_index_in_array(&g_array, path);
 		if(index >= 0){
@@ -1180,7 +1178,6 @@ int unlink(const char *path){
 }
 
 int unlinkat(int dirfd, const char *path, int flags){
-	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_unlinkat == NULL){
 		original_unlinkat = dlsym_wrapper(__func__);
@@ -1209,7 +1206,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 		is set to indicate the error.
    	*/
    	if(unlinkat_result == -1){
-		printf("UNLINKAT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] UNLINKAT ERROR: %s\n", strerror(errno));
 	} else {
 
 	   	int index = find_index_in_array(&g_array, full_path);
@@ -1224,7 +1221,6 @@ int unlinkat(int dirfd, const char *path, int flags){
 }
 
 int openat(int dirfd, const char *path, int flags, ...){
-	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	const char *full_path;
 	if(path_is_absolute(path)){
@@ -1250,7 +1246,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 		returned and errno is set to indicate the error.
 	*/
 	if(openat_result == -1){
-		printf("OPENAT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] OPENAT ERROR: %s\n", strerror(errno));
 	} else {
 
 		if(!path_exists_before && !fstat(openat_result, &new_file)){
@@ -1273,7 +1269,6 @@ int openat(int dirfd, const char *path, int flags, ...){
 	Creates a symbolic link called newpath that poins to oldpath.
 */
 int symlink(const char *oldpath, const char *newpath){
-    printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
     if(original_symlink == NULL){
     	original_symlink = dlsym_wrapper(__func__);
@@ -1295,7 +1290,7 @@ int symlink(const char *oldpath, const char *newpath){
 		shall return -1 and set errno to indicate the error.
     */
     if(symlink_result == -1){
-		printf("SYMLINK ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] SYMLINK ERROR: %s\n", strerror(errno));
 	} else {
 
 	    ino_t inode = get_inode(newpath);
@@ -1312,7 +1307,6 @@ int symlink(const char *oldpath, const char *newpath){
 	Creates a symbolic link to oldpath called newpath in the directory pointed to by newdirfd.
 */
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
-	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
 	if(original_symlinkat == NULL){
 		original_symlinkat = dlsym_wrapper(__func__);
@@ -1339,7 +1333,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		is set to indicate the error.
 	*/
 	if(symlinkat_result == -1){
-		printf("SYMLINKAT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] SYMLINKAT ERROR: %s\n", strerror(errno));
 	} else {
 		ino_t inode = get_inode(full_new_path);
 		upsert_inode_in_array(&g_array, full_new_path, inode);
@@ -1355,8 +1349,6 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 */
 int remove(const char *path) {
 
-	printf("Program %s with PID: %d called remove for path: %s\n", GET_PROGRAM_NAME(), getpid(), path);
-	
 	if(original_remove == NULL){
     	original_remove = dlsym_wrapper(__func__);
     }
@@ -1374,7 +1366,7 @@ int remove(const char *path) {
 		set appropriately.
 	*/
 	if(remove_result == -1){
-		printf("REMOVE ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] REMOVE ERROR: %s\n", strerror(errno));
 	} else {
 		int index = find_index_in_array(&g_array, path);
 
@@ -1393,7 +1385,6 @@ int remove(const char *path) {
     specified by mode and dev.
 */
 int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
-    printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
     if(original_xmknod == NULL){
     	original_xmknod = dlsym_wrapper(__func__);
@@ -1414,7 +1405,7 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 		occurred (in which case, errno is set appropriately).
     */
     if(mknod_result == -1){
-		printf("MKNOD ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKNOD ERROR: %s\n", strerror(errno));
 	} else {
 
 	    ino_t inode = get_inode(path);
@@ -1433,7 +1424,6 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 	directory file descriptor.
 */
 int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
-	printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
 	if(original_xmknodat == NULL){
 		original_xmknodat = dlsym_wrapper(__func__);
@@ -1457,8 +1447,8 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		On success, mknodat() returns 0. On error, -1 is returned and errno is
 		set to indicate the error.
 	*/
-	if(mknodat_result == -1){
-		printf("MKNODAT ERROR: %s\n", strerror(errno));
+	if(mknodat_result == -1){ 
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKNODAT ERROR: %s\n", strerror(errno));
 	} else {
 		ino_t inode = get_inode(full_path);
     	upsert_inode_in_array(&g_array, full_path, inode);
@@ -1472,7 +1462,6 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 	Creates a new hardlink called newpath that points to oldpath. 
 */
 int link(const char *oldpath, const char *newpath){
-   printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
    if(original_link == NULL){
    		original_link = dlsym_wrapper(__func__);
@@ -1497,7 +1486,7 @@ int link(const char *oldpath, const char *newpath){
 		be returned and errno set to indicate the error.
    	*/
    	if(link_result == -1){
-		printf("LINK ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] LINK ERROR: %s\n", strerror(errno));
 	} else {
 
 	   	ino_t inode = get_inode(newpath);
@@ -1516,7 +1505,6 @@ int link(const char *oldpath, const char *newpath){
 	points to file oldpath, which is located in directroy pointed to by olddirfd. 
 */
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
-	printf("Process %s with pid %d called %s for oldpath: %s and newpath: %s\n", GET_PROGRAM_NAME(), getpid(), __func__, oldpath, newpath);
 
 	if(original_linkat == NULL){
 		original_linkat = dlsym_wrapper(__func__);
@@ -1549,7 +1537,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		set to indicate the error.
     */
     if(linkat_result == -1){
-    	printf("LINKAT ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] LINKAT ERROR: %s\n", strerror(errno));
     } else {
 
     	ino_t inode = get_inode(full_new_path);
@@ -1562,7 +1550,6 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 }
 
 int creat64(const char *path, mode_t mode){
-    printf("Process %s with pid %d called %s for path %s\n", GET_PROGRAM_NAME(), getpid(), __func__, path);
 
     if(original_creat64 == NULL){
     	original_creat64 = dlsym_wrapper(__func__);
@@ -1583,7 +1570,7 @@ int creat64(const char *path, mode_t mode){
 		one of the following values:
     */
     if(creat64_result == -1){
-    	printf("CREAT64 ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CREAT64 ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, path, get_inode(path));
     	increment_file_descriptor_number(&g_array, path);
@@ -1594,8 +1581,6 @@ int creat64(const char *path, mode_t mode){
 }
 
 int creat(const char *path, mode_t mode){
-
-	printf("Program %s with PID: %d called creat for path: %s", GET_PROGRAM_NAME(), getpid(), path);
     
     if(original_creat == NULL){
     	original_creat = dlsym_wrapper(__func__);
@@ -1616,7 +1601,7 @@ int creat(const char *path, mode_t mode){
 		one of the following values:
     */
     if(creat_result == -1){
-    	printf("CREAT ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CREAT ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, path, get_inode(path));
     	increment_file_descriptor_number(&g_array, path);
@@ -1646,7 +1631,7 @@ int rmdir(const char *path){
 		If -1 is returned, the named directory shall not be changed.
 	*/
 	if(rmdir_result == -1){
-		printf("RMDIR ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RMDIR ERROR: %s\n", strerror(errno));
 	} else {
 		int index = find_index_in_array(&g_array, path);
 
@@ -1675,7 +1660,7 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 	upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
 
 	if(readlink_result == -1){
-    	printf("READLINK ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINK ERROR: %s\n", strerror(errno));
     } else {
 
     	ino_t inode = get_inode(pathname);
@@ -1711,7 +1696,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
        	error.
     */
     if(readlinkat_result == -1){
-    	printf("READLINKAT ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINKAT ERROR: %s\n", strerror(errno));
     } else {
 
     	ino_t inode = get_inode(full_path);
@@ -1747,7 +1732,7 @@ int rename(const char *oldpath, const char *newpath){
 	*/
 
 	if(rename_result == -1){
-		printf("RENAME ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		if(found){
 			upsert_path_in_array(&g_array, full_old_path, full_new_path);
@@ -1797,7 +1782,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 	*/
 
 	if(renameat_result == -1){
-		printf("RENAME ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		if(found){
 			upsert_path_in_array(&g_array, full_old_path, full_new_path);
@@ -1856,7 +1841,7 @@ int mkfifo(const char *pathname, mode_t mode){
     	error, -1 is returned (in which case, errno is set appropriately).
     */
     if(mkfifo_result == -1){
-		printf("MKFIFO ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKFIFO ERROR: %s\n", strerror(errno));
 	} else {
 		
 		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
@@ -1891,7 +1876,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
        	error.
     */
     if(mkfifoat_result == -1){
-    	printf("READLINKAT ERROR: %s\n", strerror(errno));
+    	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINKAT ERROR: %s\n", strerror(errno));
     } else {
 
 		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
@@ -1916,7 +1901,7 @@ int chmod(const char *pathname, mode_t mode){
 	int chmod_result =  original_chmod(pathname, mode);
 
 	if(chmod_result == -1){
-		printf("CHMOD ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CHMOD ERROR: %s\n", strerror(errno));
 	}
 
 	return chmod_result;
@@ -1938,7 +1923,7 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 	int chown_result =  original_chown(pathname, owner, group);
 
 	if(chown_result == -1){
-		printf("CHOWN ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CHOWN ERROR: %s\n", strerror(errno));
 	}
 
 	return chown_result;
@@ -1960,7 +1945,7 @@ int truncate(const char *path, off_t length){
 	int truncate_result = original_truncate(path, length);
 
 	if(truncate_result == -1){
-		printf("TRUNCATE ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] TRUNCATE ERROR: %s\n", strerror(errno));
 	}
 
 	return truncate_result;
@@ -1981,7 +1966,7 @@ int truncate64(const char *path, off_t length){
 	int truncate64_result = original_truncate64(path, length);
 
 	if(truncate64_result == -1){
-		printf("TRUNCATE64 ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] TRUNCATE64 ERROR: %s\n", strerror(errno));
 	}
 
 	return truncate64_result;
@@ -2002,7 +1987,7 @@ int utime(const char *filename, const struct utimbuf *times){
 	int utime_result = original_utime(filename, times);
 
 	if(utime_result == -1){
-		printf("UTIME ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] UTIME ERROR: %s\n", strerror(errno));
 	}
 
 	return utime_result;
@@ -2023,7 +2008,7 @@ int utimes(const char *filename, const struct timeval *times){
 	int utimes_result = original_utimes(filename, times);
 
 	if(utimes_result == -1){
-		printf("UTIMES ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] UTIMES ERROR: %s\n", strerror(errno));
 	}
 
 	return utimes_result;
@@ -2044,7 +2029,7 @@ long pathconf(const char *path, int name){
 	int pathconf_result = original_pathconf(path, name);
 
 	if(pathconf_result == -1){
-		printf("PATHCONF ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] PATHCONF ERROR: %s\n", strerror(errno));
 	}
 
 	return pathconf_result;
@@ -2065,7 +2050,7 @@ int mkdir(const char *pathname, mode_t mode){
 	int mkdir_result = original_mkdir(pathname, mode);
 
 	if(mkdir_result == -1){
-		printf("MKDIR ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKDIR ERROR: %s\n", strerror(errno));
 	} else {
 		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
 	}
@@ -2095,7 +2080,7 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 	int mkdirat_result = original_mkdirat(dirfd, pathname, mode);
 
 	if(mkdirat_result == -1){
-		printf("MKDIRAT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKDIRAT ERROR: %s\n", strerror(errno));
 	} else {
 		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
 	}
@@ -2114,7 +2099,7 @@ int chdir(const char *path){
 	int chdir_result = chdir_wrapper(path);
 
 	if(chdir_result == -1){
-		printf("CHDIR ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CHDIR ERROR: %s\n", strerror(errno));
 	}
 
 	return chdir_result;
@@ -2136,7 +2121,7 @@ int chroot(const char *path){
 	int chroot_result = original_chroot(path);
 
 	if(chroot_result == -1){
-		printf("CHROOT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CHROOT ERROR: %s\n", strerror(errno));
 	}
 
 	return chroot_result;
@@ -2161,7 +2146,7 @@ int execl(const char *pathname, const char *arg, ...){
 	va_end(variable_arguments);
 
 	if(execl_result == -1){
-		printf("EXECL ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECL ERROR: %s\n", strerror(errno));
 	}
 
 	return execl_result;
@@ -2186,7 +2171,7 @@ int execlp(const char *file, const char *arg, ...){
 	va_end(variable_arguments);
 
 	if(execlp_result == -1){
-		printf("EXECLP ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECLP ERROR: %s\n", strerror(errno));
 	}
 
 	return execlp_result;
@@ -2211,7 +2196,7 @@ int execle(const char *pathname, const char *arg, ...){
 	va_end(variable_arguments);
 
 	if(execle_result == -1){
-		printf("EXECLE ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECLE ERROR: %s\n", strerror(errno));
 	}
 
 	return execle_result;
@@ -2231,7 +2216,7 @@ int execv(const char *pathname, char *const argv[]){
 	// If execv succeeds this code will never be executed
 
 	if(execv_result == -1){
-		printf("EXECV ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECV ERROR: %s\n", strerror(errno));
 	}
 
 	return execv_result;
@@ -2250,7 +2235,7 @@ int execvp(const char *file, char *const argv[]){
 	// If execv succeeds this code will never be executed
 
 	if(execvp_result == -1){
-		printf("EXECVP ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECVP ERROR: %s\n", strerror(errno));
 	}
 
 	return execvp_result;
@@ -2270,7 +2255,7 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 	// If execv succeeds this code will never be executed
 
 	if(execve_result == -1){
-		printf("EXECVE ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECVE ERROR: %s\n", strerror(errno));
 	}
 
 	return execve_result;
@@ -2290,7 +2275,7 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 	// If execv succeeds this code will never be executed
 
 	if(execve_result == -1){
-		printf("EXECVPE ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] EXECVPE ERROR: %s\n", strerror(errno));
 	}
 
 	return execve_result;
@@ -2310,7 +2295,7 @@ FILE * popen(const char *command, const char *type){
 	FILE *file = original_popen(command, type);
 
 	if(file == NULL){
-		printf("POPEN ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] POPEN ERROR: %s\n", strerror(errno));
 	}
 
 	return file;
@@ -2332,7 +2317,7 @@ int mount(const char *source, const char *target, const char *filesystemtype, un
 	int mount_result = original_mount(source, target, filesystemtype, mountflags, data);
 
 	if(mount_result == -1){
-		printf("MOUNT ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MOUNT ERROR: %s\n", strerror(errno));
 	}
 
 	return mount_result;
