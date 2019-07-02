@@ -179,8 +179,33 @@ void decrement_file_descriptor_numer(file_objects_info *, const char *);
 
 /// <-------------------------------------------------> 
 
+/// ########## file_descriptors_info.c ##########
+
+typedef struct{
+	char *path;
+	int fd;
+} file_descriptor_info;
+
+typedef struct{
+	file_descriptor_inof *list;
+	size_t used;
+	size_t size;
+} file_descriptors_info;
+
+// -- Array operations -- //
+void initialize_fd_array(file_descriptors_info *, size_t);
+void insert_fd_in_array(file_descriptors_info *, int, const char *);
+void remove_from_fd_array_at_index(file_descriptors_info *, int);
+int find_index_in_fd_array(file_descriptors_info *, int);
+void free_fd_array(file_descriptors_info*);
+
+/// ########## file_descriptors_info.c ##########
+
+/// <------------------------------------------------->
+
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
+file_descriptors_info g_fd_array;
 char *log_dir = "/tmp/libTOCTTOUlog/";
 //extern char **environ;
 /// ########## GLOBAL VARIABLES ##########
@@ -445,6 +470,36 @@ void decrement_file_descriptor_numer(file_objects_info *array, const char *pathn
 }
 
 /// ########## Array management ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## File Descriptor Array management ##########
+
+void initialize_fd_array(file_descriptors_info *array, size_t size){
+array->list = (file_descriptor_info *) calloc(size, sizeof(file_descriptor_info)); 
+	if(!array->list){
+		exit(EXIT_FAILURE);
+	}
+	array->used = 0;
+	array->size = size;
+}
+
+void insert_fd_in_array(file_descriptors_info *array, int fd, const char *pathname){
+	//TODO
+}
+
+void remove_from_fd_array_at_index(file_descriptors_info *array, int index){
+	//TODO
+}
+
+int find_index_in_fd_array(file_descriptors_info *array, int index){
+
+}
+
+void free_fd_array(file_descriptors_info *array){
+
+}
+/// ########## File Descriptor Array management ##########
 
 /// <-------------------------------------------------> 
 
