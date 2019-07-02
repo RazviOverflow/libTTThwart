@@ -220,10 +220,13 @@ void create_log_dir(){
 	if(dir){ //Directory exists
 		closedir(dir);
 	} else if(errno == ENOENT){ //Directory does not exist; create
+		mode_t originalUmask = umask(0000);
 		if(mkdir(log_dir, 0777) == -1){
 			fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ABORTING.\n", strerror(errno));
+			umask(originalUmask);
 			exit(EXIT_FAILURE);
 		}
+		umask(originalUmask);
 	} else {
 		fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
