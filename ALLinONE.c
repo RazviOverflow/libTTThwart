@@ -187,7 +187,7 @@ typedef struct{
 } file_descriptor_info;
 
 typedef struct{
-	file_descriptor_inof *list;
+	file_descriptor_info *list;
 	size_t used;
 	size_t size;
 } file_descriptors_info;
@@ -196,7 +196,7 @@ typedef struct{
 void initialize_fd_array(file_descriptors_info *, size_t);
 void insert_fd_in_array(file_descriptors_info *, int, const char *);
 void remove_from_fd_array_at_index(file_descriptors_info *, int);
-int find_index_in_fd_array(file_descriptors_info *, int);
+int find_index_in_fd_array(file_descriptors_info *, const char *);
 void free_fd_array(file_descriptors_info*);
 
 /// ########## file_descriptors_info.c ##########
@@ -271,8 +271,8 @@ void create_log_file_and_start_logger(){
 }
 
 void start_logger(const char* log_file_name){
-	//zlog_init(log_file_name);
-	zlog_init_stdout();
+	zlog_init(log_file_name);
+	//zlog_init_stdout();
 }
 
 /// ########## Logger ##########
@@ -368,9 +368,6 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
     is ment to be called at the end of the program.
 */
 void free_array(file_objects_info *array){
-
-	print_contents_of_array(array);
-	fflush(stdout);
 
 	for(uint i = 0; i < array->used; i++){
 		free(array->list[i].path);
@@ -488,18 +485,86 @@ array->list = (file_descriptor_info *) calloc(size, sizeof(file_descriptor_info)
 }
 
 void insert_fd_in_array(file_descriptors_info *array, int fd, const char *pathname){
-	//TODO
+	// If array has not been yet initialized, initialize it. 
+	if(array->size == 0){
+		initialize_array(&g_array, 2);
+	} 
+
+    // If number of elements (used) in the array equals its size, it means
+    // the array requires more room. It's size gets doubled
+		if(array->used == array->size){
+		////printf("Size of array %X is about to get doubled.\n", &(*array));
+		//printf("Size of array is about to get doubled\n");
+			array->size *= 2;
+			file_descriptor_info *aux = (file_descriptor_info *)realloc(array->list,
+				array->size * sizeof(file_descriptor_info));
+
+        // It is never a good idea to do something like:
+        // array->list = realloc... because if realloc fails you lose the
+        // reference to your original data and realloc does not free() so
+        // there'll be an implicit memory leak.
+			if(!aux){
+				fprintf(stderr, "Error trying to realloc size for file descriptor array in insert process.\n");
+				exit(EXIT_FAILURE);
+			} else {
+				array->list = aux;
+			}
+
+        //Initializing new elements of realocated array
+			memset(&array->list[array->used], 0, sizeof(file_descriptor_info) * (array->size - array->used));
+
+		}
+
+	array->list[array->used].path = strdup(pathname);
+	array->list[array->used].fd = fd;
+	array->used++;
+	
 }
 
 void remove_from_fd_array_at_index(file_descriptors_info *array, int index){
-	//TODO
+	int number_elements = array->used;
+	if(index < number_elements){
+
+		for(int i = index; i < number_elements; i++){
+			array->list[i] = array->list[i+1];
+		}
+
+	} 
+
+	array->used--;
 }
 
-int find_index_in_fd_array(file_descriptors_info *array, int index){
+int find_index_in_fd_array(file_descriptors_info *array, const char* path){
+
+	int returnValue = -1;
+
+	if(array->size > 0){
+		for(uint i = 0; i < array->used; i++){
+			if(!strcmp(array->list[i].path, path)){
+				returnValue = i;
+			break;
+			}
+		}
+		return returnValue;
+	} else {
+		return returnValue;
+	}
+
 
 }
 
 void free_fd_array(file_descriptors_info *array){
+
+	for(uint i = 0; i < array->used; i++){
+		free(array->list[i].path);
+		array->list[i].path = NULL;
+	}
+
+	free(array->list);
+	array->list = NULL;
+
+	array->used = 0;
+	array->size = 0;
 
 }
 /// ########## File Descriptor Array management ##########
@@ -974,8 +1039,8 @@ char * get_directory_from_fd(int directory_fd){
 
 static void before_main(void){
 
-	printf("PATH Variable environment: %s\n", getenv("PATH"));
-	printf("ENVIRON: %s\n", *__environ);
+	//printf("PATH Variable environment: %s\n", getenv("PATH"));
+	//printf("ENVIRON: %s\n", *__environ);
 
 	create_log_dir();
 	create_log_file_and_start_logger();
