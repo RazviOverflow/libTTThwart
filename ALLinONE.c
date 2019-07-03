@@ -111,6 +111,12 @@ static FILE *(*original_popen)(const char *command, const char *type) = NULL;
 static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 
 
+////TODO fd_array
+//fclose
+//close
+//dup
+//dup2
+
 /// ########## Hooked functions ##########
 
 /// <-------------------------------------------------> 
@@ -1254,6 +1260,8 @@ int access(const char *path, int mode){
 
 FILE *fopen(const char *path, const char *mode){
 
+	//TODO fd_array
+
 	path = sanitize_and_get_absolute_path(path);
 
 	check_parameters_properties(path, __func__);
@@ -1349,6 +1357,8 @@ int unlinkat(int dirfd, const char *path, int flags){
 }
 
 int openat(int dirfd, const char *path, int flags, ...){
+
+	//TODO fd_array
 
 	const char *full_path;
 	if(path_is_absolute(path)){
@@ -1679,6 +1689,8 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 
 int creat64(const char *path, mode_t mode){
 
+	//TODO fd_array
+
     if(original_creat64 == NULL){
     	original_creat64 = dlsym_wrapper(__func__);
     }
@@ -1710,6 +1722,8 @@ int creat64(const char *path, mode_t mode){
 
 int creat(const char *path, mode_t mode){
     
+	//TODO fd_array
+
     if(original_creat == NULL){
     	original_creat = dlsym_wrapper(__func__);
     }
@@ -1923,6 +1937,8 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 }
 
 FILE *fopen64(const char *path, const char *mode){
+
+	//TODO fd_array
 
 	path = sanitize_and_get_absolute_path(path);
 
