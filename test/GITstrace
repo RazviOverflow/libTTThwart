@@ -1,0 +1,454 @@
+execve("/usr/bin/git", ["git", "commit", "-m", "TESTING"], [/* 71 vars */]) = 0
+brk(NULL)                               = 0x1c5d000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+access("/etc/ld.so.preload", R_OK)      = 0
+open("/etc/ld.so.preload", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+close(3)                                = 0
+open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=99075, ...}) = 0
+mmap(NULL, 99075, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97b90000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libpcre.so.3", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\25\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=456632, ...}) = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b8f000
+mmap(NULL, 2552072, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b97714000
+mprotect(0x7f6b97782000, 2097152, PROT_NONE) = 0
+mmap(0x7f6b97982000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6e000) = 0x7f6b97982000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libz.so.1", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\35\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=104864, ...}) = 0
+mmap(NULL, 2199848, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b974fa000
+mprotect(0x7f6b97513000, 2093056, PROT_NONE) = 0
+mmap(0x7f6b97712000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x18000) = 0x7f6b97712000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libresolv.so.2", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P9\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=101200, ...}) = 0
+mmap(NULL, 2206280, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b972df000
+mprotect(0x7f6b972f6000, 2097152, PROT_NONE) = 0
+mmap(0x7f6b974f6000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x17000) = 0x7f6b974f6000
+mmap(0x7f6b974f8000, 6728, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f6b974f8000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libpthread.so.0", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260`\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=138696, ...}) = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b8e000
+mmap(NULL, 2212904, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b970c2000
+mprotect(0x7f6b970da000, 2093056, PROT_NONE) = 0
+mmap(0x7f6b972d9000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x17000) = 0x7f6b972d9000
+mmap(0x7f6b972db000, 13352, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f6b972db000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/librt.so.1", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0!\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=31712, ...}) = 0
+mmap(NULL, 2128832, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b96eba000
+mprotect(0x7f6b96ec1000, 2093056, PROT_NONE) = 0
+mmap(0x7f6b970c0000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f6b970c0000
+close(3)                                = 0
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+open("/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\t\2\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1868984, ...}) = 0
+mmap(NULL, 3971488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f6b96af0000
+mprotect(0x7f6b96cb0000, 2097152, PROT_NONE) = 0
+mmap(0x7f6b96eb0000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1c0000) = 0x7f6b96eb0000
+mmap(0x7f6b96eb6000, 14752, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f6b96eb6000
+close(3)                                = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b8d000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b8c000
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b8b000
+arch_prctl(ARCH_SET_FS, 0x7f6b97b8c700) = 0
+mprotect(0x7f6b96eb0000, 16384, PROT_READ) = 0
+mprotect(0x7f6b972d9000, 4096, PROT_READ) = 0
+mprotect(0x7f6b970c0000, 4096, PROT_READ) = 0
+mprotect(0x7f6b974f6000, 4096, PROT_READ) = 0
+mprotect(0x7f6b97712000, 4096, PROT_READ) = 0
+mprotect(0x7f6b97982000, 4096, PROT_READ) = 0
+mprotect(0x7bf000, 4096, PROT_READ)     = 0
+mprotect(0x7f6b97ba9000, 4096, PROT_READ) = 0
+munmap(0x7f6b97b90000, 99075)           = 0
+set_tid_address(0x7f6b97b8c9d0)         = 8632
+set_robust_list(0x7f6b97b8c9e0, 24)     = 0
+rt_sigaction(SIGRTMIN, {0x7f6b970c7b50, [], SA_RESTORER|SA_SIGINFO, 0x7f6b970d3390}, NULL, 8) = 0
+rt_sigaction(SIGRT_1, {0x7f6b970c7be0, [], SA_RESTORER|SA_RESTART|SA_SIGINFO, 0x7f6b970d3390}, NULL, 8) = 0
+rt_sigprocmask(SIG_UNBLOCK, [RTMIN RT_1], NULL, 8) = 0
+getrlimit(RLIMIT_STACK, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+open("/dev/null", O_RDWR)               = 3
+close(3)                                = 0
+rt_sigprocmask(SIG_UNBLOCK, [PIPE], NULL, 8) = 0
+rt_sigaction(SIGPIPE, {SIG_DFL, [PIPE], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [], 0}, 8) = 0
+brk(NULL)                               = 0x1c5d000
+brk(0x1c7e000)                          = 0x1c7e000
+open("/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=10219008, ...}) = 0
+mmap(NULL, 10219008, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b96131000
+close(3)                                = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 3
+read(3, "ref: refs/heads/master\n", 255) = 23
+read(3, "", 232)                        = 0
+close(3)                                = 0
+lstat(".git/commondir", 0x7ffed7ac1610) = -1 ENOENT (No such file or directory)
+access(".git/objects", X_OK)            = 0
+access(".git/refs", X_OK)               = 0
+lstat(".git/commondir", 0x7ffed7ac1600) = -1 ENOENT (No such file or directory)
+access("/etc/gitconfig", R_OK)          = -1 ENOENT (No such file or directory)
+access("/home/redcayle/.config/git/config", R_OK) = -1 ENOENT (No such file or directory)
+access("/home/redcayle/.gitconfig", R_OK) = 0
+open("/home/redcayle/.gitconfig", O_RDONLY) = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=62, ...}) = 0
+read(3, "[user]\n\temail = razvioverflow@gm"..., 4096) = 62
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+access(".git/config", R_OK)             = 0
+open(".git/config", O_RDONLY)           = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=266, ...}) = 0
+read(3, "[core]\n\trepositoryformatversion "..., 4096) = 266
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+chdir(".")                              = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 130) = 37
+lstat("/home/redcayle/Desktop/Releases/zlog", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+chdir("/home/redcayle/Desktop/Releases/zlog") = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+lstat(".git/commondir", 0x7ffed7ac1430) = -1 ENOENT (No such file or directory)
+access("/etc/gitconfig", R_OK)          = -1 ENOENT (No such file or directory)
+access("/home/redcayle/.config/git/config", R_OK) = -1 ENOENT (No such file or directory)
+access("/home/redcayle/.gitconfig", R_OK) = 0
+open("/home/redcayle/.gitconfig", O_RDONLY) = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=62, ...}) = 0
+read(3, "[user]\n\temail = razvioverflow@gm"..., 4096) = 62
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+access(".git/config", R_OK)             = 0
+open(".git/config", O_RDONLY)           = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=266, ...}) = 0
+read(3, "[core]\n\trepositoryformatversion "..., 4096) = 266
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+chdir(".git")                           = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog/.git", 219) = 42
+lstat("/home/redcayle/Desktop/Releases/zlog/.git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+chdir("/home/redcayle/Desktop/Releases/zlog") = 0
+chdir("/home/redcayle/Desktop/Releases/zlog") = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+lstat(".git/commondir", 0x7ffed7ac16c0) = -1 ENOENT (No such file or directory)
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 3
+read(3, "ref: refs/heads/master\n", 256) = 23
+read(3, "", 233)                        = 0
+close(3)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 3
+read(3, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(3, "", 215)                        = 0
+close(3)                                = 0
+open(".git/index", O_RDONLY)            = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=630, ...}) = 0
+mmap(NULL, 630, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 630)             = 0
+open("/home/redcayle/Desktop/Releases/zlog/.gitmodules", O_RDONLY) = -1 ENOENT (No such file or directory)
+lstat(".git/MERGE_HEAD", 0x7ffed7ac0cd0) = -1 ENOENT (No such file or directory)
+lstat(".git/CHERRY_PICK_HEAD", 0x7ffed7ac0cd0) = -1 ENOENT (No such file or directory)
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 3
+read(3, "ref: refs/heads/master\n", 256) = 23
+read(3, "", 233)                        = 0
+close(3)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 3
+read(3, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(3, "", 215)                        = 0
+close(3)                                = 0
+lstat(".git/refs/HEAD", 0x7ffed7abea50) = -1 ENOENT (No such file or directory)
+open(".git/packed-refs", O_RDONLY)      = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+fstat(3, {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+read(3, "# pack-refs with: peeled fully-p"..., 4096) = 107
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+lstat(".git/refs/tags/HEAD", 0x7ffed7abea50) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/heads/HEAD", 0x7ffed7abea50) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD", 0x7ffed7abea50) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD/HEAD", 0x7ffed7abea50) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+open(".git/refs/", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getdents(3, /* 5 entries */, 32768)     = 136
+stat(".git/refs/heads", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/refs/tags", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/refs/remotes", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getdents(3, /* 0 entries */, 32768)     = 0
+close(3)                                = 0
+open(".git/refs/bisect", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+open(".git/objects/pack", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getdents(3, /* 2 entries */, 32768)     = 48
+getdents(3, /* 0 entries */, 32768)     = 0
+close(3)                                = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+open(".git/objects/info/alternates", O_RDONLY|O_NOATIME) = -1 ENOENT (No such file or directory)
+access(".git/objects/62/42bcb6f9d982de6664fe5082cca0264696b443", F_OK) = 0
+open(".git/objects/62/42bcb6f9d982de6664fe5082cca0264696b443", O_RDONLY|O_NOATIME) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=183, ...}) = 0
+mmap(NULL, 183, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 183)             = 0
+open(".git/objects/62/42bcb6f9d982de6664fe5082cca0264696b443", O_RDONLY|O_NOATIME) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=183, ...}) = 0
+mmap(NULL, 183, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 183)             = 0
+open(".git/info/grafts", O_RDONLY)      = -1 ENOENT (No such file or directory)
+open(".git/shallow", O_RDONLY)          = -1 ENOENT (No such file or directory)
+mmap(NULL, 524288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f6b97b0b000
+readlink(".git/index", 0x1c60150, 32)   = -1 EINVAL (Invalid argument)
+rt_sigaction(SIGINT, {0x529b50, [INT], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [], 0}, 8) = 0
+rt_sigaction(SIGHUP, {0x529b50, [HUP], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [], 0}, 8) = 0
+rt_sigaction(SIGTERM, {0x529b50, [TERM], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [], 0}, 8) = 0
+rt_sigaction(SIGQUIT, {0x529b50, [QUIT], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [], 0}, 8) = 0
+rt_sigaction(SIGPIPE, {0x529b50, [PIPE], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, {SIG_DFL, [PIPE], SA_RESTORER|SA_RESTART, 0x7f6b96b254b0}, 8) = 0
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+open("/home/redcayle/Desktop/Releases/zlog/.git/index.lock", O_RDWR|O_CREAT|O_EXCL, 0666) = 3
+lstat("LICENSE", {st_mode=S_IFREG|0664, st_size=1211, ...}) = 0
+lstat("Makefile", {st_mode=S_IFREG|0664, st_size=297, ...}) = 0
+lstat("README.md", {st_mode=S_IFREG|0664, st_size=1208, ...}) = 0
+lstat("aa", {st_mode=S_IFREG|0664, st_size=0, ...}) = 0
+lstat("example.c", {st_mode=S_IFREG|0664, st_size=1987, ...}) = 0
+lstat("zlog-config.h", {st_mode=S_IFREG|0664, st_size=495, ...}) = 0
+lstat("zlog.c", {st_mode=S_IFREG|0664, st_size=6399, ...}) = 0
+lstat("zlog.h", {st_mode=S_IFREG|0664, st_size=1144, ...}) = 0
+brk(0x1c9f000)                          = 0x1c9f000
+access(".git/objects/68/a49daad8ff7e35068f2b7a97d643aab440eaec", F_OK) = 0
+access(".git/objects/41/2e2aa16cf1548ea5b2314d2f05d649e9b2f332", F_OK) = 0
+access(".git/objects/03/d7e40fa8d632670d0f6669c31bba60d8456c92", F_OK) = 0
+access(".git/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391", F_OK) = 0
+access(".git/objects/52/98984e3099375baa1f725bbe2a0c35dc960b9e", F_OK) = 0
+access(".git/objects/6f/6113caf757f01729ab74dfe740d64b0cb5b7fd", F_OK) = 0
+access(".git/objects/43/51ec8d49ec829e4dff638ad98218fab2762424", F_OK) = 0
+access(".git/objects/e9/92f586e0b01a0227c5a8cd85bfc8497143a725", F_OK) = 0
+access(".git/objects/12/b24bf03ac677ad7afa5c9fae5b67058352874f", F_OK) = -1 ENOENT (No such file or directory)
+open(".git/objects/12/tmp_obj_qPZRpo", O_RDWR|O_CREAT|O_EXCL, 0444) = -1 ENOENT (No such file or directory)
+mkdir(".git/objects/12", 0777)          = 0
+open(".git/objects/12/tmp_obj_atQ6po", O_RDWR|O_CREAT|O_EXCL, 0444) = 4
+brk(0x1cc1000)                          = 0x1cc1000
+write(4, "x\1+)JMU0\2620a040031Q\360\361tv\365\vve\310X2w\325\215"..., 265) = 265
+brk(0x1cb1000)                          = 0x1cb1000
+brk(0x1ca1000)                          = 0x1ca1000
+brk(0x1c9f000)                          = 0x1c9f000
+close(4)                                = 0
+link(".git/objects/12/tmp_obj_atQ6po", ".git/objects/12/b24bf03ac677ad7afa5c9fae5b67058352874f") = 0
+unlink(".git/objects/12/tmp_obj_atQ6po") = 0
+brk(0x1c9d000)                          = 0x1c9d000
+write(3, "DIRC\0\0\0\2\0\0\0\10]\31\266\267$\353c\250]\31\266\267$\353c\250\0\0\10\1"..., 649) = 649
+fstat(3, {st_mode=S_IFREG|0664, st_size=649, ...}) = 0
+close(3)                                = 0
+rename("/home/redcayle/Desktop/Releases/zlog/.git/index.lock", "/home/redcayle/Desktop/Releases/zlog/.git/index") = 0
+open("/etc/localtime", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=2637, ...}) = 0
+fstat(3, {st_mode=S_IFREG|0644, st_size=2637, ...}) = 0
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\v\0\0\0\v\0\0\0\0"..., 4096) = 2637
+lseek(3, -1663, SEEK_CUR)               = 974
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\v\0\0\0\v\0\0\0\0"..., 4096) = 1663
+close(3)                                = 0
+access(".git/hooks/pre-commit", X_OK)   = -1 ENOENT (No such file or directory)
+open(".git/COMMIT_EDITMSG", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=0, ...}) = 0
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 4
+read(4, "ref: refs/heads/master\n", 256) = 23
+read(4, "", 233)                        = 0
+close(4)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 4
+read(4, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(4, "", 215)                        = 0
+close(4)                                = 0
+lstat(".git/refs/HEAD", 0x7ffed7abd810) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/tags/HEAD", 0x7ffed7abd810) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/heads/HEAD", 0x7ffed7abd810) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD", 0x7ffed7abd810) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD/HEAD", 0x7ffed7abd810) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 4
+read(4, "ref: refs/heads/master\n", 256) = 23
+read(4, "", 233)                        = 0
+close(4)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 4
+read(4, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(4, "", 215)                        = 0
+close(4)                                = 0
+lstat(".git/refs/HEAD", 0x7ffed7abcec0) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/tags/HEAD", 0x7ffed7abcec0) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/heads/HEAD", 0x7ffed7abcec0) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD", 0x7ffed7abcec0) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+lstat(".git/refs/remotes/HEAD/HEAD", 0x7ffed7abcec0) = -1 ENOENT (No such file or directory)
+stat(".git/packed-refs", {st_mode=S_IFREG|0664, st_size=107, ...}) = 0
+open(".git/objects/1c/cc09d45558c552359176fe8bd3ec3a794368af", O_RDONLY|O_NOATIME) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=239, ...}) = 0
+mmap(NULL, 239, PROT_READ, MAP_PRIVATE, 4, 0) = 0x7f6b97ba8000
+close(4)                                = 0
+munmap(0x7f6b97ba8000, 239)             = 0
+write(3, "TESTING\n", 8)                = 8
+close(3)                                = 0
+open(".git/index", O_RDONLY)            = 3
+fstat(3, {st_mode=S_IFREG|0664, st_size=649, ...}) = 0
+mmap(NULL, 649, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 649)             = 0
+access(".git/objects/12/b24bf03ac677ad7afa5c9fae5b67058352874f", F_OK) = 0
+access(".git/hooks/prepare-commit-msg", X_OK) = -1 ENOENT (No such file or directory)
+access(".git/hooks/commit-msg", X_OK)   = -1 ENOENT (No such file or directory)
+open(".git/COMMIT_EDITMSG", O_RDONLY)   = 3
+read(3, "TESTING\n", 8192)              = 8
+read(3, "", 8184)                       = 0
+close(3)                                = 0
+open(".git/objects/12/b24bf03ac677ad7afa5c9fae5b67058352874f", O_RDONLY|O_NOATIME) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=265, ...}) = 0
+mmap(NULL, 265, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 265)             = 0
+access(".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32", F_OK) = -1 ENOENT (No such file or directory)
+open(".git/objects/01/tmp_obj_mvIBlp", O_RDWR|O_CREAT|O_EXCL, 0444) = -1 ENOENT (No such file or directory)
+mkdir(".git/objects/01", 0777)          = 0
+open(".git/objects/01/tmp_obj_wM8Tlp", O_RDWR|O_CREAT|O_EXCL, 0444) = 3
+brk(0x1cc4000)                          = 0x1cc4000
+write(3, "x\1\245\216\301\n\2!\24E[\373\25\356\203p\236\372t \242MD\233\202\232\37x:Z\3c"..., 167) = 167
+brk(0x1cb4000)                          = 0x1cb4000
+brk(0x1ca4000)                          = 0x1ca4000
+brk(0x1ca3000)                          = 0x1ca3000
+close(3)                                = 0
+link(".git/objects/01/tmp_obj_wM8Tlp", ".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32") = 0
+unlink(".git/objects/01/tmp_obj_wM8Tlp") = 0
+brk(0x1ca1000)                          = 0x1ca1000
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 3
+read(3, "ref: refs/heads/master\n", 256) = 23
+read(3, "", 233)                        = 0
+close(3)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 3
+read(3, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(3, "", 215)                        = 0
+close(3)                                = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/refs", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/refs/heads", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+readlink(".git/refs/heads/master", 0x1c7d2c0, 32) = -1 EINVAL (Invalid argument)
+getcwd("/home/redcayle/Desktop/Releases/zlog", 129) = 37
+open("/home/redcayle/Desktop/Releases/zlog/.git/refs/heads/master.lock", O_RDWR|O_CREAT|O_EXCL, 0666) = 3
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 4
+read(4, "6242bcb6f9d982de6664fe5082cca026"..., 256) = 41
+read(4, "", 215)                        = 0
+close(4)                                = 0
+access(".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32", F_OK) = 0
+open(".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32", O_RDONLY|O_NOATIME) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=167, ...}) = 0
+mmap(NULL, 167, PROT_READ, MAP_PRIVATE, 4, 0) = 0x7f6b97ba8000
+close(4)                                = 0
+munmap(0x7f6b97ba8000, 167)             = 0
+open(".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32", O_RDONLY|O_NOATIME) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=167, ...}) = 0
+mmap(NULL, 167, PROT_READ, MAP_PRIVATE, 4, 0) = 0x7f6b97ba8000
+close(4)                                = 0
+munmap(0x7f6b97ba8000, 167)             = 0
+write(3, "0111eb645e1645ab903d3db45afcd31b"..., 40) = 40
+write(3, "\n", 1)                       = 1
+close(3)                                = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/logs", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/logs/refs", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/logs/refs/heads", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+open(".git/logs/refs/heads/master", O_WRONLY|O_CREAT|O_APPEND, 0666) = 3
+close(3)                                = 0
+open(".git/logs/refs/heads/master", O_WRONLY|O_APPEND) = 3
+write(3, "6242bcb6f9d982de6664fe5082cca026"..., 155) = 155
+close(3)                                = 0
+stat(".git", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+stat(".git/logs", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+open(".git/logs/HEAD", O_WRONLY|O_CREAT|O_APPEND, 0666) = 3
+close(3)                                = 0
+open(".git/logs/HEAD", O_WRONLY|O_APPEND) = 3
+write(3, "6242bcb6f9d982de6664fe5082cca026"..., 155) = 155
+close(3)                                = 0
+rename("/home/redcayle/Desktop/Releases/zlog/.git/refs/heads/master.lock", "/home/redcayle/Desktop/Releases/zlog/.git/refs/heads/master") = 0
+unlink(".git/CHERRY_PICK_HEAD")         = -1 ENOENT (No such file or directory)
+unlink(".git/REVERT_HEAD")              = -1 ENOENT (No such file or directory)
+unlink(".git/MERGE_HEAD")               = -1 ENOENT (No such file or directory)
+unlink(".git/MERGE_MSG")                = -1 ENOENT (No such file or directory)
+unlink(".git/MERGE_MODE")               = -1 ENOENT (No such file or directory)
+unlink(".git/SQUASH_MSG")               = -1 ENOENT (No such file or directory)
+stat(".git/rr-cache", 0x7ffed7ac0b70)   = -1 ENOENT (No such file or directory)
+access(".git/hooks/post-commit", X_OK)  = -1 ENOENT (No such file or directory)
+lstat(".git/HEAD", {st_mode=S_IFREG|0664, st_size=23, ...}) = 0
+open(".git/HEAD", O_RDONLY)             = 3
+read(3, "ref: refs/heads/master\n", 256) = 23
+read(3, "", 233)                        = 0
+close(3)                                = 0
+lstat(".git/refs/heads/master", {st_mode=S_IFREG|0664, st_size=41, ...}) = 0
+open(".git/refs/heads/master", O_RDONLY) = 3
+read(3, "0111eb645e1645ab903d3db45afcd31b"..., 256) = 41
+read(3, "", 215)                        = 0
+close(3)                                = 0
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 0), ...}) = 0
+open(".git/objects/1c/cc09d45558c552359176fe8bd3ec3a794368af", O_RDONLY|O_NOATIME) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=239, ...}) = 0
+mmap(NULL, 239, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 239)             = 0
+open(".git/objects/12/b24bf03ac677ad7afa5c9fae5b67058352874f", O_RDONLY|O_NOATIME) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=265, ...}) = 0
+mmap(NULL, 265, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f6b97ba8000
+close(3)                                = 0
+munmap(0x7f6b97ba8000, 265)             = 0
+access(".git/objects/01/11eb645e1645ab903d3db45afcd31b48347d32", F_OK) = 0
+open(".git/objects/01/", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+getdents(3, /* 3 entries */, 32768)     = 112
+getdents(3, /* 0 entries */, 32768)     = 0
+close(3)                                = 0
+write(1, "[master 0111eb6] TESTING\n", 25) = 25
+open("/etc/gitattributes", O_RDONLY)    = -1 ENOENT (No such file or directory)
+open("/home/redcayle/.config/git/attributes", O_RDONLY) = -1 ENOENT (No such file or directory)
+open(".gitattributes", O_RDONLY)        = -1 ENOENT (No such file or directory)
+open(".git/info/attributes", O_RDONLY)  = -1 ENOENT (No such file or directory)
+lstat("aa", {st_mode=S_IFREG|0664, st_size=0, ...}) = 0
+lstat("aa", {st_mode=S_IFREG|0664, st_size=0, ...}) = 0
+write(1, " 1 file changed, 0 insertions(+)"..., 49) = 49
+write(1, " create mode 100644 aa\n", 23) = 23
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 0), ...}) = 0
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 0), ...}) = 0
+close(1)                                = 0
+exit_group(0)                           = ?
++++ exited with 0 +++
