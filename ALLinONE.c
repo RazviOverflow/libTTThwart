@@ -32,7 +32,7 @@
 // Logger
 #include "zlog.h"
 
-#define NONEXISTING_FILE_INODE -5555
+#define NONEXISTING_FILE_INODE 0
 
 #undef GET_PROGRAM_NAME
 #ifdef __GLIBC__
@@ -209,6 +209,32 @@ file_descriptors_info g_fd_array;
 char *log_dir = "/tmp/libTOCTTOUlog/";
 //extern char **environ;
 /// ########## GLOBAL VARIABLES ##########
+
+/// <-------------------------------------------------> 
+
+/// ########## Coconstructor and Destructor ##########
+
+static void before_main(void){
+
+	//printf("PATH Variable environment: %s\n", getenv("PATH"));
+	//printf("ENVIRON: %s\n", *__environ);
+
+	create_log_dir();
+	create_log_file_and_start_logger();
+
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlog_flush_buffer();
+}
+
+static void after_main(void){
+
+	zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+	zlog_flush_buffer();
+	free_array(&g_array);
+
+}
+
+/// ########## Coconstructor and Destructor ##########
 
 /// <-------------------------------------------------> 
 
@@ -1037,25 +1063,6 @@ char * get_directory_from_fd(int directory_fd){
 	return directory_fd_path;
 }
 
-static void before_main(void){
-
-	//printf("PATH Variable environment: %s\n", getenv("PATH"));
-	//printf("ENVIRON: %s\n", *__environ);
-
-	create_log_dir();
-	create_log_file_and_start_logger();
-
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
-	zlog_flush_buffer();
-}
-
-static void after_main(void){
-
-	zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
-	zlog_flush_buffer();
-	free_array(&g_array);
-
-}
 
 /// ########## Core and useful functions ##########
 
@@ -2251,7 +2258,7 @@ int chroot(const char *path){
 
 int execl(const char *pathname, const char *arg, ...){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	//pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname);
 
@@ -2276,7 +2283,7 @@ int execl(const char *pathname, const char *arg, ...){
 
 int execlp(const char *file, const char *arg, ...){
 
-	file = sanitize_and_get_absolute_path(file);
+	//file = sanitize_and_get_absolute_path(file);
 
 	print_function_and_path(__func__, file);
 
@@ -2301,7 +2308,7 @@ int execlp(const char *file, const char *arg, ...){
 
 int execle(const char *pathname, const char *arg, ...){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	//pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname);
 
@@ -2326,7 +2333,7 @@ int execle(const char *pathname, const char *arg, ...){
 
 int execv(const char *pathname, char *const argv[]){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	//pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname);
 
@@ -2345,7 +2352,7 @@ int execv(const char *pathname, char *const argv[]){
 
 int execvp(const char *file, char *const argv[]){
 
-	file = sanitize_and_get_absolute_path(file);
+	//file = sanitize_and_get_absolute_path(file);
 
 	print_function_and_path(__func__, file);
 
@@ -2365,7 +2372,7 @@ int execvp(const char *file, char *const argv[]){
 
 int execve(const char *pathname, char *const argv[], char *const envp[]){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	//pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname);
 
@@ -2385,7 +2392,7 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 
 int execvpe(const char *file, char *const argv[], char *const envp[]){
 
-	file = sanitize_and_get_absolute_path(file);
+	//file = sanitize_and_get_absolute_path(file);
 
 	print_function_and_path(__func__, file);
 
