@@ -147,9 +147,8 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 int file_does_exist(const char *);
 char * get_directory_from_fd(int);
 bool path_is_absolute(const char *);
-void create_log_dir();
-void create_log_file_and_start_logger();
-void start_logger(const char *);
+void create_log_dir_and_start_logger();
+void create_log_file_and_start_logger(const char *);
 
 /// ########## Prototype declaration ##########
 
@@ -212,7 +211,6 @@ void free_fd_array(file_descriptors_info*);
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
 file_descriptors_info g_fd_array;
-char *log_dir = "/tmp/libTOCTTOUlog/";
 //extern char **environ;
 /// ########## GLOBAL VARIABLES ##########
 
@@ -225,8 +223,7 @@ static void before_main(void){
 	//printf("PATH Variable environment: %s\n", getenv("PATH"));
 	//printf("ENVIRON: %s\n", *__environ);
 
-	create_log_dir();
-	create_log_file_and_start_logger();
+	create_log_dir_and_start_logger();
 
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 	zlog_flush_buffer();
@@ -246,29 +243,66 @@ static void after_main(void){
 
 /// ########## Logger ##########
 
-void create_log_dir(){
-	
-	DIR *dir = opendir(log_dir);
-	if(dir){ //Directory exists
-		closedir(dir);
-	} else if(errno == ENOENT){ //Directory does not exist; create
-		mode_t originalUmask = umask(0000);
-		if(mkdir(log_dir, 0777) == -1){
-			fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ABORTING.\n", strerror(errno));
-			umask(originalUmask);
+void create_log_dir_and_start_logger(){
+
+	char *home = getenv("HOME");
+	if(!home){
+		fprintf(stderr, "[!] ERROR RETRIEVING HOME ENV VARIABLE.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
+		zlog_init_stderr();
+		return;
+	} else {
+
+		char *folder_name = "libTOCTTOU";
+
+		int log_folder_dir_length = strlen(home) + strlen (folder_name) + 2;
+		char log_folder_dir[log_folder_dir_length];
+		snprintf(log_folder_dir, log_folder_dir_length, "%s/%s", home, folder_name);
+
+		DIR *folder_dir = opendir(log_folder_dir);
+		if(folder_dir){
+			closedir(folder_dir);
+		} else {
+			if(mkdir(log_folder_dir, 0755) == -1){ // (Bear in mind umask)
+				fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
+				zlog_init_stderr();
+				return;
+			}
+			closedir(folder_dir);
+		}
+
+
+
+		char *program_name = GET_PROGRAM_NAME();
+		// +3 because of "/" and null trailling byte
+		int log_dir_length = strlen(home) + strlen (folder_name) + strlen(program_name) + 3;
+		char log_dir[log_dir_length];
+
+		snprintf(log_dir, log_dir_length, "%s/%s/%s", home, folder_name, program_name);
+		
+		printf("LOGDIR ES: %s\n",log_dir);
+
+		DIR *dir = opendir(log_dir);
+		if(dir){ //Directory exists
+			closedir(dir);
+			create_log_file_and_start_logger(log_dir);
+		} else if(errno == ENOENT){ //Directory does not exist; create
+			create_log_file_and_start_logger(log_dir);
+			if(mkdir(log_dir, 0755) == -1){ // (Bear in mind umask)
+				fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
+				zlog_init_stderr();
+				return;
+			}
+			closedir(dir);
+		} else {
+			fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-		umask(originalUmask);
-	} else {
-		fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
 	}
-
 	
 }
 
 
-void create_log_file_and_start_logger(){
+void create_log_file_and_start_logger(const char *log_dir){
 	time_t ltime;
 	ltime = time(NULL);
 	char char_pid[10];
@@ -277,35 +311,32 @@ void create_log_file_and_start_logger(){
 	struct tm *tm_struct = localtime(&ltime);
 
 	sprintf(char_pid, "%d", getpid());
-
 	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
 	
-	//+1 because strlen excludes the terminating null byte
-	int program_name_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + strlen(date_and_time) + strlen(".log") + 1;
+	//+2 because  of "/" and because strlen excludes the terminating null byte
+	int program_name_length = strlen(char_pid) + strlen(date_and_time) + strlen(".log") + 2;
 	
-	// +2 because of "_"
-	int log_file_absolute_path_length = strlen(log_dir) + program_name_length + 2;
+	// +1 because of "_"
+	int log_file_absolute_path_length = strlen(log_dir) + program_name_length + 1;
 
 	char log_file_absolute_path[log_file_absolute_path_length]; 
-	snprintf(log_file_absolute_path, log_file_absolute_path_length, "%s%s_%s_%s.log", log_dir, GET_PROGRAM_NAME(), char_pid, date_and_time);
+	snprintf(log_file_absolute_path, log_file_absolute_path_length, "%s/%s_%s.log", log_dir, char_pid, date_and_time);
 
 	if ( original_open == NULL ) {
 		original_open = dlsym_wrapper("open");
 	}
 
+	printf("LOGDIR ES: %s y LOG_ABSOLUTE: %s\n", log_dir, log_file_absolute_path);
+
  	if(original_open(log_file_absolute_path, O_CREAT | O_EXCL, 0644) == -1){
- 		fprintf(stderr, "[!] ERROR CREATING LOG FILE.\n[!] ERROR: %s\n[!] ABORTING.\n", strerror(errno));
-		exit(EXIT_FAILURE);
+ 		fprintf(stderr, "[!] ERROR CREATING LOG FILE.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
+		zlog_init_stderr();
+ 	} else {
+ 		zlog_init(log_file_absolute_path);
  	}
 
- 	start_logger(log_file_absolute_path);
-
 }
 
-void start_logger(const char* log_file_name){
-	zlog_init(log_file_name);
-	//zlog_init_stdout();
-}
 
 /// ########## Logger ##########
 
