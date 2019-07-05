@@ -279,20 +279,18 @@ void create_log_dir_and_start_logger(){
 
 		snprintf(log_dir, log_dir_length, "%s/%s/%s", home, folder_name, program_name);
 		
-		printf("LOGDIR ES: %s\n",log_dir);
-
 		DIR *dir = opendir(log_dir);
 		if(dir){ //Directory exists
 			closedir(dir);
 			create_log_file_and_start_logger(log_dir);
 		} else if(errno == ENOENT){ //Directory does not exist; create
-			create_log_file_and_start_logger(log_dir);
 			if(mkdir(log_dir, 0755) == -1){ // (Bear in mind umask)
 				fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
 				zlog_init_stderr();
 				return;
 			}
 			closedir(dir);
+			create_log_file_and_start_logger(log_dir);
 		} else {
 			fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
@@ -325,8 +323,6 @@ void create_log_file_and_start_logger(const char *log_dir){
 	if ( original_open == NULL ) {
 		original_open = dlsym_wrapper("open");
 	}
-
-	printf("LOGDIR ES: %s y LOG_ABSOLUTE: %s\n", log_dir, log_file_absolute_path);
 
  	if(original_open(log_file_absolute_path, O_CREAT | O_EXCL, 0644) == -1){
  		fprintf(stderr, "[!] ERROR CREATING LOG FILE.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
