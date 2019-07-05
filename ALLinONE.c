@@ -889,6 +889,8 @@ ino_t get_inode(const char *path){
 	fd = open_wrapper(path, O_RDONLY, NULL);
 	if (fd < 0){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] Errors occurred while getting inode of %s. ERROR: %s\n", path, strerror(errno));
+		close(fd);
+		return 0;
 	}
 	struct stat file_stat;
 	fstat(fd, &file_stat);
@@ -1851,23 +1853,13 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 
 int rename(const char *oldpath, const char *newpath){
 
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "123123123123123123 SE HA INVOCADO RENAME CON OLDPATH: %s Y NEWPATH: %s \n", oldpath, newpath);
+	
 
-	const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+	//const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
 	const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
 
 	print_function_and_path(__func__, newpath, sanitized_new_path);
 
-	/*
-		We check whether the the new file name was already used. In case 
-		something like the following happens:
-		...
-		open(afilecontrolled by the user)
-		...
-		rename()
-		...
-
-	*/ 
 	check_parameters_properties(sanitized_new_path, __func__);
 
 	if(original_rename == NULL){
@@ -1875,6 +1867,8 @@ int rename(const char *oldpath, const char *newpath){
 	}
 
 	int rename_result = original_rename(oldpath, newpath);
+
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "######### 123123123123123123 SE HA INVOCADO RENAME CON OLDPATH: %s Y NEWPATH: %s || el resultado ha sido: %d \n", oldpath, newpath, rename_result);
 
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
@@ -1885,9 +1879,10 @@ int rename(const char *oldpath, const char *newpath){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 
-		ino_t inode = get_inode(sanitized_old_path);
-		upsert_inode_in_array(&g_array, newpath, inode);
-		
+		ino_t inode = get_inode(sanitized_new_path);
+		if(inode){
+			upsert_inode_in_array(&g_array, newpath, inode);
+		}
 	}
 
 	return rename_result;
@@ -1899,7 +1894,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		original_renameat = dlsym_wrapper(__func__);
 	}
 
-	const char *sanitized_old_path;
+	//const char *sanitized_old_path;
 	const char *sanitized_new_path;
 
 	if(path_is_absolute(oldpath)){
@@ -1929,7 +1924,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		
-		ino_t inode = get_inode(sanitized_old_path);
+		ino_t inode = get_inode(sanitized_new_path);
 		upsert_inode_in_array(&g_array, newpath, inode);
 
 	}
