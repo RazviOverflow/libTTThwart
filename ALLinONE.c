@@ -171,7 +171,6 @@ typedef struct{
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
 void upsert_inode_in_array(file_objects_info *, const char *, ino_t);
-void upsert_path_in_array(file_objects_info *, const char *, const char *);
 void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
@@ -497,22 +496,6 @@ void print_contents_of_array(file_objects_info *array){
 	for(uint i = 0; i < array->used; i++){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
 	}
-}
-
-/*
-	Upsert is update + insert. If the element already exists, update it. 
-	Otherwise insert it.
-*/
-void upsert_path_in_array(file_objects_info *array, const char *oldpath, const char *newpath){
-	
-	int index = find_index_in_array(array, oldpath);
-	if(index == -1){
-		ino_t inode = get_inode(newpath);
-		upsert_inode_in_array(array, newpath, inode);
-	} else {
-		array->list[index].path = strdup(newpath);
-	}
-
 }
 
 void increment_file_descriptor_number(file_objects_info *array, const char *pathname){
@@ -1141,7 +1124,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(sanitized_path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path, sanitized_path);
 
@@ -1157,7 +1140,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 int __lxstat64(int ver, const char *path, struct stat64 *buf)
 {
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(sanitized_path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path, sanitized_path);
 
@@ -1604,7 +1587,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
 	}
 
-   	print_function_and_path(__func__, sanitized_path);
+   	print_function_and_path(__func__, path, sanitized_path);
 
    	check_parameters_properties(sanitized_path, __func__);
 
@@ -1679,7 +1662,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
-    print_function_and_path(__func__, newpath, full_old_path);
+    print_function_and_path(__func__, newpath, full_new_path);
 
 	check_parameters_properties(full_new_path, __func__);
 	
@@ -1770,18 +1753,17 @@ int creat(const char *path, mode_t mode){
 
 }
 
-// HERE
 int rmdir(const char *path){
+    
+    const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+	print_function_and_path(__func__, path, sanitized_path);
+
+	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_rmdir == NULL){
     	original_rmdir = dlsym_wrapper(__func__);
     }
-    
-    path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path);
-
-	check_parameters_properties(path, __func__);
 
 	int rmdir_result = original_rmdir(path);
 
@@ -1793,7 +1775,7 @@ int rmdir(const char *path){
 	if(rmdir_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RMDIR ERROR: %s\n", strerror(errno));
 	} else {
-		int index = find_index_in_array(&g_array, path);
+		int index = find_index_in_array(&g_array, sanitized_path);
 
 		if(index >= 0){
 			remove_from_array_at_index(&g_array, index);
@@ -1807,9 +1789,9 @@ int rmdir(const char *path){
 
 ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	const char* sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
 	if ( original_readlink == NULL ) {
 		original_readlink = dlsym_wrapper(__func__);
@@ -1817,14 +1799,14 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 	int readlink_result = original_readlink(pathname, buf, bufsiz);
 
-	upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+	upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
 
 	if(readlink_result == -1){
     	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINK ERROR: %s\n", strerror(errno));
     } else {
 
-    	ino_t inode = get_inode(pathname);
-		upsert_inode_in_array(&g_array, pathname, inode);
+    	ino_t inode = get_inode(sanitized_pathname);
+		upsert_inode_in_array(&g_array, sanitized_pathname, inode);
 
     }
 
@@ -1838,14 +1820,14 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 		original_readlinkat = dlsym_wrapper(__func__);
 	}
 
-	const char *full_path;
+	const char *sanitized_path;
 	if(path_is_absolute(pathname)){
-		full_path = sanitize_and_get_absolute_path(pathname);
+		sanitized_path = sanitize_and_get_absolute_path(pathname);
 	} else {
-		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
 	}
 
-    print_function_and_path(__func__, full_path);
+    print_function_and_path(__func__, pathname, sanitized_path);
 
     int readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
 
@@ -1859,8 +1841,8 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
     	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINKAT ERROR: %s\n", strerror(errno));
     } else {
 
-    	ino_t inode = get_inode(full_path);
-		upsert_inode_in_array(&g_array, full_path, inode);
+    	ino_t inode = get_inode(sanitized_path);
+		upsert_inode_in_array(&g_array, sanitized_path, inode);
 
     }
 
@@ -1869,21 +1851,29 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 
 int rename(const char *oldpath, const char *newpath){
 
-	const char *full_old_path = sanitize_and_get_absolute_path(oldpath);
-	const char *full_new_path = sanitize_and_get_absolute_path(newpath);
+	zlogf_time(ZLOG_DEBUG_LOG_MSG, "123123123123123123 SE HA INVOCADO RENAME CON OLDPATH: %s Y NEWPATH: %s \n", oldpath, newpath);
 
-	print_function_and_path(__func__, full_new_path);
+	const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+	const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
+
+	print_function_and_path(__func__, newpath, sanitized_new_path);
+
+	/*
+		We check whether the the new file name was already used. In case 
+		something like the following happens:
+		...
+		open(afilecontrolled by the user)
+		...
+		rename()
+		...
+
+	*/ 
+	check_parameters_properties(sanitized_new_path, __func__);
 
 	if(original_rename == NULL){
 		original_rename = dlsym_wrapper(__func__);
 	}
 
-	bool found;
-
-	if(find_index_in_array(&g_array, full_new_path) >= 0){
-		check_parameters_properties(full_new_path, __func__);
-		found = true;
-	}
 	int rename_result = original_rename(oldpath, newpath);
 
 	/*
@@ -1894,11 +1884,10 @@ int rename(const char *oldpath, const char *newpath){
 	if(rename_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
-		if(found){
-			upsert_path_in_array(&g_array, full_old_path, full_new_path);
-		} else {
-			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
-		}
+
+		ino_t inode = get_inode(sanitized_old_path);
+		upsert_inode_in_array(&g_array, newpath, inode);
+		
 	}
 
 	return rename_result;
@@ -1910,29 +1899,24 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		original_renameat = dlsym_wrapper(__func__);
 	}
 
-	const char *full_old_path;
-	const char *full_new_path;
+	const char *sanitized_old_path;
+	const char *sanitized_new_path;
 
 	if(path_is_absolute(oldpath)){
-		full_old_path = sanitize_and_get_absolute_path(oldpath);
+		sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
 	} else {
-		full_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, olddirfd);
+		sanitized_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, olddirfd);
 	}	
 
 	if(path_is_absolute(newpath)){
-		full_new_path = sanitize_and_get_absolute_path(newpath);
+		sanitized_new_path = sanitize_and_get_absolute_path(newpath);
 	} else {
-		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
+		sanitized_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
-    print_function_and_path(__func__, full_new_path);
+    print_function_and_path(__func__, newpath, sanitized_new_path);
 
-    bool found;
-
-	if(find_index_in_array(&g_array, full_new_path) >= 0){
-		check_parameters_properties(full_new_path, __func__);
-		found = true;
-	}
+    check_parameters_properties(sanitized_new_path, __func__);
 
 	int renameat_result = original_rename(oldpath, newpath);
 
@@ -1944,11 +1928,10 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 	if(renameat_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
-		if(found){
-			upsert_path_in_array(&g_array, full_old_path, full_new_path);
-		} else {
-			upsert_inode_in_array(&g_array, full_new_path, get_inode(full_new_path));
-		}
+		
+		ino_t inode = get_inode(sanitized_old_path);
+		upsert_inode_in_array(&g_array, newpath, inode);
+
 	}
 
 	return renameat_result;
@@ -1958,9 +1941,11 @@ FILE *fopen64(const char *path, const char *mode){
 
 	//TODO fd_array
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	check_parameters_properties(path, __func__);
+	print_function_and_path(__func__, path, sanitized_path);
+
+	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_fopen64 == NULL){
 		original_fopen64 = dlsym_wrapper(__func__);
@@ -1972,9 +1957,11 @@ FILE *fopen64(const char *path, const char *mode){
 
 FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	check_parameters_properties(pathname, __func__);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
+
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_freopen == NULL){
 		original_freopen = dlsym_wrapper(__func__);
@@ -1986,15 +1973,15 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 
 int mkfifo(const char *pathname, mode_t mode){
 
+    const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+
+   	print_function_and_path(__func__, pathname, sanitized_pathname);
+
+	check_parameters_properties(pathname, __func__);
+
 	if(original_mkfifo == NULL){
     	original_mkfifo = dlsym_wrapper(__func__);
     }
-	
-    pathname = sanitize_and_get_absolute_path(pathname);
-
-   	print_function_and_path(__func__, pathname);
-
-	check_parameters_properties(pathname, __func__);
 	
     int mkfifo_result = original_mkfifo(pathname, mode);
 
@@ -2014,20 +2001,22 @@ int mkfifo(const char *pathname, mode_t mode){
 }
 
 int mkfifoat(int dirfd, const char *pathname, mode_t mode){
+
+
+	const char *sanitized_path;
+	if(path_is_absolute(pathname)){
+		sanitized_path = sanitize_and_get_absolute_path(pathname);
+	} else {
+		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+	}
+
+    print_function_and_path(__func__, pathname, sanitized_path);
+
+	check_parameters_properties(sanitized_path, __func__);
+
 	if(original_mkfifoat == NULL){
 		original_mkfifoat = dlsym_wrapper(__func__);
 	}
-
-	const char *full_path;
-	if(path_is_absolute(pathname)){
-		full_path = sanitize_and_get_absolute_path(pathname);
-	} else {
-		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
-	}
-
-    print_function_and_path(__func__, full_path);
-
-	check_parameters_properties(full_path, __func__);
 
     int mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 
@@ -2041,7 +2030,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
     	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] READLINKAT ERROR: %s\n", strerror(errno));
     } else {
 
-		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 
 	}
 
@@ -2050,11 +2039,11 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 
 int chmod(const char *pathname, mode_t mode){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_chmod == NULL){
 		original_chmod = dlsym_wrapper(__func__);
@@ -2072,11 +2061,11 @@ int chmod(const char *pathname, mode_t mode){
 
 int chown(const char *pathname, uid_t owner, gid_t group){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_chown == NULL){
 		original_chown = dlsym_wrapper(__func__);
@@ -2094,11 +2083,11 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 
 int truncate(const char *path, off_t length){
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path);
+	print_function_and_path(__func__, path, sanitized_pathname);
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_truncate == NULL){
 		original_truncate = dlsym_wrapper(__func__);
@@ -2115,11 +2104,11 @@ int truncate(const char *path, off_t length){
 
 int truncate64(const char *path, off_t length){
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path);
+	print_function_and_path(__func__, path, sanitized_pathname);
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_truncate64 == NULL){
 		original_truncate64 = dlsym_wrapper(__func__);
@@ -2136,11 +2125,11 @@ int truncate64(const char *path, off_t length){
 
 int utime(const char *filename, const struct utimbuf *times){
 
-	filename = sanitize_and_get_absolute_path(filename);
+	const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
 
-	print_function_and_path(__func__, filename);
+	print_function_and_path(__func__, filename, sanitized_filename);
 
-	check_parameters_properties(filename, __func__);
+	check_parameters_properties(sanitized_filename, __func__);
 
 	if(original_utime == NULL){
 		original_utime = dlsym_wrapper(__func__);
@@ -2157,11 +2146,11 @@ int utime(const char *filename, const struct utimbuf *times){
 
 int utimes(const char *filename, const struct timeval *times){
 
-	filename = sanitize_and_get_absolute_path(filename);
+	const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
 
-	print_function_and_path(__func__, filename);
+	print_function_and_path(__func__, filename, sanitized_filename);
 
-	check_parameters_properties(filename, __func__);
+	check_parameters_properties(sanitized_filename, __func__);
 
 	if(original_utimes == NULL){
 		original_utimes = dlsym_wrapper(__func__);
@@ -2178,11 +2167,11 @@ int utimes(const char *filename, const struct timeval *times){
 
 long pathconf(const char *path, int name){
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path);
+	print_function_and_path(__func__, path, sanitized_path);
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_pathconf == NULL){
 		original_pathconf = dlsym_wrapper(__func__);
@@ -2199,11 +2188,11 @@ long pathconf(const char *path, int name){
 
 int mkdir(const char *pathname, mode_t mode){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	if(original_mkdir == NULL){
 		original_mkdir = dlsym_wrapper(__func__);
@@ -2214,7 +2203,7 @@ int mkdir(const char *pathname, mode_t mode){
 	if(mkdir_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKDIR ERROR: %s\n", strerror(errno));
 	} else {
-		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+		upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
 	}
 
 	return mkdir_result;
@@ -2222,18 +2211,18 @@ int mkdir(const char *pathname, mode_t mode){
 
 int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
-	pathname = sanitize_and_get_absolute_path(pathname);
+	
 
-	print_function_and_path(__func__, pathname);
-
-	const char *full_path;
+	const char *sanitized_path;
 	if(path_is_absolute(pathname)){
-		full_path = sanitize_and_get_absolute_path(pathname);
+		sanitized_path = sanitize_and_get_absolute_path(pathname);
 	} else {
-		full_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
 	}
 
-	check_parameters_properties(full_path, __func__);
+	print_function_and_path(__func__, pathname, sanitized_path);
+
+	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_mkdirat == NULL){
 		original_mkdirat = dlsym_wrapper(__func__);
@@ -2244,7 +2233,7 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 	if(mkdirat_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] MKDIRAT ERROR: %s\n", strerror(errno));
 	} else {
-		upsert_inode_in_array(&g_array, full_path, get_inode(full_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 	}
 
 	return mkdirat_result;
@@ -2252,11 +2241,11 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
 int chdir(const char *path){
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path);
+	print_function_and_path(__func__, path, sanitized_path);
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(sanitized_path, __func__);
 
 	int chdir_result = chdir_wrapper(path);
 
@@ -2270,15 +2259,15 @@ int chdir(const char *path){
 
 int chroot(const char *path){
 
-	path = sanitize_and_get_absolute_path(path);
+	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path);
+	print_function_and_path(__func__, path, sanitized_path);
 
 	if(original_chroot == NULL){
 		original_chroot = dlsym_wrapper(__func__);
 	}
 
-	check_parameters_properties(path, __func__);
+	check_parameters_properties(sanitized_path, __func__);
 
 	int chroot_result = original_chroot(path);
 
@@ -2292,11 +2281,11 @@ int chroot(const char *path){
 
 int execl(const char *pathname, const char *arg, ...){
 
-	//pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, arg);
@@ -2317,11 +2306,11 @@ int execl(const char *pathname, const char *arg, ...){
 
 int execlp(const char *file, const char *arg, ...){
 
-	//file = sanitize_and_get_absolute_path(file);
+	const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
-	print_function_and_path(__func__, file);
+	print_function_and_path(__func__, file, sanitized_file);
 
-	check_parameters_properties(file, __func__);
+	check_parameters_properties(sanitized_file, __func__);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, arg);
@@ -2342,11 +2331,11 @@ int execlp(const char *file, const char *arg, ...){
 
 int execle(const char *pathname, const char *arg, ...){
 
-	//pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	va_list variable_arguments;
 	va_start(variable_arguments, arg);
@@ -2367,11 +2356,11 @@ int execle(const char *pathname, const char *arg, ...){
 
 int execv(const char *pathname, char *const argv[]){
 
-	//pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	int execv_result = execv_wrapper(pathname, argv);
 
@@ -2386,7 +2375,7 @@ int execv(const char *pathname, char *const argv[]){
 
 int execvp(const char *file, char *const argv[]){
 
-	char sanitized_file = sanitize_and_get_absolute_path(file);
+	const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
 	print_function_and_path(__func__, file, sanitized_file);
 
@@ -2406,11 +2395,11 @@ int execvp(const char *file, char *const argv[]){
 
 int execve(const char *pathname, char *const argv[], char *const envp[]){
 
-	//pathname = sanitize_and_get_absolute_path(pathname);
+	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	print_function_and_path(__func__, pathname);
+	print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(pathname, __func__);
+	check_parameters_properties(sanitized_pathname, __func__);
 
 	int execve_result = execve_wrapper(pathname, argv, envp);
 
@@ -2426,11 +2415,11 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 
 int execvpe(const char *file, char *const argv[], char *const envp[]){
 
-	//file = sanitize_and_get_absolute_path(file);
+	const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
-	print_function_and_path(__func__, file);
+	print_function_and_path(__func__, file, sanitized_file);
 
-	check_parameters_properties(file, __func__);
+	check_parameters_properties(sanitized_file, __func__);
 
 	int execvpe_result = execvpe_wrapper(file, argv, envp);
 
@@ -2446,7 +2435,7 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 FILE * popen(const char *command, const char *type){
 
-	print_function_and_path(__func__, command);
+	print_function_and_path(__func__, command, command);
 
 	check_parameters_properties(command, __func__);
 
@@ -2466,11 +2455,11 @@ FILE * popen(const char *command, const char *type){
 
 int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data){
 
-	print_function_and_path(__func__, source);
+	const char *sanitized_source = sanitize_and_get_absolute_path(source);
+	
+	print_function_and_path(__func__, source, sanitized_source);
 
-	source = sanitize_and_get_absolute_path(source);
-
-	check_parameters_properties(source, __func__);
+	check_parameters_properties(sanitized_source, __func__);
 
 	if(original_mount == NULL){
 		original_mount = dlsym_wrapper(__func__);
