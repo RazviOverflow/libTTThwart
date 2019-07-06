@@ -100,8 +100,8 @@ static int (*original_chroot)(const char *path) = NULL;
 //static int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
 //static int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
 
-static int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
-static int (*original_execvp)(const char *file, char *const argv[]) = NULL;
+//static int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
+//static int (*original_execvp)(const char *file, char *const argv[]) = NULL;
 static int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
 static int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
 
@@ -109,13 +109,6 @@ static int (*original_execvpe)(const char *file, char *const argv[], char *const
 static FILE *(*original_popen)(const char *command, const char *type) = NULL;
 //static int (*original_pclose)(FILE *stream) = NULL;
 static int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
-
-
-////TODO fd_array
-//fclose
-//close
-//dup
-//dup2
 
 /// ########## Hooked functions ##########
 
@@ -176,42 +169,13 @@ int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
 void print_contents_of_array(file_objects_info *);
-void increment_file_descriptor_number(file_objects_info *, const char *);
-void decrement_file_descriptor_numer(file_objects_info *, const char *);
-
 
 /// ########## file_objects_info.c ##########
-
-/// <-------------------------------------------------> 
-
-/// ########## file_descriptors_info.c ##########
-
-typedef struct{
-	char *path;
-	int fd;
-} file_descriptor_info;
-
-typedef struct{
-	file_descriptor_info *list;
-	size_t used;
-	size_t size;
-} file_descriptors_info;
-
-// -- Array operations -- //
-void initialize_fd_array(file_descriptors_info *, size_t);
-void insert_fd_in_array(file_descriptors_info *, int, const char *);
-void remove_from_fd_array_at_index(file_descriptors_info *, int);
-int find_index_in_fd_array(file_descriptors_info *, const char *);
-void free_fd_array(file_descriptors_info*);
-
-/// ########## file_descriptors_info.c ##########
 
 /// <------------------------------------------------->
 
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
-file_descriptors_info g_fd_array;
-//extern char **environ;
 /// ########## GLOBAL VARIABLES ##########
 
 /// <-------------------------------------------------> 
@@ -498,119 +462,7 @@ void print_contents_of_array(file_objects_info *array){
 	}
 }
 
-void increment_file_descriptor_number(file_objects_info *array, const char *pathname){
-	int index = find_index_in_array(array, pathname);
-	if(index >= 0){
-		array->list[index].fd_number++;
-	}
-}
-
-void decrement_file_descriptor_numer(file_objects_info *array, const char *pathname){
-	int index = find_index_in_array(array, pathname);
-	if(index >= 0){
-		array->list[index].fd_number--;
-	}
-}
-
 /// ########## Array management ##########
-
-/// <-------------------------------------------------> 
-
-/// ########## File Descriptor Array management ##########
-
-void initialize_fd_array(file_descriptors_info *array, size_t size){
-array->list = (file_descriptor_info *) calloc(size, sizeof(file_descriptor_info)); 
-	if(!array->list){
-		exit(EXIT_FAILURE);
-	}
-	array->used = 0;
-	array->size = size;
-}
-
-void insert_fd_in_array(file_descriptors_info *array, int fd, const char *pathname){
-	// If array has not been yet initialized, initialize it. 
-	if(array->size == 0){
-		initialize_array(&g_array, 2);
-	} 
-
-    // If number of elements (used) in the array equals its size, it means
-    // the array requires more room. It's size gets doubled
-		if(array->used == array->size){
-		////printf("Size of array %X is about to get doubled.\n", &(*array));
-		//printf("Size of array is about to get doubled\n");
-			array->size *= 2;
-			file_descriptor_info *aux = (file_descriptor_info *)realloc(array->list,
-				array->size * sizeof(file_descriptor_info));
-
-        // It is never a good idea to do something like:
-        // array->list = realloc... because if realloc fails you lose the
-        // reference to your original data and realloc does not free() so
-        // there'll be an implicit memory leak.
-			if(!aux){
-				fprintf(stderr, "Error trying to realloc size for file descriptor array in insert process.\n");
-				exit(EXIT_FAILURE);
-			} else {
-				array->list = aux;
-			}
-
-        //Initializing new elements of realocated array
-			memset(&array->list[array->used], 0, sizeof(file_descriptor_info) * (array->size - array->used));
-
-		}
-
-	array->list[array->used].path = strdup(pathname);
-	array->list[array->used].fd = fd;
-	array->used++;
-	
-}
-
-void remove_from_fd_array_at_index(file_descriptors_info *array, int index){
-	int number_elements = array->used;
-	if(index < number_elements){
-
-		for(int i = index; i < number_elements; i++){
-			array->list[i] = array->list[i+1];
-		}
-
-	} 
-
-	array->used--;
-}
-
-int find_index_in_fd_array(file_descriptors_info *array, const char* path){
-
-	int returnValue = -1;
-
-	if(array->size > 0){
-		for(uint i = 0; i < array->used; i++){
-			if(!strcmp(array->list[i].path, path)){
-				returnValue = i;
-			break;
-			}
-		}
-		return returnValue;
-	} else {
-		return returnValue;
-	}
-
-
-}
-
-void free_fd_array(file_descriptors_info *array){
-
-	for(uint i = 0; i < array->used; i++){
-		free(array->list[i].path);
-		array->list[i].path = NULL;
-	}
-
-	free(array->list);
-	array->list = NULL;
-
-	array->used = 0;
-	array->size = 0;
-
-}
-/// ########## File Descriptor Array management ##########
 
 /// <-------------------------------------------------> 
 
@@ -1208,8 +1060,6 @@ int open(const char *path, int flags, ...)
 			
 		}
 
-		increment_file_descriptor_number(&g_array, sanitized_path);
-
 	}
 
 	return open_result;
@@ -1254,7 +1104,6 @@ int open64(const char *path, int flags, ...){
 			
 		}
 
-		increment_file_descriptor_number(&g_array, sanitized_path);
 	}
 
 	return open64_result;
@@ -1278,13 +1127,14 @@ int access(const char *path, int mode){
 
 FILE *fopen(const char *path, const char *mode){
 
-	//TODO fd_array
-
 	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path, sanitized_path);
 
 	check_parameters_properties(sanitized_path, __func__);
+
+	bool path_exists_before = file_does_exist(sanitized_path);
+	struct stat new_file;
 
 	if(original_fopen == NULL){
 		original_fopen = dlsym_wrapper(__func__);
@@ -1295,7 +1145,10 @@ FILE *fopen(const char *path, const char *mode){
 	if(fopen_result == NULL){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] FOPEN ERROR: %s\n", strerror(errno));
 	} else {
-		increment_file_descriptor_number(&g_array, sanitized_path);
+		if(!path_exists_before && !fstat(fileno(fopen_result), &new_file)){
+			// A new file has been created.
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	}
 
 	return fopen_result;
@@ -1379,8 +1232,6 @@ int unlinkat(int dirfd, const char *path, int flags){
 
 int openat(int dirfd, const char *path, int flags, ...){
 
-	//TODO fd_array
-
 	const char *sanitized_path;
 
 	if(path_is_absolute(path)){
@@ -1420,7 +1271,6 @@ int openat(int dirfd, const char *path, int flags, ...){
 
 		}
 
-		increment_file_descriptor_number(&g_array, sanitized_path);
 	}
 	return openat_result;
 
@@ -1693,8 +1543,6 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 
 int creat64(const char *path, mode_t mode){
 
-	//TODO fd_array
-
     const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
     print_function_and_path(__func__, path, sanitized_path);
@@ -1717,7 +1565,6 @@ int creat64(const char *path, mode_t mode){
     	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CREAT64 ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
-    	increment_file_descriptor_number(&g_array, sanitized_path);
     }
 
     return creat64_result;
@@ -1748,7 +1595,6 @@ int creat(const char *path, mode_t mode){
     	zlogf_time(ZLOG_INFO_LOG_MSG, "[+] CREAT ERROR: %s\n", strerror(errno));
     } else {
     	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
-    	increment_file_descriptor_number(&g_array, sanitized_path);
     }
 
     return creat_result;
@@ -1853,9 +1699,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 
 int rename(const char *oldpath, const char *newpath){
 
-	
-
-	//const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+	const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
 	const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
 
 	print_function_and_path(__func__, newpath, sanitized_new_path);
@@ -1868,8 +1712,6 @@ int rename(const char *oldpath, const char *newpath){
 
 	int rename_result = original_rename(oldpath, newpath);
 
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "######### 123123123123123123 SE HA INVOCADO RENAME CON OLDPATH: %s Y NEWPATH: %s || el resultado ha sido: %d \n", oldpath, newpath, rename_result);
-
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
     	set appropriately.
@@ -1879,10 +1721,14 @@ int rename(const char *oldpath, const char *newpath){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 
-		ino_t inode = get_inode(sanitized_new_path);
-		if(inode){
-			upsert_inode_in_array(&g_array, newpath, inode);
+		int index = find_index_in_array(&g_array, sanitized_old_path);
+		if(index > -1){
+			remove_from_array_at_index(&g_array, index);
 		}
+
+		ino_t inode = get_inode(sanitized_new_path);
+		upsert_inode_in_array(&g_array, newpath, inode);
+		
 	}
 
 	return rename_result;
@@ -1890,18 +1736,8 @@ int rename(const char *oldpath, const char *newpath){
 
 int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath){
 
-	if(original_renameat == NULL){
-		original_renameat = dlsym_wrapper(__func__);
-	}
-
-	//const char *sanitized_old_path;
 	const char *sanitized_new_path;
-
-	if(path_is_absolute(oldpath)){
-		sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
-	} else {
-		sanitized_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, olddirfd);
-	}	
+	const char *sanitized_old_path;
 
 	if(path_is_absolute(newpath)){
 		sanitized_new_path = sanitize_and_get_absolute_path(newpath);
@@ -1909,11 +1745,21 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		sanitized_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
 	}
 
+	if(path_is_absolute(oldpath)){
+		sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+	} else {
+		sanitized_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, newdirfd);
+	}
+
     print_function_and_path(__func__, newpath, sanitized_new_path);
 
     check_parameters_properties(sanitized_new_path, __func__);
 
-	int renameat_result = original_rename(oldpath, newpath);
+    	if(original_renameat == NULL){
+		original_renameat = dlsym_wrapper(__func__);
+	}
+
+	int renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
@@ -1924,6 +1770,11 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] RENAME ERROR: %s\n", strerror(errno));
 	} else {
 		
+		int index = find_index_in_array(&g_array, sanitized_old_path);
+		if(index > -1){
+			remove_from_array_at_index(&g_array, index);
+		}
+
 		ino_t inode = get_inode(sanitized_new_path);
 		upsert_inode_in_array(&g_array, newpath, inode);
 
@@ -1934,19 +1785,30 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 
 FILE *fopen64(const char *path, const char *mode){
 
-	//TODO fd_array
-
 	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 	print_function_and_path(__func__, path, sanitized_path);
 
 	check_parameters_properties(sanitized_path, __func__);
 
+	bool path_exists_before = file_does_exist(sanitized_path);
+	struct stat new_file;
+
 	if(original_fopen64 == NULL){
 		original_fopen64 = dlsym_wrapper(__func__);
+	} 
+
+	FILE *fopen64_result = original_fopen64(path, mode);
+
+	if(fopen64_result == NULL){
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] FOPEN64 ERROR: %s\n", strerror(errno));
+	} else {
+		if(!path_exists_before && !fstat(fileno(fopen64_result), &new_file)){
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	}
 
-	return original_fopen64(path, mode);
+	return fopen64_result;
 
 }
 
@@ -1958,12 +1820,25 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 
 	check_parameters_properties(sanitized_pathname, __func__);
 
+	bool file_exists_before = file_does_exist(sanitized_pathname);
+	struct stat new_file;
+
 	if(original_freopen == NULL){
 		original_freopen = dlsym_wrapper(__func__);
 	}
 
-	return original_freopen(pathname, mode, stream);
+	FILE *freopen_result= original_freopen(pathname, mode, stream);
 
+	if(freopen_result == NULL){
+		zlogf_time(ZLOG_INFO_LOG_MSG, "[+] FREOPEN ERROR: %s\n", strerror(errno));
+	} else {
+		if(!file_exists_before && !fstat(fileno(freopen_result), &new_file)){
+			// A new file has been created.
+			upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		}
+	}
+
+	return freopen_result;
 }
 
 int mkfifo(const char *pathname, mode_t mode){
