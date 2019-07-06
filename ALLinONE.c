@@ -642,7 +642,7 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 	Additional info: https://code.woboq.org/userspace/glibc/posix/execl.c.html
 */
 int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
-	int execlX_result;
+	int execlX_result = -1;
 
 	if(function == 0 || function == 1 ){
 		va_list aux_list;
