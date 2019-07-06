@@ -189,6 +189,8 @@ static void before_main(void){
 
 	create_log_dir_and_start_logger();
 
+	//zlog_init_stdout();
+
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 	zlog_flush_buffer();
 }
@@ -351,7 +353,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	if(index >= 0){
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
-			zlogf_time(ZLOG_INFO_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
 		}
 	} else  {
     // If number of elements (used) in the array equals its size, it means
@@ -493,8 +495,8 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			file_object_info aux = get_from_array_at_index(&g_array,index);
 			if(aux.inode != inode){
 			//printf("FILE %s EXISTS: %d\n", path, exists);
-				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode);
-				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM ABORTED [#]\n[#] Check logs for more info [#]\n");
+				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode, GET_PROGRAM_NAME());
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n", GET_PROGRAM_NAME());
 				fflush(stdout);
 				zlog_flush_buffer();
 				exit(EXIT_FAILURE);
@@ -504,7 +506,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			}
 		}
 	} else { // if file_does_exist
-		zlogf_time(ZLOG_INFO_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
 		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
 	}
 }
@@ -910,9 +912,13 @@ void timestamp(){
 
 int file_does_exist(const char *pathname){
 	
-	if(open_wrapper(pathname, O_RDONLY, NULL) < 0){
+	int fd = open_wrapper(pathname, O_RDONLY, NULL);
+
+	if( fd < 0){
+		close(fd);
 		return 0;
 	} else {
+		close(fd);
 		return 1;
 	}
 	
