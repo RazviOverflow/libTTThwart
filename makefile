@@ -1,7 +1,6 @@
 SHELL= /bin/sh
 CC=gcc
-CFLAGS= -shared -fPIC -Wall -Wextra
-LDFLAGS= -ldl
+CFLAGS= -shared -fPIC -Wall -Wextra -fstack-protector-all -O2 -lpthread -ldl
 
 INCLUDEDIR=include
 SOURCEDIR=src
@@ -11,15 +10,13 @@ SRCS= $(shell echo src/*.c)
 
 TARGET= libTTThwart.so
 
-all: $(TARGET)
-
-$(TARGET): $(SRCS) $(DEPS)
-	$(CC) $(CFLAGS) $(SRCS) -I$(INCLUDEDIR) -o $@ $(LDFLAGS)
+library:
+	$(CC) $(CFLAGS) $(SRCS) -I$(INCLUDEDIR) -o $(TARGET) 
 
 ALLINONESRCS= ALLinONE.c src/zlog.c
 
 allinone: 
-	gcc -shared -fpic -Wall -Wextra $(ALLINONESRCS) -I$(INCLUDEDIR) -o ALLinONE.so -ldl -lpthread -D DEBUG
+	$(CC) $(CFLAGS) $(ALLINONESRCS) -I$(INCLUDEDIR) -o ALLinONE.so -D DEBUG
 
 .PHONY: clean
 
