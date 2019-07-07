@@ -293,6 +293,8 @@ void create_log_file_and_start_logger(const char *log_dir){
 	// +1 because of "_"
 	int log_file_absolute_path_length = strlen(log_dir) + program_name_length + 1;
 
+
+
 	char log_file_absolute_path[log_file_absolute_path_length]; 
 	snprintf(log_file_absolute_path, log_file_absolute_path_length, "%s/%s_%s.log", log_dir, char_pid, date_and_time);
 
@@ -497,7 +499,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			if(aux.inode != inode){
 			//printf("FILE %s EXISTS: %d\n", path, exists);
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode, GET_PROGRAM_NAME());
-				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n", GET_PROGRAM_NAME());
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
 				zlog_flush_buffer();
 				exit(EXIT_FAILURE);
