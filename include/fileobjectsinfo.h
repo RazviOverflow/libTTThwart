@@ -1,29 +1,33 @@
-#ifndef FILEOBJECTINFOS
-#define FILEOBJECTINFOS
+#ifndef FILE_OBJECTS_INFO_H_
+#define FILE_OBJECTS_INFO_H_
 
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>           /* Definition of AT_* constants */
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 typedef struct{
-  char *path;
-  int inode;
-} FileObjectInfo;
+	char *path;
+	ino_t inode;
+	int fd_number;
+} file_object_info;
 
 typedef struct{
-	FileObjectInfo * list;
+	file_object_info *list;
 	size_t used;
 	size_t size;
-} FileObjectsInfo;
+} file_objects_info;
 
-FileObjectsInfo* Initialize(size_t);
-void Insert(FileObjectsInfo*, const char *, ino_t);
-void Free(FileObjectsInfo *);
-int FindIndex(FileObjectsInfo *, const char *);
-FileObjectInfo Get(FileObjectsInfo *, int);
-//void CreateFileObjectInfo(char*, ino_t); //private
+// -- Array operations -- //
+void initialize_array(file_objects_info *, size_t);
+void upsert_inode_in_array(file_objects_info *, const char *, ino_t);
+void free_array(file_objects_info *);
+int find_index_in_array(file_objects_info *, const char *);
+file_object_info get_from_array_at_index(file_objects_info *, int);
+void remove_from_array_at_index(file_objects_info *, int);
 
-#endif //FILEOBJECTINFOS
+#endif

@@ -13,10 +13,8 @@ TARGET= libTTThwart.so
 library:
 	$(CC) $(CFLAGS) $(SRCS) -I$(INCLUDEDIR) -o $(TARGET) 
 
-ALLINONESRCS= ALLinONE.c src/zlog.c
-
-allinone: 
-	$(CC) $(CFLAGS) $(ALLINONESRCS) -I$(INCLUDEDIR) -o ALLinONE.so -D DEBUG
+debug: 
+	$(CC) $(CFLAGS) $(SRCS) -I$(INCLUDEDIR) -o $(TARGET) -D DEBUG
 
 .PHONY: clean
 
