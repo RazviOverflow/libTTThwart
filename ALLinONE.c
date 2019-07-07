@@ -192,6 +192,7 @@ static void before_main(void){
 	}
 
 	if(LIBRARY_ON){
+
 		create_log_dir_and_start_logger();
 
 		//zlog_init_stdout();
@@ -199,6 +200,7 @@ static void before_main(void){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		zlog_flush_buffer();
 	}
+
 }
 
 static void after_main(void){
@@ -1742,61 +1744,78 @@ int creat(const char *path, mode_t mode){
 }
 
 int rmdir(const char *path){
-    
-    const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_rmdir == NULL){
-    	original_rmdir = dlsym_wrapper(__func__);
-    }
+		original_rmdir = dlsym_wrapper(__func__);
+	}
 
-	int rmdir_result = original_rmdir(path);
+
+	int rmdir_result;
+
+	if(LIBRARY_ON){
+
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+		rmdir_result = original_rmdir(path);
 
 	/*
 		Upon successful completion, the function rmdir() shall return 0. 
 		Otherwise, -1 shall be returned, and errno set to indicate the error. 
 		If -1 is returned, the named directory shall not be changed.
 	*/
-	if(rmdir_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RMDIR ERROR: %s\n", strerror(errno));
-	} else {
-		int index = find_index_in_array(&g_array, sanitized_path);
+		if(rmdir_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RMDIR ERROR: %s\n", strerror(errno));
+		} else {
+			int index = find_index_in_array(&g_array, sanitized_path);
 
-		if(index >= 0){
-			remove_from_array_at_index(&g_array, index);
+			if(index >= 0){
+				remove_from_array_at_index(&g_array, index);
 			//g_array.list[index].inode = -1;
+			}
 		}
+	} else {
+		rmdir_result = original_rmdir(path);
 	}
 
-    return rmdir_result;
+	return rmdir_result;
 
 }
 
 ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
-	const char* sanitized_pathname = sanitize_and_get_absolute_path(pathname);
-
-	print_function_and_path(__func__, pathname, sanitized_pathname);
-
 	if ( original_readlink == NULL ) {
 		original_readlink = dlsym_wrapper(__func__);
 	}
 
-	int readlink_result = original_readlink(pathname, buf, bufsiz);
+	int readlink_result;
+	if(LIBRARY_ON){
 
-	upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		const char* sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	if(readlink_result == -1){
-    	zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
-    } else {
+		print_function_and_path(__func__, pathname, sanitized_pathname);
 
-    	ino_t inode = get_inode(sanitized_pathname);
-		upsert_inode_in_array(&g_array, sanitized_pathname, inode);
 
-    }
+
+		readlink_result = original_readlink(pathname, buf, bufsiz);
+
+		upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+
+		if(readlink_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
+		} else {
+
+			ino_t inode = get_inode(sanitized_pathname);
+			upsert_inode_in_array(&g_array, sanitized_pathname, inode);
+
+		}
+	} else {
+		readlink_result = original_readlink(pathname, buf, bufsiz);
+	}
 
 	return readlink_result;
 }
@@ -1808,16 +1827,20 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 		original_readlinkat = dlsym_wrapper(__func__);
 	}
 
-	const char *sanitized_path;
-	if(path_is_absolute(pathname)){
-		sanitized_path = sanitize_and_get_absolute_path(pathname);
-	} else {
-		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
-	}
+	int readlinkat_result;
 
-    print_function_and_path(__func__, pathname, sanitized_path);
+	if(LIBRARY_ON){
 
-    int readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
+		const char *sanitized_path;
+		if(path_is_absolute(pathname)){
+			sanitized_path = sanitize_and_get_absolute_path(pathname);
+		} else {
+			sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+		}
+
+		print_function_and_path(__func__, pathname, sanitized_path);
+
+		readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
 
     /*
 		On success, these calls return the number of bytes placed in buf.
@@ -1825,50 +1848,61 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
        	occurred.)  On error, -1 is returned and errno is set to indicate the
        	error.
     */
-    if(readlinkat_result == -1){
-    	zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
-    } else {
+		if(readlinkat_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
+		} else {
 
-    	ino_t inode = get_inode(sanitized_path);
-		upsert_inode_in_array(&g_array, sanitized_path, inode);
+			ino_t inode = get_inode(sanitized_path);
+			upsert_inode_in_array(&g_array, sanitized_path, inode);
 
-    }
+		}
+	} else {
+		readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
+	}
 
-    return readlinkat_result;
+	return readlinkat_result;
 }
 
 int rename(const char *oldpath, const char *newpath){
 
-	const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
-	const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
-
-	print_function_and_path(__func__, newpath, sanitized_new_path);
-
-	check_parameters_properties(sanitized_new_path, __func__);
 
 	if(original_rename == NULL){
 		original_rename = dlsym_wrapper(__func__);
 	}
 
-	int rename_result = original_rename(oldpath, newpath);
+	int rename_result;
+	if(LIBRARY_ON){
+
+		const char *sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+		const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
+
+		print_function_and_path(__func__, newpath, sanitized_new_path);
+
+		check_parameters_properties(sanitized_new_path, __func__);
+
+
+		rename_result = original_rename(oldpath, newpath);
 
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
     	set appropriately.
 	*/
 
-	if(rename_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
-	} else {
+		if(rename_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
+		} else {
 
-		int index = find_index_in_array(&g_array, sanitized_old_path);
-		if(index > -1){
-			remove_from_array_at_index(&g_array, index);
+			int index = find_index_in_array(&g_array, sanitized_old_path);
+			if(index > -1){
+				remove_from_array_at_index(&g_array, index);
+			}
+
+			ino_t inode = get_inode(sanitized_new_path);
+			upsert_inode_in_array(&g_array, newpath, inode);
+
 		}
-
-		ino_t inode = get_inode(sanitized_new_path);
-		upsert_inode_in_array(&g_array, newpath, inode);
-		
+	} else {
+		rename_result = original_rename(oldpath, newpath);
 	}
 
 	return rename_result;
@@ -1876,48 +1910,56 @@ int rename(const char *oldpath, const char *newpath){
 
 int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath){
 
-	const char *sanitized_new_path;
-	const char *sanitized_old_path;
-
-	if(path_is_absolute(newpath)){
-		sanitized_new_path = sanitize_and_get_absolute_path(newpath);
-	} else {
-		sanitized_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
-	}
-
-	if(path_is_absolute(oldpath)){
-		sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
-	} else {
-		sanitized_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, newdirfd);
-	}
-
-    print_function_and_path(__func__, newpath, sanitized_new_path);
-
-    check_parameters_properties(sanitized_new_path, __func__);
-
-    	if(original_renameat == NULL){
+	if(original_renameat == NULL){
 		original_renameat = dlsym_wrapper(__func__);
 	}
 
-	int renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
+	int renameat_result;
+	if(LIBRARY_ON){
+
+		const char *sanitized_new_path;
+		const char *sanitized_old_path;
+
+		if(path_is_absolute(newpath)){
+			sanitized_new_path = sanitize_and_get_absolute_path(newpath);
+		} else {
+			sanitized_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
+		}
+
+		if(path_is_absolute(oldpath)){
+			sanitized_old_path = sanitize_and_get_absolute_path(oldpath);
+		} else {
+			sanitized_old_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(oldpath, newdirfd);
+		}
+
+		print_function_and_path(__func__, newpath, sanitized_new_path);
+
+		check_parameters_properties(sanitized_new_path, __func__);
+
+
+
+		renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 
 	/*
 		On success, zero is returned.  On error, -1 is returned, and errno is
     	set appropriately.
 	*/
 
-	if(renameat_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
-	} else {
-		
-		int index = find_index_in_array(&g_array, sanitized_old_path);
-		if(index > -1){
-			remove_from_array_at_index(&g_array, index);
+		if(renameat_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
+		} else {
+
+			int index = find_index_in_array(&g_array, sanitized_old_path);
+			if(index > -1){
+				remove_from_array_at_index(&g_array, index);
+			}
+
+			ino_t inode = get_inode(sanitized_new_path);
+			upsert_inode_in_array(&g_array, newpath, inode);
+
 		}
-
-		ino_t inode = get_inode(sanitized_new_path);
-		upsert_inode_in_array(&g_array, newpath, inode);
-
+	} else {
+		renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 	}
 
 	return renameat_result;
@@ -1925,27 +1967,36 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 
 FILE *fopen64(const char *path, const char *mode){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
-
-	bool path_exists_before = file_does_exist(sanitized_path);
-	struct stat new_file;
-
 	if(original_fopen64 == NULL){
 		original_fopen64 = dlsym_wrapper(__func__);
 	} 
 
-	FILE *fopen64_result = original_fopen64(path, mode);
+	FILE *fopen64_result;
 
-	if(fopen64_result == NULL){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN64 ERROR: %s\n", strerror(errno));
-	} else {
-		if(!path_exists_before && !fstat(fileno(fopen64_result), &new_file)){
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+	if(LIBRARY_ON){
+
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+		bool path_exists_before = file_does_exist(sanitized_path);
+		struct stat new_file;
+
+
+
+		fopen64_result = original_fopen64(path, mode);
+
+		if(fopen64_result == NULL){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN64 ERROR: %s\n", strerror(errno));
+		} else {
+			if(!path_exists_before && !fstat(fileno(fopen64_result), &new_file)){
+				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			}
 		}
+	} else {
+		fopen64_result = original_fopen64(path, mode);
 	}
 
 	return fopen64_result;
@@ -1954,28 +2005,37 @@ FILE *fopen64(const char *path, const char *mode){
 
 FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
-
-	print_function_and_path(__func__, pathname, sanitized_pathname);
-
-	check_parameters_properties(sanitized_pathname, __func__);
-
-	bool file_exists_before = file_does_exist(sanitized_pathname);
-	struct stat new_file;
-
 	if(original_freopen == NULL){
 		original_freopen = dlsym_wrapper(__func__);
 	}
 
-	FILE *freopen_result= original_freopen(pathname, mode, stream);
+	FILE *freopen_result;
 
-	if(freopen_result == NULL){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FREOPEN ERROR: %s\n", strerror(errno));
-	} else {
-		if(!file_exists_before && !fstat(fileno(freopen_result), &new_file)){
+	if(LIBRARY_ON){
+
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+
+		print_function_and_path(__func__, pathname, sanitized_pathname);
+
+		check_parameters_properties(sanitized_pathname, __func__);
+
+		bool file_exists_before = file_does_exist(sanitized_pathname);
+		struct stat new_file;
+
+
+
+		freopen_result= original_freopen(pathname, mode, stream);
+
+		if(freopen_result == NULL){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FREOPEN ERROR: %s\n", strerror(errno));
+		} else {
+			if(!file_exists_before && !fstat(fileno(freopen_result), &new_file)){
 			// A new file has been created.
-			upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+				upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+			}
 		}
+	} else {
+		freopen_result= original_freopen(pathname, mode, stream);
 	}
 
 	return freopen_result;
@@ -1983,52 +2043,65 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 
 int mkfifo(const char *pathname, mode_t mode){
 
-    const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
-
-   	print_function_and_path(__func__, pathname, sanitized_pathname);
-
-	check_parameters_properties(pathname, __func__);
-
 	if(original_mkfifo == NULL){
-    	original_mkfifo = dlsym_wrapper(__func__);
-    }
-	
-    int mkfifo_result = original_mkfifo(pathname, mode);
+		original_mkfifo = dlsym_wrapper(__func__);
+	}
+
+	int mkfifo_result;
+
+	if(LIBRARY_ON){
+
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+
+		print_function_and_path(__func__, pathname, sanitized_pathname);
+
+		check_parameters_properties(pathname, __func__);
+
+
+
+		mkfifo_result = original_mkfifo(pathname, mode);
 
     /*
 		On success mkfifo() and mkfifoat() return 0.  In the case of an
     	error, -1 is returned (in which case, errno is set appropriately).
     */
-    if(mkfifo_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKFIFO ERROR: %s\n", strerror(errno));
+		if(mkfifo_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKFIFO ERROR: %s\n", strerror(errno));
+		} else {
+
+			upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+
+		}
 	} else {
-		
-		upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
-		
+		mkfifo_result = original_mkfifo(pathname, mode);
 	}
 
-    return mkfifo_result;
+	return mkfifo_result;
 }
 
 int mkfifoat(int dirfd, const char *pathname, mode_t mode){
-
-
-	const char *sanitized_path;
-	if(path_is_absolute(pathname)){
-		sanitized_path = sanitize_and_get_absolute_path(pathname);
-	} else {
-		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
-	}
-
-    print_function_and_path(__func__, pathname, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_mkfifoat == NULL){
 		original_mkfifoat = dlsym_wrapper(__func__);
 	}
 
-    int mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
+	int mkfifoat_result;
+
+	if(LIBRARY_ON){
+		const char *sanitized_path;
+		if(path_is_absolute(pathname)){
+			sanitized_path = sanitize_and_get_absolute_path(pathname);
+		} else {
+			sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+		}
+
+    print_function_and_path(__func__, pathname, sanitized_path);
+
+	check_parameters_properties(sanitized_path, __func__);
+
+
+
+    mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 
     /*
 		On success, these calls return the number of bytes placed in buf.
@@ -2043,11 +2116,23 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 
 	}
+} else {
+	mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
+}
 
     return mkfifoat_result;
 }
 
 int chmod(const char *pathname, mode_t mode){
+
+
+	if(original_chmod == NULL){
+		original_chmod = dlsym_wrapper(__func__);
+	}
+
+	int chmod_result;
+
+	if(LIBRARY_ON){
 
 	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
@@ -2055,15 +2140,15 @@ int chmod(const char *pathname, mode_t mode){
 
 	check_parameters_properties(sanitized_pathname, __func__);
 
-	if(original_chmod == NULL){
-		original_chmod = dlsym_wrapper(__func__);
-	}
 
-	int chmod_result =  original_chmod(pathname, mode);
+	chmod_result =  original_chmod(pathname, mode);
 
 	if(chmod_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHMOD ERROR: %s\n", strerror(errno));
 	}
+} else {
+	chmod_result =  original_chmod(pathname, mode);
+}
 
 	return chmod_result;
 
@@ -2071,21 +2156,30 @@ int chmod(const char *pathname, mode_t mode){
 
 int chown(const char *pathname, uid_t owner, gid_t group){
 
+	if(original_chown == NULL){
+		original_chown = dlsym_wrapper(__func__);
+	}
+
+	int chown_result;
+
+	if(LIBRARY_ON){
+
 	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname, sanitized_pathname);
 
 	check_parameters_properties(sanitized_pathname, __func__);
 
-	if(original_chown == NULL){
-		original_chown = dlsym_wrapper(__func__);
-	}
 
-	int chown_result =  original_chown(pathname, owner, group);
+
+	chown_result =  original_chown(pathname, owner, group);
 
 	if(chown_result == -1){
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHOWN ERROR: %s\n", strerror(errno));
 	}
+} else {
+	chown_result =  original_chown(pathname, owner, group);
+}
 
 	return chown_result;
 
@@ -2093,20 +2187,29 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 
 int truncate(const char *path, off_t length){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_pathname);
-
-	check_parameters_properties(sanitized_pathname, __func__);
-
 	if(original_truncate == NULL){
 		original_truncate = dlsym_wrapper(__func__);
 	}
 
-	int truncate_result = original_truncate(path, length);
+	int truncate_result;
 
-	if(truncate_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_pathname);
+
+		check_parameters_properties(sanitized_pathname, __func__);
+
+
+
+		truncate_result = original_truncate(path, length);
+
+		if(truncate_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		truncate_result = original_truncate(path, length);
 	}
 
 	return truncate_result;
@@ -2114,20 +2217,28 @@ int truncate(const char *path, off_t length){
 
 int truncate64(const char *path, off_t length){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_pathname);
-
-	check_parameters_properties(sanitized_pathname, __func__);
-
 	if(original_truncate64 == NULL){
 		original_truncate64 = dlsym_wrapper(__func__);
 	}
 
-	int truncate64_result = original_truncate64(path, length);
+	int truncate64_result;
 
-	if(truncate64_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE64 ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_pathname);
+
+		check_parameters_properties(sanitized_pathname, __func__);
+
+		truncate64_result = original_truncate64(path, length);
+
+		if(truncate64_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE64 ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		truncate64_result = original_truncate64(path, length);
 	}
 
 	return truncate64_result;
@@ -2135,20 +2246,30 @@ int truncate64(const char *path, off_t length){
 
 int utime(const char *filename, const struct utimbuf *times){
 
-	const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
-
-	print_function_and_path(__func__, filename, sanitized_filename);
-
-	check_parameters_properties(sanitized_filename, __func__);
-
 	if(original_utime == NULL){
 		original_utime = dlsym_wrapper(__func__);
 	}
 
-	int utime_result = original_utime(filename, times);
+	int utime_result;
 
-	if(utime_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIME ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+
+		const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
+
+		print_function_and_path(__func__, filename, sanitized_filename);
+
+		check_parameters_properties(sanitized_filename, __func__);
+
+
+
+		utime_result = original_utime(filename, times);
+
+		if(utime_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIME ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		utime_result = original_utime(filename, times);
 	}
 
 	return utime_result;
@@ -2156,20 +2277,27 @@ int utime(const char *filename, const struct utimbuf *times){
 
 int utimes(const char *filename, const struct timeval *times){
 
-	const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
-
-	print_function_and_path(__func__, filename, sanitized_filename);
-
-	check_parameters_properties(sanitized_filename, __func__);
-
 	if(original_utimes == NULL){
 		original_utimes = dlsym_wrapper(__func__);
 	}
 
-	int utimes_result = original_utimes(filename, times);
+	int utimes_result;
 
-	if(utimes_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIMES ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
+
+		print_function_and_path(__func__, filename, sanitized_filename);
+
+		check_parameters_properties(sanitized_filename, __func__);
+
+		utimes_result = original_utimes(filename, times);
+
+		if(utimes_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIMES ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		utimes_result = original_utimes(filename, times);
 	}
 
 	return utimes_result;
@@ -2177,20 +2305,30 @@ int utimes(const char *filename, const struct timeval *times){
 
 long pathconf(const char *path, int name){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_pathconf == NULL){
 		original_pathconf = dlsym_wrapper(__func__);
 	}
 
-	int pathconf_result = original_pathconf(path, name);
+	int pathconf_result;
 
-	if(pathconf_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] PATHCONF ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+		pathconf_result = original_pathconf(path, name);
+
+		if(pathconf_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] PATHCONF ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		pathconf_result = original_pathconf(path, name);
 	}
 
 	return pathconf_result;
@@ -2198,22 +2336,30 @@ long pathconf(const char *path, int name){
 
 int mkdir(const char *pathname, mode_t mode){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
-
-	print_function_and_path(__func__, pathname, sanitized_pathname);
-
-	check_parameters_properties(sanitized_pathname, __func__);
-
 	if(original_mkdir == NULL){
 		original_mkdir = dlsym_wrapper(__func__);
 	}
 
-	int mkdir_result = original_mkdir(pathname, mode);
+	int mkdir_result;
 
-	if(mkdir_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+
+		print_function_and_path(__func__, pathname, sanitized_pathname);
+
+		check_parameters_properties(sanitized_pathname, __func__);
+
+		mkdir_result = original_mkdir(pathname, mode);
+
+		if(mkdir_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
+		} else {
+			upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		}
+
 	} else {
-		upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		mkdir_result = original_mkdir(pathname, mode);
 	}
 
 	return mkdir_result;
@@ -2221,29 +2367,34 @@ int mkdir(const char *pathname, mode_t mode){
 
 int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
-	
-
-	const char *sanitized_path;
-	if(path_is_absolute(pathname)){
-		sanitized_path = sanitize_and_get_absolute_path(pathname);
-	} else {
-		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
-	}
-
-	print_function_and_path(__func__, pathname, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
-
 	if(original_mkdirat == NULL){
 		original_mkdirat = dlsym_wrapper(__func__);
 	}
 
-	int mkdirat_result = original_mkdirat(dirfd, pathname, mode);
+	int mkdirat_result;
 
-	if(mkdirat_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIRAT ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_path;
+		if(path_is_absolute(pathname)){
+			sanitized_path = sanitize_and_get_absolute_path(pathname);
+		} else {
+			sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(pathname, dirfd);
+		}
+
+		print_function_and_path(__func__, pathname, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+		mkdirat_result = original_mkdirat(dirfd, pathname, mode);
+
+		if(mkdirat_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIRAT ERROR: %s\n", strerror(errno));
+		} else {
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	} else {
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		mkdirat_result = original_mkdirat(dirfd, pathname, mode);
 	}
 
 	return mkdirat_result;
@@ -2251,16 +2402,25 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
 int chdir(const char *path){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path, sanitized_path);
+	int chdir_result;
 
-	check_parameters_properties(sanitized_path, __func__);
+	if(LIBRARY_ON){
 
-	int chdir_result = chdir_wrapper(path);
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	if(chdir_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHDIR ERROR: %s\n", strerror(errno));
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+		chdir_result = chdir_wrapper(path);
+
+		if(chdir_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHDIR ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		chdir_result = chdir_wrapper(path);
 	}
 
 	return chdir_result;
@@ -2269,20 +2429,29 @@ int chdir(const char *path){
 
 int chroot(const char *path){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	int chroot_result;
 
-	print_function_and_path(__func__, path, sanitized_path);
 
-	if(original_chroot == NULL){
-		original_chroot = dlsym_wrapper(__func__);
-	}
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_path, __func__);
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	int chroot_result = original_chroot(path);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	if(chroot_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHROOT ERROR: %s\n", strerror(errno));
+		if(original_chroot == NULL){
+			original_chroot = dlsym_wrapper(__func__);
+		}
+
+		check_parameters_properties(sanitized_path, __func__);
+
+		chroot_result = original_chroot(path);
+
+		if(chroot_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHROOT ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		chroot_result = original_chroot(path);
 	}
 
 	return chroot_result;
@@ -2316,23 +2485,35 @@ int execl(const char *pathname, const char *arg, ...){
 
 int execlp(const char *file, const char *arg, ...){
 
-	const char *sanitized_file = sanitize_and_get_absolute_path(file);
+	int execlp_result;
 
-	print_function_and_path(__func__, file, sanitized_file);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_file, __func__);
+		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
-	va_list variable_arguments;
-	va_start(variable_arguments, arg);
+		print_function_and_path(__func__, file, sanitized_file);
 
-	int execlp_result = execlX_wrapper(1, file, arg, variable_arguments);
+		check_parameters_properties(sanitized_file, __func__);
+
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
+
+		execlp_result = execlX_wrapper(1, file, arg, variable_arguments);
 
 	// If execlp succeeds this code will never be executed
 
-	va_end(variable_arguments);
+		va_end(variable_arguments);
 
-	if(execlp_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLP ERROR: %s\n", strerror(errno));
+		if(execlp_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLP ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
+
+		execlp_result = execlX_wrapper(1, file, arg, variable_arguments);
+
+		va_end(variable_arguments);
 	}
 
 	return execlp_result;
@@ -2341,23 +2522,33 @@ int execlp(const char *file, const char *arg, ...){
 
 int execle(const char *pathname, const char *arg, ...){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+	int execle_result;
 
-	print_function_and_path(__func__, pathname, sanitized_pathname);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_pathname, __func__);
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	va_list variable_arguments;
-	va_start(variable_arguments, arg);
+		print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	int execle_result = execlX_wrapper(2, pathname, arg, variable_arguments);
+		check_parameters_properties(sanitized_pathname, __func__);
+
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
+
+		execle_result = execlX_wrapper(2, pathname, arg, variable_arguments);
 
 	// If execle succeeds this code will never be executed
 
-	va_end(variable_arguments);
+		va_end(variable_arguments);
 
-	if(execle_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLE ERROR: %s\n", strerror(errno));
+		if(execle_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLE ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
+		execle_result = execlX_wrapper(2, pathname, arg, variable_arguments);
+		va_end(variable_arguments);
 	}
 
 	return execle_result;
@@ -2366,18 +2557,23 @@ int execle(const char *pathname, const char *arg, ...){
 
 int execv(const char *pathname, char *const argv[]){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+	int execv_result;
 
-	print_function_and_path(__func__, pathname, sanitized_pathname);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_pathname, __func__);
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	int execv_result = execv_wrapper(pathname, argv);
+		print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	// If execv succeeds this code will never be executed
+		check_parameters_properties(sanitized_pathname, __func__);
 
-	if(execv_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECV ERROR: %s\n", strerror(errno));
+		execv_result = execv_wrapper(pathname, argv);
+
+		if(execv_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECV ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		execv_result = execv_wrapper(pathname, argv);
 	}
 
 	return execv_result;
@@ -2385,18 +2581,25 @@ int execv(const char *pathname, char *const argv[]){
 
 int execvp(const char *file, char *const argv[]){
 
-	const char *sanitized_file = sanitize_and_get_absolute_path(file);
+	int execvp_result;
 
-	print_function_and_path(__func__, file, sanitized_file);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_file, __func__);
+		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
-	int execvp_result = execvp_wrapper(file, argv);
+		print_function_and_path(__func__, file, sanitized_file);
+
+		check_parameters_properties(sanitized_file, __func__);
+
+		execvp_result = execvp_wrapper(file, argv);
 
 	// If execv succeeds this code will never be executed
 
-	if(execvp_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
+		if(execvp_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		execvp_result = execvp_wrapper(file, argv);
 	}
 
 	return execvp_result;
@@ -2405,18 +2608,25 @@ int execvp(const char *file, char *const argv[]){
 
 int execve(const char *pathname, char *const argv[], char *const envp[]){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+	int execve_result;
 
-	print_function_and_path(__func__, pathname, sanitized_pathname);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_pathname, __func__);
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	int execve_result = execve_wrapper(pathname, argv, envp);
+		print_function_and_path(__func__, pathname, sanitized_pathname);
+
+		check_parameters_properties(sanitized_pathname, __func__);
+
+		execve_result = execve_wrapper(pathname, argv, envp);
 
 	// If execv succeeds this code will never be executed
 
-	if(execve_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
+		if(execve_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		execve_result = execve_wrapper(pathname, argv, envp);
 	}
 
 	return execve_result;
@@ -2425,18 +2635,26 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 
 int execvpe(const char *file, char *const argv[], char *const envp[]){
 
-	const char *sanitized_file = sanitize_and_get_absolute_path(file);
+	int execvpe_result;
 
-	print_function_and_path(__func__, file, sanitized_file);
+	if(LIBRARY_ON){
 
-	check_parameters_properties(sanitized_file, __func__);
+		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
-	int execvpe_result = execvpe_wrapper(file, argv, envp);
+		print_function_and_path(__func__, file, sanitized_file);
+
+		check_parameters_properties(sanitized_file, __func__);
+
+		execvpe_result = execvpe_wrapper(file, argv, envp);
 
 	// If execv succeeds this code will never be executed
 
-	if(execvpe_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
+		if(execvpe_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		execvpe_result = execvpe_wrapper(file, argv, envp);
 	}
 
 	return execvpe_result;
@@ -2445,18 +2663,26 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 FILE * popen(const char *command, const char *type){
 
-	print_function_and_path(__func__, command, command);
+	FILE *file;
 
-	check_parameters_properties(command, __func__);
+	if(LIBRARY_ON){
 
-	if(original_popen == NULL){
-		original_popen = dlsym_wrapper(__func__);
-	}
+		print_function_and_path(__func__, command, command);
 
-	FILE *file = original_popen(command, type);
+		check_parameters_properties(command, __func__);
 
-	if(file == NULL){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] POPEN ERROR: %s\n", strerror(errno));
+		if(original_popen == NULL){
+			original_popen = dlsym_wrapper(__func__);
+		}
+
+		file = original_popen(command, type);
+
+		if(file == NULL){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] POPEN ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		file = original_popen(command, type);
 	}
 
 	return file;
@@ -2465,20 +2691,30 @@ FILE * popen(const char *command, const char *type){
 
 int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data){
 
-	const char *sanitized_source = sanitize_and_get_absolute_path(source);
-	
-	print_function_and_path(__func__, source, sanitized_source);
-
-	check_parameters_properties(sanitized_source, __func__);
-
 	if(original_mount == NULL){
 		original_mount = dlsym_wrapper(__func__);
 	}
 
-	int mount_result = original_mount(source, target, filesystemtype, mountflags, data);
+	int mount_result;
 
-	if(mount_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MOUNT ERROR: %s\n", strerror(errno));
+	if(LIBRARY_ON){
+
+		const char *sanitized_source = sanitize_and_get_absolute_path(source);
+
+		print_function_and_path(__func__, source, sanitized_source);
+
+		check_parameters_properties(sanitized_source, __func__);
+
+
+
+		mount_result = original_mount(source, target, filesystemtype, mountflags, data);
+
+		if(mount_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MOUNT ERROR: %s\n", strerror(errno));
+		}
+
+	} else {
+		mount_result = original_mount(source, target, filesystemtype, mountflags, data);
 	}
 
 	return mount_result;
