@@ -168,7 +168,6 @@ void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
-void print_contents_of_array(file_objects_info *);
 
 /// ########## file_objects_info.c ##########
 
@@ -176,6 +175,7 @@ void print_contents_of_array(file_objects_info *);
 
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
+bool LIBRARY_ON; //defaults to false
 /// ########## GLOBAL VARIABLES ##########
 
 /// <-------------------------------------------------> 
@@ -187,18 +187,26 @@ static void before_main(void){
 	//printf("PATH Variable environment: %s\n", getenv("PATH"));
 	//printf("ENVIRON: %s\n", *__environ);
 
-	create_log_dir_and_start_logger();
+	if(getuid() != geteuid()){
+		LIBRARY_ON = true;
+	}
 
-	//zlog_init_stdout();
+	if(LIBRARY_ON){
+		create_log_dir_and_start_logger();
 
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
-	zlog_flush_buffer();
+		//zlog_init_stdout();
+
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+		zlog_flush_buffer();
+	}
 }
 
 static void after_main(void){
 
-	zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
-	zlog_flush_buffer();
+	if(LIBRARY_ON){
+		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
+		zlog_flush_buffer();
+	}
 	free_array(&g_array);
 
 }
@@ -453,15 +461,6 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 	} 
 
 	array->used--;
-}
-
-void print_contents_of_array(file_objects_info *array){
-
-	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Array used: %lu\n[+] Array size: %lu\n", array->used, array->size);
-
-	for(uint i = 0; i < array->used; i++){
-		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Element at position %d: path-> %s inode ->%lu\n", i, array->list[i].path, array->list[i].inode);
-	}
 }
 
 /// ########## Array management ##########
@@ -900,26 +899,6 @@ bool path_is_absolute(const char *path){
 	return (path[0] == '/');
 }
 
-/*
-	Function used to print current time with the following format:
-	DD mm dd hh:MM:ss yyyy [hh:MM:ss.nanoseconds]
-	Example: <Wed May  1 13:44:17 2019
- 				[13:45:17.676232682]>
-
-void timestamp(){
-	time_t ltime;
-	ltime = time(NULL);
-
-	struct tm *tm_struct = localtime(&ltime);
-
-	struct timespec spec;
-	clock_gettime(CLOCK_REALTIME, &spec);
-
-	printf("<%s [%d:%d:%d.%lu]>\n", asctime(tm_struct), tm_struct->tm_hour, tm_struct->tm_min, tm_struct->tm_sec, spec.tv_nsec);
-
-}
-*/
-
 int file_does_exist(const char *pathname){
 	
 	int fd = open_wrapper(pathname, O_RDONLY, NULL);
@@ -962,43 +941,47 @@ char * get_directory_from_fd(int directory_fd){
 int __xstat(int ver, const char *path, struct stat *buf)
 {
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path, sanitized_path);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 
+	}
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
 	}
-
 	return original_xstat(ver, path, buf);
 } 
 
 int __xstat64(int ver, const char *path, struct stat64 *buf)
 {
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path,sanitized_path);
+		print_function_and_path(__func__, path,sanitized_path);
 
-	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+	}
 
 	if ( original_xstat64 == NULL ) {
 		original_xstat64 = dlsym_wrapper(__func__);
 	}
-
 	return original_xstat64(ver, path, buf);
 }
 
 int __lxstat(int ver, const char *path, struct stat *buf)
 {
+	
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	print_function_and_path(__func__, path, sanitized_path);
-
-	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+	}	
 
 	if ( original_lxstat == NULL ) {
 		original_lxstat = dlsym_wrapper(__func__);
@@ -1009,12 +992,13 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 int __lxstat64(int ver, const char *path, struct stat64 *buf)
 {
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	print_function_and_path(__func__, path, sanitized_path);
-
-	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+	}
 
 	if ( original_lxstat64 == NULL ) {
 		original_lxstat64 = dlsym_wrapper(__func__);
@@ -1033,35 +1017,37 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 int open(const char *path, int flags, ...)
 {
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	int open_result;
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	print_function_and_path(__func__, path, sanitized_path);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	bool path_exists_before = file_does_exist(sanitized_path);
-	struct stat new_file;
+		bool path_exists_before = file_does_exist(sanitized_path);
+		struct stat new_file;
 
-	check_parameters_properties(sanitized_path, __func__);
+		check_parameters_properties(sanitized_path, __func__);
 
-	va_list variable_arguments;
-	va_start(variable_arguments, flags);
+		va_list variable_arguments;
+		va_start(variable_arguments, flags);
 
-	int open_result = open_wrapper(path, flags, variable_arguments);
+		open_result = open_wrapper(path, flags, variable_arguments);
 
-	va_end(variable_arguments);
+		va_end(variable_arguments);
 
 	/*
 		open(), openat(), and creat() return the new file descriptor, or -1
 		if an error occurred (in which case, errno is set appropriately).
 	*/
 
-	if(open_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] OPEN ERROR: %s\n", strerror(errno));
-	} else {
+		if(open_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] OPEN ERROR: %s\n", strerror(errno));
+		} else {
 		/*
 		If file didn't exist before actual open call and fstat returns
 		zero (success), a new file has been created.
 		*/
-		if(!path_exists_before && !fstat(open_result, &new_file)){
+			if(!path_exists_before && !fstat(open_result, &new_file)){
 			/*
 				New file has been just created. Now there are two options:
 					- There is already an entry in the array referencing the path
@@ -1069,13 +1055,22 @@ int open(const char *path, int flags, ...)
 					- There is no entry in the array so just insert.
 				Both actions are carreid out by upsert_inode_in_array
 			*/
-			
-			ino_t inode = get_inode(sanitized_path);
 
-			upsert_inode_in_array(&g_array, sanitized_path, inode);
-			
+				ino_t inode = get_inode(sanitized_path);
+
+				upsert_inode_in_array(&g_array, sanitized_path, inode);
+
+			}
+
 		}
+	} else {
 
+		va_list variable_arguments;
+		va_start(variable_arguments, flags);
+
+		open_result = open_wrapper(path, flags, variable_arguments);
+
+		va_end(variable_arguments);
 	}
 
 	return open_result;
@@ -1087,52 +1082,65 @@ int open(const char *path, int flags, ...)
 */
 int open64(const char *path, int flags, ...){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	int open64_result;
+	
+	if(LIBRARY_ON){
 
-	print_function_and_path(__func__, path, sanitized_path);
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	bool path_exists_before = file_does_exist(sanitized_path);
-	struct stat new_file;
+		print_function_and_path(__func__, path, sanitized_path);
 
-	check_parameters_properties(sanitized_path, __func__);
+		bool path_exists_before = file_does_exist(sanitized_path);
+		struct stat new_file;
 
-	va_list variable_arguments;
-	va_start(variable_arguments, flags);
+		check_parameters_properties(sanitized_path, __func__);
 
-	int open64_result = open64_wrapper(path, flags, variable_arguments);
+		va_list variable_arguments;
+		va_start(variable_arguments, flags);
 
-	va_end(variable_arguments);
+		open64_result = open64_wrapper(path, flags, variable_arguments);
+
+		va_end(variable_arguments);
 
 	/*
 		open(), openat(), and creat() return the new file descriptor, or -1
 		if an error occurred (in which case, errno is set appropriately).
 	*/
 
-	if(open64_result == -1){
-		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] OPEN64 ERROR: %s\n", strerror(errno));
-	} else {
+		if(open64_result == -1){
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] OPEN64 ERROR: %s\n", strerror(errno));
+		} else {
 
-		if(!path_exists_before && !fstat(open64_result, &new_file)){
-			
-			ino_t inode = get_inode(sanitized_path);
+			if(!path_exists_before && !fstat(open64_result, &new_file)){
 
-			upsert_inode_in_array(&g_array, sanitized_path, inode);
-			
+				ino_t inode = get_inode(sanitized_path);
+
+				upsert_inode_in_array(&g_array, sanitized_path, inode);
+
+			}
+
 		}
+	} else {
+		va_list variable_arguments;
+		va_start(variable_arguments, flags);
 
+		open64_result = open64_wrapper(path, flags, variable_arguments);
+
+		va_end(variable_arguments);
 	}
-
 	return open64_result;
 }
 
 int access(const char *path, int mode){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	if(LIBRARY_ON){
 
-	print_function_and_path(__func__, path, sanitized_path);
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		print_function_and_path(__func__, path, sanitized_path);
 
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+	}
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
 	}	
@@ -1143,28 +1151,34 @@ int access(const char *path, int mode){
 
 FILE *fopen(const char *path, const char *mode){
 
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
-
-	bool path_exists_before = file_does_exist(sanitized_path);
-	struct stat new_file;
-
 	if(original_fopen == NULL){
 		original_fopen = dlsym_wrapper(__func__);
 	}
+	FILE *fopen_result;
+	if(LIBRARY_ON){
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-	FILE *fopen_result = original_fopen(path, mode);
+		print_function_and_path(__func__, path, sanitized_path);
 
-	if(fopen_result == NULL){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN ERROR: %s\n", strerror(errno));
-	} else {
-		if(!path_exists_before && !fstat(fileno(fopen_result), &new_file)){
+		check_parameters_properties(sanitized_path, __func__);
+
+		bool path_exists_before = file_does_exist(sanitized_path);
+		struct stat new_file;
+
+
+
+		fopen_result = original_fopen(path, mode);
+
+		if(fopen_result == NULL){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN ERROR: %s\n", strerror(errno));
+		} else {
+			if(!path_exists_before && !fstat(fileno(fopen_result), &new_file)){
 			// A new file has been created.
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			}
 		}
+	} else {
+		fopen_result = original_fopen(path, mode);
 	}
 
 	return fopen_result;
@@ -1172,30 +1186,34 @@ FILE *fopen(const char *path, const char *mode){
 }
 
 int unlink(const char *path){
-	
-	const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-   	print_function_and_path(__func__, path, sanitized_path);
-
-   	check_parameters_properties(sanitized_path, __func__);
-
 	if(original_unlink == NULL){
 		original_unlink = dlsym_wrapper(__func__);
 	}
+	int unlink_result;
+	if(LIBRARY_ON){
 
-	int unlink_result = original_unlink(path);
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+		unlink_result = original_unlink(path);
 
 	/*
 		On success, zero is returned. On error, -1 is returned, and errno is
 		set appropriately.
 	*/
-	if(unlink_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UNLINK ERROR: %s\n", strerror(errno));
-	} else {
-		int index = find_index_in_array(&g_array, sanitized_path);
-		if(index >= 0){
-			remove_from_array_at_index(&g_array, index);
+		if(unlink_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UNLINK ERROR: %s\n", strerror(errno));
+		} else {
+			int index = find_index_in_array(&g_array, sanitized_path);
+			if(index >= 0){
+				remove_from_array_at_index(&g_array, index);
+			}
 		}
+	} else {
+		unlink_result = original_unlink(path);
 	}
 
 	return unlink_result;
@@ -1203,6 +1221,13 @@ int unlink(const char *path){
 }
 
 int unlinkat(int dirfd, const char *path, int flags){
+
+	if(original_unlinkat == NULL){
+		original_unlinkat = dlsym_wrapper(__func__);
+	}
+	int unlinkat_result;
+
+	if(LIBRARY_ON){
 	
 	const char *sanitized_path;
 
@@ -1216,16 +1241,14 @@ int unlinkat(int dirfd, const char *path, int flags){
 
 	check_parameters_properties(sanitized_path, __func__);
 
-	if(original_unlinkat == NULL){
-		original_unlinkat = dlsym_wrapper(__func__);
-	}
+	
 
 	/*
 		Note that the original function gets passed only path, not sanitized_path
 		since the retrieval of sanitized_path is a mere operation in order to
 		keep g_array updated.
 	*/
-   	int unlinkat_result = original_unlinkat(dirfd, path, flags);
+   	unlinkat_result = original_unlinkat(dirfd, path, flags);
 
    	/*
 		On success, unlinkat() returns 0. On error, -1 is returned and errno
@@ -1241,12 +1264,19 @@ int unlinkat(int dirfd, const char *path, int flags){
 			remove_from_array_at_index(&g_array, index);
 		}
 	}
+} else {
+	unlinkat_result = original_unlinkat(dirfd, path, flags);
+}
 
 	return unlinkat_result;
 
 }
 
 int openat(int dirfd, const char *path, int flags, ...){
+
+	int openat_result;
+
+	if(LIBRARY_ON){
 
 	const char *sanitized_path;
 
@@ -1266,7 +1296,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 	va_list variable_arguments;
 	va_start(variable_arguments, flags);
 
-	int openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
+	openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
 
 	va_end(variable_arguments);
 
@@ -1288,6 +1318,13 @@ int openat(int dirfd, const char *path, int flags, ...){
 		}
 
 	}
+} else{
+	va_list variable_arguments;
+	va_start(variable_arguments, flags);
+	openat_result =  openat_wrapper(dirfd, path, flags, variable_arguments);
+	va_end(variable_arguments);
+}
+
 	return openat_result;
 
 }
@@ -1297,6 +1334,15 @@ int openat(int dirfd, const char *path, int flags, ...){
 	Creates a symbolic link called newpath that poins to oldpath.
 */
 int symlink(const char *oldpath, const char *newpath){
+
+
+	if(original_symlink == NULL){
+    	original_symlink = dlsym_wrapper(__func__);
+    }
+
+    int symlink_result;
+
+	if(LIBRARY_ON){
 	
     const char *sanitized_newpath = sanitize_and_get_absolute_path(newpath);
 
@@ -1304,11 +1350,9 @@ int symlink(const char *oldpath, const char *newpath){
 
    	check_parameters_properties(sanitized_newpath, __func__);
    	
-   	if(original_symlink == NULL){
-    	original_symlink = dlsym_wrapper(__func__);
-    }
+   
 
-    int symlink_result = original_symlink(oldpath, newpath);
+    symlink_result = original_symlink(oldpath, newpath);
 
     /*
 		Upon successful completion, symlink() shall return 0; otherwise, it 
@@ -1323,6 +1367,10 @@ int symlink(const char *oldpath, const char *newpath){
 		upsert_inode_in_array(&g_array, sanitized_newpath, inode);
 		
 	}
+}
+else{
+	symlink_result = original_symlink(oldpath, newpath);
+}
 
 	return symlink_result;
 
@@ -1332,6 +1380,15 @@ int symlink(const char *oldpath, const char *newpath){
 	Creates a symbolic link to oldpath called newpath in the directory pointed to by newdirfd.
 */
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
+
+
+   	if(original_symlinkat == NULL){
+		original_symlinkat = dlsym_wrapper(__func__);
+	}
+	int symlinkat_result;
+
+	if(LIBRARY_ON){
+
 
 	const char *sanitized_new_path;
 
@@ -1345,12 +1402,9 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 
    	check_parameters_properties(sanitized_new_path, __func__);
    	
-   	if(original_symlinkat == NULL){
-		original_symlinkat = dlsym_wrapper(__func__);
-	}
 
 
-	int symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
+	symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
 	/*
 		On success, symlinkat() returns 0. On error, -1 is returned and errno
@@ -1362,6 +1416,9 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		ino_t inode = get_inode(sanitized_new_path);
 		upsert_inode_in_array(&g_array, sanitized_new_path, inode);
 	}
+} else {
+symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
+}
 
 	return symlinkat_result;
 
@@ -1372,34 +1429,43 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	It calls unlink(2) for files, and rmdir(2) for directories.	
 */
 int remove(const char *path) {
-    
-    const char *sanitized_path = sanitize_and_get_absolute_path(path);
-
-	print_function_and_path(__func__, path, sanitized_path);
-
-	check_parameters_properties(sanitized_path, __func__);
 
 	if(original_remove == NULL){
-    	original_remove = dlsym_wrapper(__func__);
-    }
+		original_remove = dlsym_wrapper(__func__);
+	}
 
-	int remove_result = original_remove(path);
+	int remove_result;
+
+	if(LIBRARY_ON){
+
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+
+		remove_result = original_remove(path);
 
 	/*
 		On success, zero is returned. On error, -1 is returned, and errno is
 		set appropriately.
 	*/
-	if(remove_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] REMOVE ERROR: %s\n", strerror(errno));
-	} else {
-		int index = find_index_in_array(&g_array, sanitized_path);
+		if(remove_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] REMOVE ERROR: %s\n", strerror(errno));
+		} else {
+			int index = find_index_in_array(&g_array, sanitized_path);
 
-		if(index >= 0){
-			remove_from_array_at_index(&g_array, index);
+			if(index >= 0){
+				remove_from_array_at_index(&g_array, index);
+			}
 		}
+	} else {
+		remove_result = original_remove(path);
 	}
 
-    return remove_result;
+	return remove_result;
 
 }
 
@@ -1409,34 +1475,43 @@ int remove(const char *path) {
     specified by mode and dev.
 */
 int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
-	
-    const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-   	print_function_and_path(__func__, path, sanitized_path);
+	if(original_xmknod == NULL){
+		original_xmknod = dlsym_wrapper(__func__);
+	}
 
-   	check_parameters_properties(sanitized_path, __func__);
-   	
-   	if(original_xmknod == NULL){
-    	original_xmknod = dlsym_wrapper(__func__);
-    }
+	int mknod_result;
 
-    int mknod_result = original_xmknod(ver, path, mode, dev);
+	if(LIBRARY_ON){
+
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+
+		mknod_result = original_xmknod(ver, path, mode, dev);
 
     /*
 		mknod() and mknodat() return zero on success, or -1 if an error
 		occurred (in which case, errno is set appropriately).
     */
-    if(mknod_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNOD ERROR: %s\n", strerror(errno));
+		if(mknod_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNOD ERROR: %s\n", strerror(errno));
+		} else {
+
+			ino_t inode = get_inode(sanitized_path);
+
+			upsert_inode_in_array(&g_array, sanitized_path, inode);
+
+		}
 	} else {
-
-	    ino_t inode = get_inode(sanitized_path);
-
-	    upsert_inode_in_array(&g_array, sanitized_path, inode);
-	    
+		mknod_result = original_xmknod(ver, path, mode, dev);
 	}
 
-    return mknod_result;
+	return mknod_result;
 
 }
 
@@ -1446,37 +1521,47 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 	directory file descriptor.
 */
 int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
-	
-	const char *sanitized_path;
 
-	if(path_is_absolute(path)){
-		sanitized_path = sanitize_and_get_absolute_path(path);
-	} else {
-		sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
-	}
 
-   	print_function_and_path(__func__, path, sanitized_path);
-
-   	check_parameters_properties(sanitized_path, __func__);
-
-   	if(original_xmknodat == NULL){
+	if(original_xmknodat == NULL){
 		original_xmknodat = dlsym_wrapper(__func__);
 	}
 
-	int mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
+	int mknodat_result;
+
+	if(LIBRARY_ON){
+
+		const char *sanitized_path;
+
+		if(path_is_absolute(path)){
+			sanitized_path = sanitize_and_get_absolute_path(path);
+		} else {
+			sanitized_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(path, dirfd);
+		}
+
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+		mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
 	/*
 		On success, mknodat() returns 0. On error, -1 is returned and errno is
 		set to indicate the error.
 	*/
-	if(mknodat_result == -1){ 
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNODAT ERROR: %s\n", strerror(errno));
-	} else {
-		ino_t inode = get_inode(sanitized_path);
-    	upsert_inode_in_array(&g_array, sanitized_path, inode);
-    }
+		if(mknodat_result == -1){ 
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNODAT ERROR: %s\n", strerror(errno));
+		} else {
+			ino_t inode = get_inode(sanitized_path);
+			upsert_inode_in_array(&g_array, sanitized_path, inode);
+		}
 
-    return mknodat_result;
+	} else {
+		mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
+	}
+
+	return mknodat_result;
 }
 
 
@@ -1485,33 +1570,43 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 */
 int link(const char *oldpath, const char *newpath){
 
-	const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
+	if(original_link == NULL){
+		original_link = dlsym_wrapper(__func__);
+	}
 
-   	print_function_and_path(__func__, newpath, sanitized_new_path);
+	int link_result;
 
-   	check_parameters_properties(sanitized_new_path, __func__);
+	if(LIBRARY_ON){
 
-   	if(original_link == NULL){
-   		original_link = dlsym_wrapper(__func__);
-   	}
+		const char *sanitized_new_path = sanitize_and_get_absolute_path(newpath);
 
-   	int link_result = original_link(oldpath, newpath);
+		print_function_and_path(__func__, newpath, sanitized_new_path);
+
+		check_parameters_properties(sanitized_new_path, __func__);
+
+
+
+		link_result = original_link(oldpath, newpath);
 
    	/*
 		Upon successful completion, 0 shall be returned. Otherwise, -1 shall
 		be returned and errno set to indicate the error.
    	*/
-   	if(link_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINK ERROR: %s\n", strerror(errno));
+		if(link_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINK ERROR: %s\n", strerror(errno));
+		} else {
+
+			ino_t inode = get_inode(sanitized_new_path);
+
+			upsert_inode_in_array(&g_array, sanitized_new_path, inode);
+
+		}
+
 	} else {
-
-	   	ino_t inode = get_inode(sanitized_new_path);
-
-		upsert_inode_in_array(&g_array, sanitized_new_path, inode);
-	
+		link_result = original_link(oldpath, newpath);
 	}
 
-   return link_result;
+	return link_result;
 
 }
 
@@ -1522,54 +1617,70 @@ int link(const char *oldpath, const char *newpath){
 */
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
 
-	const char *full_new_path;
 
-	if(path_is_absolute(newpath)){
-		full_new_path = sanitize_and_get_absolute_path(newpath);
-	} else {
-		full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
-	}
-
-    print_function_and_path(__func__, newpath, full_new_path);
-
-	check_parameters_properties(full_new_path, __func__);
-	
 	if(original_linkat == NULL){
 		original_linkat = dlsym_wrapper(__func__);
 	}
 
-    int linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+	int linkat_result;
+
+	if(LIBRARY_ON){
+
+		const char *full_new_path;
+
+		if(path_is_absolute(newpath)){
+			full_new_path = sanitize_and_get_absolute_path(newpath);
+		} else {
+			full_new_path = sanitize_and_get_absolute_path_from_dir_file_descriptor(newpath, newdirfd);
+		}
+
+		print_function_and_path(__func__, newpath, full_new_path);
+
+		check_parameters_properties(full_new_path, __func__);
+
+
+
+		linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
     /*
 		On success, linkat() returns 0. On error, -1 is returned and errno is
 		set to indicate the error.
     */
-    if(linkat_result == -1){
-    	zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINKAT ERROR: %s\n", strerror(errno));
-    } else {
+		if(linkat_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINKAT ERROR: %s\n", strerror(errno));
+		} else {
 
-    	ino_t inode = get_inode(full_new_path);
-		upsert_inode_in_array(&g_array, full_new_path, inode);
+			ino_t inode = get_inode(full_new_path);
+			upsert_inode_in_array(&g_array, full_new_path, inode);
 
-    }
+		}
+	} else {
+		linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+	}
 
-    return linkat_result;
+	return linkat_result;
 
 }
 
 int creat64(const char *path, mode_t mode){
 
-    const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	if(original_creat64 == NULL){
+		original_creat64 = dlsym_wrapper(__func__);
+	}
 
-    print_function_and_path(__func__, path, sanitized_path);
+	int creat64_result;
 
-    check_parameters_properties(sanitized_path, __func__);
+	if(LIBRARY_ON){
 
-    if(original_creat64 == NULL){
-    	original_creat64 = dlsym_wrapper(__func__);
-    }
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-    int creat64_result = original_creat64(path, mode);
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+
+		creat64_result = original_creat64(path, mode);
 
     /*
 		If successful, creat() and creat64() return a nonnegative integer, 
@@ -1577,29 +1688,38 @@ int creat64(const char *path, mode_t mode){
 		they return -1, do not create or modify any files, and set errno to 
 		one of the following values:
     */
-    if(creat64_result == -1){
-    	zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT64 ERROR: %s\n", strerror(errno));
-    } else {
-    	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
-    }
+		if(creat64_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT64 ERROR: %s\n", strerror(errno));
+		} else {
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
+	} else {
+		creat64_result = original_creat64(path, mode);
+	}
 
-    return creat64_result;
+	return creat64_result;
 
 }
 
 int creat(const char *path, mode_t mode){
 
-    const char *sanitized_path = sanitize_and_get_absolute_path(path);
+	if(original_creat == NULL){
+		original_creat = dlsym_wrapper(__func__);
+	}
 
-    print_function_and_path(__func__, path, sanitized_path);
+	int creat_result;
 
-    check_parameters_properties(sanitized_path, __func__);
+	if(LIBRARY_ON){
 
-    if(original_creat == NULL){
-    	original_creat = dlsym_wrapper(__func__);
-    }
+		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
-    int creat_result = original_creat(path, mode);
+		print_function_and_path(__func__, path, sanitized_path);
+
+		check_parameters_properties(sanitized_path, __func__);
+
+
+
+		creat_result = original_creat(path, mode);
 
      /*
 		If successful, creat() and creat64() return a nonnegative integer, 
@@ -1607,13 +1727,17 @@ int creat(const char *path, mode_t mode){
 		they return -1, do not create or modify any files, and set errno to 
 		one of the following values:
     */
-    if(creat_result == -1){
-    	zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT ERROR: %s\n", strerror(errno));
-    } else {
-    	upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
-    }
+		if(creat_result == -1){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT ERROR: %s\n", strerror(errno));
+		} else {
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
+	} else {
+		creat_result = original_creat(path, mode);
+	}
 
-    return creat_result;
+	return creat_result;
+
 
 }
 
