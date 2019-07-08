@@ -34,15 +34,220 @@
 #include "fileobjectsinfo.h"
 // Library internal operations
 #include "libTTThwart_internals.h"
-// Library wrappers
-#include "libTTThwart_wrappers.h"
-// Hooked Functions
+// Hooked Functions and wrappers for them
 #include "libTTThwart_hooked_functions.h"
 
-/// ########## Hooked functions ##########
+/// ########## Wrappers ##########
+
+/*
+    The correct way to test for an error is to call dlerror() 
+    to clear any old error conditions, then call dlsym(), and 
+    then call dlerror() again, saving its return value into a
+    variable, and check whether this saved value is not NULL.
+    https://linux.die.net/man/3/dlsym
+*/
+void* dlsym_wrapper(const char *original_function){
+
+	dlerror();
+
+	void *function_handler;
+
+	function_handler = dlsym(RTLD_NEXT, original_function);
+
+	check_dlsym_error();
+
+	return function_handler;
+}
+
+/*
+    The open wrapper guarantees, insures original_open is initialized.
+    It's used by other inner functions in order to avoid open() recursivity
+    and overhead. In adittion, it deals with ellipsis (variable 
+    arguments) since open is a variadic function.
+*/
+int open_wrapper(const char *path, int flags, va_list variable_arguments){
+
+	if ( original_open == NULL ) {
+		original_open = dlsym_wrapper("open");
+	}
+
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(aux_list, mode_t);
+
+		va_end(aux_list);
+
+		return original_open(path, flags, mode);
+
+	} else {
+		return original_open(path, flags);
+	}
+	
+}
+
+int open64_wrapper(const char *path, int flags, va_list variable_arguments){
+
+	if ( original_open64 == NULL ) {
+		original_open64 = dlsym_wrapper("open64");
+	}
+
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(aux_list, mode_t);
+
+		va_end(aux_list);
+
+		return original_open64(path, flags, mode);
+
+	} else {
+		return original_open64(path, flags);
+	}
+	
+}
+
+/*
+	Openat wrapper is exactly the same as open wrapper but for
+	 openat.
+*/
+int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
+
+	if(original_openat == NULL){
+		original_openat = dlsym_wrapper("openat");
+	}
+
+	if(variable_arguments){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+
+		mode_t mode = va_arg(variable_arguments, mode_t);
+
+		va_end(aux_list);
+
+		return original_openat(dirfd, path, flags, mode);
+
+	} else {
+		return original_openat(dirfd, path, flags);
+	}
+
+}
+
+/*
+	Same as open_wrapper.
+*/
+int chdir_wrapper(const char *path){
+	
+	if(original_chdir == NULL){
+		original_chdir = dlsym_wrapper("chdir");
+	}
+
+	return original_chdir(path);
+}
 
 
-/// ########## Hooked functions ##########
+/*
+	Wrapper for all execlX functions family. This wrapper treats the variable
+	arguments and calls the corresponding execlX function according to:
+	[function argument value] : [execlX function]
+	0 : execl https://code.woboq.org/userspace/glibc/posix/execl.c.html
+	1 : execlp https://code.woboq.org/userspace/glibc/posix/execlp.c.html
+	2 : execle https://code.woboq.org/userspace/glibc/posix/execle.c.html
+
+	Additional info: https://code.woboq.org/userspace/glibc/posix/execl.c.html
+*/
+int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
+	int execlX_result = -1;
+
+	if(function == 0 || function == 1 ){
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+		if(number_of_arguments == -1){
+			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
+		// Reset aux_list and start from the very beginning when using va_arg
+		va_end(aux_list);
+		va_copy(aux_list, variable_arguments);
+
+		char *argv[number_of_arguments + 1];
+		argv[0] = (char *) arg;
+		ptrdiff_t i;
+		for(i = 1; i<= number_of_arguments; i++){
+			argv[i] = va_arg(aux_list, char *);
+		}
+
+		va_end(aux_list);
+		switch(function){
+			case 0:
+				execlX_result = execve_wrapper(pathname, argv, __environ);
+				break;
+			case 1:
+				execlX_result = execvpe_wrapper(pathname, argv, __environ);
+				break;
+		}
+
+	} else if(function == 2){
+
+		va_list aux_list;
+		va_copy(aux_list, variable_arguments);
+		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+		if(number_of_arguments == -1){
+			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);		
+		}
+
+		// Reset aux_list and start from the very beginning when using va_arg
+		va_end(aux_list);
+		va_copy(aux_list, variable_arguments);
+
+		char *argv[number_of_arguments + 1];
+		char **envp;
+		argv[0] = (char *) arg;
+		ptrdiff_t i;
+		for(i = 1; i<= number_of_arguments; i++){
+			argv[i] = va_arg(aux_list, char *);
+		}
+		envp = va_arg(variable_arguments, char **);
+		va_end(aux_list);
+
+		execlX_result = execve_wrapper(pathname, argv, envp);
+	} 
+
+	return execlX_result;
+}
+
+int execv_wrapper(const char *pathname, char *const argv[]){
+
+	return execve_wrapper(pathname, argv, __environ);
+}
+
+int execvp_wrapper(const char *file, char *const argv[]){
+
+	return execvpe_wrapper(file, argv, __environ);
+}
+
+int execve_wrapper(const char *pathname, char *const argv[], char *const envp[]){
+	if ( original_execve == NULL ) {
+		original_execve = dlsym_wrapper("execve");
+	}
+
+	return original_execve(pathname, argv, envp);
+}
+
+int execvpe_wrapper(const char *file, char *const argv[], char *const envp[]){
+	if ( original_execvpe == NULL ) {
+		original_execvpe = dlsym_wrapper("execvpe");
+	}
+
+	return original_execvpe(file, argv, envp);
+}
+
+/// ########## Wrappers ##########
 
 /// <-------------------------------------------------> 
 
@@ -246,7 +451,201 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 	}
 }
 
+/*
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links. That's why realpath() is useless. 
+	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
+*/
+const char * sanitize_and_get_absolute_path(const char * src) {
 
+		char *res;
+        size_t res_len;
+        size_t src_len = strlen(src);
+
+        const char *pointer;
+        const char *end_pointer;
+        const char *next_pointer;
+
+        // Relative path
+        if (src_len == 0 || src[0] != '/') {
+
+                char cwd[PATH_MAX];
+                size_t cwd_len;
+
+                // Copy into cwd the null-terminated current working 
+                // directory with a max length of sizeof(cwd)
+                if (getcwd(cwd, sizeof(cwd)) == NULL) {
+                        return NULL;
+                }
+
+                cwd_len = strlen(cwd);
+                res = malloc(cwd_len + 1 + src_len + 1);
+                // Copies cwd_len bytes from cwd to res
+                memcpy(res, cwd, cwd_len);
+                res_len = cwd_len;
+                
+        } else {
+        // Absolute path
+                //res = malloc((src_len > 0 ? src_len : 1) + 1);
+        		res = malloc(src_len + 1);
+                res_len = 0;
+                
+        }
+
+        end_pointer = &src[src_len];
+
+
+        for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
+                size_t len;
+
+                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
+                // to by pointer for the first instance of '/'
+                next_pointer = memchr(pointer, '/', end_pointer-pointer);
+
+                if (next_pointer == NULL) {
+                        next_pointer = end_pointer;
+                }
+
+
+                len = next_pointer-pointer;
+
+
+                switch(len) {
+                case 2:
+                        if (pointer[0] == '.' && pointer[1] == '.') {
+                        	// memrchr is like memchr, except that it searches 
+                        	// backward from the end of the res_len bytes pointed
+                        	// to by res instead of forward from the beginning
+                                const char * slash = memrchr(res, '/', res_len);
+                                if (slash != NULL) {
+                                	// This way the last node from the current
+                                	// directory is deleted. Lets say res starts
+                                	// @ 0x2 mem address and slash is @ 0x10.
+                                	// res_len would be 0x8 which is exactly
+                                	// the length between 0x2 and 0x10.
+                                        res_len = slash - res;
+                                }
+                                // Continue applies only to loop statements. 
+                                //That is, this jumps right to next for iteration,
+                                // skipping the remaining code.
+                                continue; 
+                        }
+                        break;
+                case 1:
+                        if (pointer[0] == '.') {
+                                continue;
+
+                        }
+                        break;
+                case 0:
+                        continue;
+                }
+                res[res_len++] = '/';
+                memcpy(&res[res_len], pointer, len);
+                res_len += len;
+        }
+
+        if (res_len == 0) {
+                res[res_len++] = '/';
+        }
+        // Marks the end of the new sanitized and absoluted path, thus discarding
+        // whatever follows res_len
+        res[res_len] = '\0';
+
+        return res;
+}
+
+/*
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links but using a directory file descriptor as current working dir. It is assumed that the file 
+	is indeed within that directory. The function translates the file descriptor
+	into the actual directory (string).
+*/
+const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd) {
+
+	// changing current working directory
+    char *original_working_dir = get_current_dir_name();
+
+	if (fchdir(directory_fd) == -1){
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] FCHDIR ERROR: %s\n", strerror(errno));
+	}
+
+	const char *res = sanitize_and_get_absolute_path(src);
+
+    // Restoring working dir
+    chdir_wrapper(original_working_dir);
+	free (original_working_dir);
+
+    return res;
+}
+
+/*
+    Retrieves the corresponding inode of a given path. If path is a symlink
+    it retrieves the inode of the target rather than the symlink itself. 
+*/
+ino_t get_inode(const char *path){
+	int fd;
+	ino_t inode;
+
+	fd = open_wrapper(path, O_RDONLY, NULL);
+	if (fd < 0){
+		if(errno == EMFILE){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] Errors occurred while getting inode of %s.\n[!] The per-process limit on the number of open file descriptors has been reached.\n[!] ERROR: %s\n", path, strerror(errno));
+			close(fd);
+			return 0;
+		} else if (errno == ENFILE){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] Errors occurred while getting inode of %s.\n[!] The system-wide limit on the total number of open files has been reached.\n[!] ERROR: %s\n", path, strerror(errno));
+			close(fd);
+			return 0;
+		} else {
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] Errors occurred while getting inode of %s. ERROR: %s\n", path, strerror(errno));
+			close(fd);
+			return 0;
+		}
+	}
+	struct stat file_stat;
+	fstat(fd, &file_stat);
+	inode = file_stat.st_ino; 
+	close(fd);
+
+	return inode;
+}
+
+
+/*
+	Function used to retrieve as string the full directory path pointed to
+	by a given file descriptor. 
+*/
+char * get_directory_from_fd(int directory_fd){
+	char *original_working_dir = get_current_dir_name();
+
+	if (fchdir(directory_fd) == -1){
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] FCHDIR ERROR: %s\n", strerror(errno));
+	}
+
+	char *directory_fd_path = get_current_dir_name();
+
+	chdir_wrapper(original_working_dir);
+
+	free (original_working_dir);
+
+	return directory_fd_path;
+}
+
+
+int file_does_exist(const char *pathname){
+	
+	int fd = open_wrapper(pathname, O_RDONLY, NULL);
+
+	if( fd < 0){
+		close(fd);
+		return 0;
+	} else {
+		close(fd);
+		return 1;
+	}
+	
+}
 
 /// ########## Logic ##########
 

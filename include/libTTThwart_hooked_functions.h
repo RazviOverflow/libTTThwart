@@ -5,6 +5,33 @@
 #include <sys/types.h>
 #include <utime.h>
 #include <sys/time.h>
+#include <stdarg.h>
+
+/// ########## Wrappers ##########
+
+void * dlsym_wrapper(const char *);
+
+int open_wrapper(const char *, int, va_list);
+
+int open64_wrapper(const char*, int, va_list);
+
+int openat_wrapper(int, const char *, int, va_list);
+
+int execlX_wrapper(int, const char *, const char *, va_list);
+
+int execv_wrapper(const char *, char * const *);
+
+int execvp_wrapper(const char *, char * const *);
+
+int execve_wrapper(const char *, char * const *, char * const *);
+
+int execvpe_wrapper(const char *, char * const *, char * const *);
+
+int chdir_wrapper(const char *);
+
+/// <-------------------------------------------------> 
+
+/// ########## Hooked functions ##########
 
 // Left-handed functions
 static int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
