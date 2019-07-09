@@ -31,11 +31,13 @@
 // Logger
 #include "zlog.h"
 // Array definition and operationss
-#include "fileobjectsinfo.h"
+#include "libTTThwart_file_objects_info.h"
 // Library internal operations
 #include "libTTThwart_internals.h"
 // Hooked Functions and wrappers for them
 #include "libTTThwart_hooked_functions.h"
+// Wrappers
+#include "libTTThwart_wrappers.h"
 
 /// ########## GLOBAL VARIABLES ##########
 file_objects_info g_array;
@@ -43,218 +45,67 @@ bool LIBRARY_ON; // Defaults to false
 char *g_temp_dir; // Directory for temporal files
 /// ########## GLOBAL VARIABLES ##########
 
-/// ########## Wrappers ##########
+// Left-handed functions
+ int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
+ int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+ int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
+ int (*original_lxstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+ int (*original_access)(const char *path, int mode) = NULL;
+ int (*original_rmdir)(const char *path) = NULL;
+ int (*original_unlink)(const char *path) = NULL;
+ int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
+ int (*original_remove)(const char *path) = NULL;
+ ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz) = NULL; // readlink(2)
+ ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
 
-/*
-    The correct way to test for an error is to call dlerror() 
-    to clear any old error conditions, then call dlsym(), and 
-    then call dlerror() again, saving its return value into a
-    variable, and check whether this saved value is not NULL.
-    https://linux.die.net/man/3/dlsym
-*/
-void* dlsym_wrapper(const char *original_function){
+// Both-handed functions
+ int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
+ int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath) = NULL;
+ int (*original_link)(const char *oldpath, const char *newpath) = NULL;
+ int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
+ int (*original_rename)(const char *oldpath, const char *newpath) = NULL;
+ int (*original_renameat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) = NULL;
+// int (*original_renameat2)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) = NULL;
+ int (*original_creat64)(const char *path, mode_t mode) = NULL;
+ int (*original_creat)(const char *path, mode_t mode) = NULL;
+ int (*original_open)(const char *path, int flags, ...) = NULL; 
+ int (*original_open64)(const char *path, int flags, ...) = NULL; 
+ int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
+ FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
+ FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
+ FILE *(*original_freopen)(const char *pathname, const char *mode, FILE *stream) = NULL;
+ int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
+ int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
+ int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
+ int (*original_mkfifoat)(int dirfd, const char *pathname, mode_t mode) = NULL;
+ int (*original_chmod)(const char *pathname, mode_t mode) = NULL;
+ int (*original_chown)(const char *pathname, uid_t owner, gid_t group) = NULL;
+ int (*original_truncate)(const char *path, off_t length) = NULL;
+ int (*original_truncate64)(const char *path, off64_t length) = NULL;
+ int (*original_utime)(const char *filename, const struct utimbuf *times) = NULL;
+ int (*original_utimes)(const char *filename, const struct timeval times[2]) = NULL;
+ long(*original_pathconf)(const char *path, int name) = NULL;
+ int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
+ int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode) = NULL;
+ int (*original_chdir)(const char *path) = NULL;
+ int (*original_chroot)(const char *path) = NULL;
+// int (*original_pivot_root)(const char *new_root, const char *putold) = NULL;
 
-	dlerror();
+/* execl* family is being hooked but there is no need for particular pointers 
+	to functions since they internally call execv, execvp and execve respectively*/
+// int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
+// int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
+// int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
 
-	void *function_handler;
+// int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
+// int (*original_execvp)(const char *file, char *const argv[]) = NULL;
+ int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
+ int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
 
-	function_handler = dlsym(RTLD_NEXT, original_function);
-
-	check_dlsym_error();
-
-	return function_handler;
-}
-
-/*
-    The open wrapper guarantees, insures original_open is initialized.
-    It's used by other inner functions in order to avoid open() recursivity
-    and overhead. In adittion, it deals with ellipsis (variable 
-    arguments) since open is a variadic function.
-*/
-int open_wrapper(const char *path, int flags, va_list variable_arguments){
-
-	if ( original_open == NULL ) {
-		original_open = dlsym_wrapper("open");
-	}
-
-	if(variable_arguments){
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-
-		mode_t mode = va_arg(aux_list, mode_t);
-
-		va_end(aux_list);
-
-		return original_open(path, flags, mode);
-
-	} else {
-		return original_open(path, flags);
-	}
-	
-}
-
-int open64_wrapper(const char *path, int flags, va_list variable_arguments){
-
-	if ( original_open64 == NULL ) {
-		original_open64 = dlsym_wrapper("open64");
-	}
-
-	if(variable_arguments){
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-
-		mode_t mode = va_arg(aux_list, mode_t);
-
-		va_end(aux_list);
-
-		return original_open64(path, flags, mode);
-
-	} else {
-		return original_open64(path, flags);
-	}
-	
-}
-
-/*
-	Openat wrapper is exactly the same as open wrapper but for
-	 openat.
-*/
-int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
-
-	if(original_openat == NULL){
-		original_openat = dlsym_wrapper("openat");
-	}
-
-	if(variable_arguments){
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-
-		mode_t mode = va_arg(variable_arguments, mode_t);
-
-		va_end(aux_list);
-
-		return original_openat(dirfd, path, flags, mode);
-
-	} else {
-		return original_openat(dirfd, path, flags);
-	}
-
-}
-
-/*
-	Same as open_wrapper.
-*/
-int chdir_wrapper(const char *path){
-	
-	if(original_chdir == NULL){
-		original_chdir = dlsym_wrapper("chdir");
-	}
-
-	return original_chdir(path);
-}
-
-
-/*
-	Wrapper for all execlX functions family. This wrapper treats the variable
-	arguments and calls the corresponding execlX function according to:
-	[function argument value] : [execlX function]
-	0 : execl https://code.woboq.org/userspace/glibc/posix/execl.c.html
-	1 : execlp https://code.woboq.org/userspace/glibc/posix/execlp.c.html
-	2 : execle https://code.woboq.org/userspace/glibc/posix/execle.c.html
-
-	Additional info: https://code.woboq.org/userspace/glibc/posix/execl.c.html
-*/
-int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
-	int execlX_result = -1;
-
-	if(function == 0 || function == 1 ){
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
-		if(number_of_arguments == -1){
-			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
-		}
-
-		// Reset aux_list and start from the very beginning when using va_arg
-		va_end(aux_list);
-		va_copy(aux_list, variable_arguments);
-
-		char *argv[number_of_arguments + 1];
-		argv[0] = (char *) arg;
-		ptrdiff_t i;
-		for(i = 1; i<= number_of_arguments; i++){
-			argv[i] = va_arg(aux_list, char *);
-		}
-
-		va_end(aux_list);
-		switch(function){
-			case 0:
-				execlX_result = execve_wrapper(pathname, argv, __environ);
-				break;
-			case 1:
-				execlX_result = execvpe_wrapper(pathname, argv, __environ);
-				break;
-		}
-
-	} else if(function == 2){
-
-		va_list aux_list;
-		va_copy(aux_list, variable_arguments);
-		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
-		if(number_of_arguments == -1){
-			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);		
-		}
-
-		// Reset aux_list and start from the very beginning when using va_arg
-		va_end(aux_list);
-		va_copy(aux_list, variable_arguments);
-
-		char *argv[number_of_arguments + 1];
-		char **envp;
-		argv[0] = (char *) arg;
-		ptrdiff_t i;
-		for(i = 1; i<= number_of_arguments; i++){
-			argv[i] = va_arg(aux_list, char *);
-		}
-		envp = va_arg(variable_arguments, char **);
-		va_end(aux_list);
-
-		execlX_result = execve_wrapper(pathname, argv, envp);
-	} 
-
-	return execlX_result;
-}
-
-int execv_wrapper(const char *pathname, char *const argv[]){
-
-	return execve_wrapper(pathname, argv, __environ);
-}
-
-int execvp_wrapper(const char *file, char *const argv[]){
-
-	return execvpe_wrapper(file, argv, __environ);
-}
-
-int execve_wrapper(const char *pathname, char *const argv[], char *const envp[]){
-	if ( original_execve == NULL ) {
-		original_execve = dlsym_wrapper("execve");
-	}
-
-	return original_execve(pathname, argv, envp);
-}
-
-int execvpe_wrapper(const char *file, char *const argv[], char *const envp[]){
-	if ( original_execvpe == NULL ) {
-		original_execvpe = dlsym_wrapper("execvpe");
-	}
-
-	return original_execvpe(file, argv, envp);
-}
-
-/// ########## Wrappers ##########
-
+// doubts
+ FILE *(*original_popen)(const char *command, const char *type) = NULL;
+// int (*original_pclose)(FILE *stream) = NULL;
+ int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 /// <-------------------------------------------------> 
 
 /// ########## Coconstructor and Destructor ##########
@@ -287,13 +138,17 @@ static void before_main(void){
 	//printf("PATH Variable environment: %s\n", getenv("PATH"));
 	//printf("ENVIRON: %s\n", *__environ);
 
-	if(getuid() != geteuid()){
+	printf("ANTES DE LLAMAR A NADA\n");
+
+	if((getuid() != geteuid()) || (getgid() != geteuid())){
 		LIBRARY_ON = true;
 	}
 
 	if(LIBRARY_ON){
 
 		create_log_dir_and_start_logger();
+
+		printf("ANTES DE LLAMAR A CREATE TEMPDIR\n");
 		create_temp_dir();
 
 		//zlog_init_stdout();
@@ -347,8 +202,6 @@ void create_log_dir_and_start_logger(){
 			}
 			closedir(folder_dir);
 		}
-
-
 
 		char *program_name = GET_PROGRAM_NAME();
 		// +3 because of "/" and null trailling byte
@@ -419,6 +272,8 @@ void create_temp_dir(){
 		temp_dir = get_current_dir_name();
 	}
 
+	printf("SAQUI LLEGA");
+
 	char *temp_dir_aux = strcat(temp_dir, "/libTOCTTOU/tmp/");
 
 	if(mkdir(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
@@ -426,8 +281,9 @@ void create_temp_dir(){
 	} else {
 		temp_dir = temp_dir_aux;
 	}
-
+	printf("SE HA CREADO EL TEMPDIR: %s\n", temp_dir);
 	g_temp_dir = strdup(temp_dir);
+	printf("SE HA AHORA GDIR VALE: %s\n", g_temp_dir);
 
 }
 
@@ -899,10 +755,13 @@ int access(const char *path, int mode){
 
 FILE *fopen(const char *path, const char *mode){
 
+	printf("ME HAN LLAMADO CON PATH: %s y mode %s\n", path, mode);
+
 	if(original_fopen == NULL){
 		original_fopen = dlsym_wrapper(__func__);
 	}
 	FILE *fopen_result;
+
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
@@ -913,9 +772,7 @@ FILE *fopen(const char *path, const char *mode){
 		bool path_exists_before = file_does_exist(sanitized_path);
 		struct stat new_file;
 
-
-
-		fopen_result = original_fopen(path, mode);
+		fopen_result = fopen_wrapper(path, mode);
 
 		if(fopen_result == NULL){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN ERROR: %s\n", strerror(errno));
@@ -926,7 +783,7 @@ FILE *fopen(const char *path, const char *mode){
 			}
 		}
 	} else {
-		fopen_result = original_fopen(path, mode);
+		fopen_result = fopen_wrapper(path, mode);
 	}
 
 	return fopen_result;

@@ -13,9 +13,12 @@
 #include <time.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #include "zlog-config.h"
 #include "zlog.h"
+#include "libTTThwart_wrappers.h"
+
 
 // --------------------------------------------------------------
 // zlog utilities
@@ -81,9 +84,15 @@ static inline void print_error(const char *function_name, char *error_msg){
 
 void zlog_init(char const* log_file)
 {
+    printf("DENTRO DE ZLOGINIT1111111: \n");
+
     zlog_file_log_name = strdup(log_file);
 
-    zlog_fout = fopen(log_file, "a+");
+    printf("DENTRO DE ZLOGINIT22222222:%s \n", log_file);
+
+    zlog_fout = fopen_wrapper(log_file, "a+");
+
+    printf("DENTRO DE ZLOGINIT3333333: %s\n", zlog_file_log_name);
     
     if(!zlog_fout){
         print_error(__func__, strerror(errno));
