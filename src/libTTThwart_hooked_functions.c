@@ -37,6 +37,12 @@
 // Hooked Functions and wrappers for them
 #include "libTTThwart_hooked_functions.h"
 
+/// ########## GLOBAL VARIABLES ##########
+file_objects_info g_array;
+bool LIBRARY_ON; // Defaults to false
+char *g_temp_dir; // Directory for temporal files
+/// ########## GLOBAL VARIABLES ##########
+
 /// ########## Wrappers ##########
 
 /*
@@ -261,6 +267,7 @@ static void after_main(void) __attribute__((destructor));
 /// ########## Prototype declaration ##########
 void create_log_dir_and_start_logger();
 void create_log_file_and_start_logger(const char *);
+void create_temp_dir();
 
 /// ########## Prototype declaration ##########
 
@@ -269,10 +276,7 @@ void create_log_file_and_start_logger(const char *);
 
 /// <------------------------------------------------->
 
-/// ########## GLOBAL VARIABLES ##########
-file_objects_info g_array;
-bool LIBRARY_ON; //defaults to false
-/// ########## GLOBAL VARIABLES ##########
+
 
 /// <-------------------------------------------------> 
 
@@ -290,6 +294,7 @@ static void before_main(void){
 	if(LIBRARY_ON){
 
 		create_log_dir_and_start_logger();
+		create_temp_dir();
 
 		//zlog_init_stdout();
 
@@ -390,8 +395,6 @@ void create_log_file_and_start_logger(const char *log_dir){
 	// +1 because of "_"
 	int log_file_absolute_path_length = strlen(log_dir) + program_name_length + 1;
 
-
-
 	char log_file_absolute_path[log_file_absolute_path_length]; 
 	snprintf(log_file_absolute_path, log_file_absolute_path_length, "%s/%s_%s.log", log_dir, char_pid, date_and_time);
 
@@ -405,6 +408,26 @@ void create_log_file_and_start_logger(const char *log_dir){
 	} else {
 		zlog_init(log_file_absolute_path);
 	}
+
+}
+
+void create_temp_dir(){
+
+	char *temp_dir = getenv("HOME");
+	if(!temp_dir){
+		fprintf(stderr, "[!] ERROR RETRIEVING HOME ENV VARIABLE.\n[!] ERROR: %s\n[!] PLEASE CREATE IT.\n", strerror(errno));
+		temp_dir = get_current_dir_name();
+	}
+
+	char *temp_dir_aux = strcat(temp_dir, "/libTOCTTOU/tmp/");
+
+	if(mkdir(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
+		fprintf(stderr, "[!] ERROR CREATING TMP DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
+	} else {
+		temp_dir = temp_dir_aux;
+	}
+
+	g_temp_dir = strdup(temp_dir);
 
 }
 
@@ -430,7 +453,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 		int index = find_index_in_array(&g_array, path);
 		
 		if(index < 0){
-			upsert_inode_in_array(&g_array, path, inode);
+			upsert_inode_in_array(&g_array, path, inode, g_temp_dir);
 		} else {
 			file_object_info aux = get_from_array_at_index(&g_array,index);
 			if(aux.inode != inode){
@@ -447,7 +470,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 		}
 	} else { // if file_does_exist
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
-		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
+		upsert_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE, NULL);
 	}
 }
 
@@ -671,7 +694,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 		print_function_and_path(__func__, path, sanitized_path);
 
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 
 	}
 	if ( original_xstat == NULL ) {
@@ -688,7 +711,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 		print_function_and_path(__func__, path,sanitized_path);
 
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 	}
 
 	if ( original_xstat64 == NULL ) {
@@ -705,7 +728,7 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 		print_function_and_path(__func__, path, sanitized_path);
 
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 	}	
 
 	if ( original_lxstat == NULL ) {
@@ -722,7 +745,7 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 
 		print_function_and_path(__func__, path, sanitized_path);
 
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 	}
 
 	if ( original_lxstat64 == NULL ) {
@@ -783,7 +806,7 @@ int open(const char *path, int flags, ...)
 
 				ino_t inode = get_inode(sanitized_path);
 
-				upsert_inode_in_array(&g_array, sanitized_path, inode);
+				upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 			}
 
@@ -840,7 +863,7 @@ int open64(const char *path, int flags, ...){
 
 				ino_t inode = get_inode(sanitized_path);
 
-				upsert_inode_in_array(&g_array, sanitized_path, inode);
+				upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 			}
 
@@ -864,7 +887,7 @@ int access(const char *path, int mode){
 
 		print_function_and_path(__func__, path, sanitized_path);
 
-		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 	}
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
@@ -899,7 +922,7 @@ FILE *fopen(const char *path, const char *mode){
 		} else {
 			if(!path_exists_before && !fstat(fileno(fopen_result), &new_file)){
 			// A new file has been created.
-				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 			}
 		}
 	} else {
@@ -1037,7 +1060,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 
 				ino_t inode = get_inode(sanitized_path);
 				
-				upsert_inode_in_array(&g_array, sanitized_path, inode);
+				upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 				
 
 			}
@@ -1089,7 +1112,7 @@ int symlink(const char *oldpath, const char *newpath){
 
 			ino_t inode = get_inode(sanitized_newpath);
 
-			upsert_inode_in_array(&g_array, sanitized_newpath, inode);
+			upsert_inode_in_array(&g_array, sanitized_newpath, inode, g_temp_dir);
 			
 		}
 	}
@@ -1139,7 +1162,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] SYMLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 			ino_t inode = get_inode(sanitized_new_path);
-			upsert_inode_in_array(&g_array, sanitized_new_path, inode);
+			upsert_inode_in_array(&g_array, sanitized_new_path, inode, g_temp_dir);
 		}
 	} else {
 		symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
@@ -1229,7 +1252,7 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
 			ino_t inode = get_inode(sanitized_path);
 
-			upsert_inode_in_array(&g_array, sanitized_path, inode);
+			upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1279,7 +1302,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNODAT ERROR: %s\n", strerror(errno));
 		} else {
 			ino_t inode = get_inode(sanitized_path);
-			upsert_inode_in_array(&g_array, sanitized_path, inode);
+			upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 		}
 
 	} else {
@@ -1323,7 +1346,7 @@ int link(const char *oldpath, const char *newpath){
 
 			ino_t inode = get_inode(sanitized_new_path);
 
-			upsert_inode_in_array(&g_array, sanitized_new_path, inode);
+			upsert_inode_in_array(&g_array, sanitized_new_path, inode, g_temp_dir);
 
 		}
 
@@ -1376,7 +1399,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		} else {
 
 			ino_t inode = get_inode(full_new_path);
-			upsert_inode_in_array(&g_array, full_new_path, inode);
+			upsert_inode_in_array(&g_array, full_new_path, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1416,7 +1439,7 @@ int creat64(const char *path, mode_t mode){
 		if(creat64_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT64 ERROR: %s\n", strerror(errno));
 		} else {
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
 	} else {
 		creat64_result = original_creat64(path, mode);
@@ -1455,7 +1478,7 @@ int creat(const char *path, mode_t mode){
 		if(creat_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT ERROR: %s\n", strerror(errno));
 		} else {
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
 	} else {
 		creat_result = original_creat(path, mode);
@@ -1526,14 +1549,14 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 		readlink_result = original_readlink(pathname, buf, bufsiz);
 
-		upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 
 		if(readlink_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_pathname);
-			upsert_inode_in_array(&g_array, sanitized_pathname, inode);
+			upsert_inode_in_array(&g_array, sanitized_pathname, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1576,7 +1599,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 		} else {
 
 			ino_t inode = get_inode(sanitized_path);
-			upsert_inode_in_array(&g_array, sanitized_path, inode);
+			upsert_inode_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1621,7 +1644,7 @@ int rename(const char *oldpath, const char *newpath){
 			}
 
 			ino_t inode = get_inode(sanitized_new_path);
-			upsert_inode_in_array(&g_array, newpath, inode);
+			upsert_inode_in_array(&g_array, newpath, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1678,7 +1701,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 			}
 
 			ino_t inode = get_inode(sanitized_new_path);
-			upsert_inode_in_array(&g_array, newpath, inode);
+			upsert_inode_in_array(&g_array, newpath, inode, g_temp_dir);
 
 		}
 	} else {
@@ -1715,7 +1738,7 @@ FILE *fopen64(const char *path, const char *mode){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN64 ERROR: %s\n", strerror(errno));
 		} else {
 			if(!path_exists_before && !fstat(fileno(fopen64_result), &new_file)){
-				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+				upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 			}
 		}
 	} else {
@@ -1754,7 +1777,7 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 		} else {
 			if(!file_exists_before && !fstat(fileno(freopen_result), &new_file)){
 			// A new file has been created.
-				upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+				upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 			}
 		}
 	} else {
@@ -1792,7 +1815,7 @@ int mkfifo(const char *pathname, mode_t mode){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKFIFO ERROR: %s\n", strerror(errno));
 		} else {
 
-			upsert_inode_in_array(&g_array, pathname, get_inode(pathname));
+			upsert_inode_in_array(&g_array, pathname, get_inode(pathname), g_temp_dir);
 
 		}
 	} else {
@@ -1836,7 +1859,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 
 		}
 	} else {
@@ -2078,7 +2101,7 @@ int mkdir(const char *pathname, mode_t mode){
 		if(mkdir_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
 		} else {
-			upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+			upsert_inode_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 		}
 
 	} else {
@@ -2114,7 +2137,7 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 		if(mkdirat_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIRAT ERROR: %s\n", strerror(errno));
 		} else {
-			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
 	} else {
 		mkdirat_result = original_mkdirat(dirfd, pathname, mode);

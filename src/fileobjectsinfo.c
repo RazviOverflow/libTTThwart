@@ -32,7 +32,7 @@ void initialize_array(file_objects_info *array, size_t size){
     updates the corresponding inode instead of inserting new
     element.
 */
-void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t inode){
+void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
     
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
@@ -42,11 +42,27 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	// the new inode is different from the one already existing
 	int index = find_index_in_array(array, path);
 
+	char *random_name= NULL;
+
 	if(index >= 0){
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
 		}
+		if(!array->list[index].tmp_path){
+			random_name = rand_string(random_name, 25);
+
+			char *tmp_file_path = strcat(tmp_dir, random_name);
+
+			if(symlink(path, random_name) == -1){
+				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
+				array->list[array->used].tmp_path = NULL;
+			} else {
+				array->list[array->used].tmp_path = strdup(tmp_file_path);
+			}
+		}
+		
+
 	} else  {
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
@@ -62,7 +78,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
         // reference to your original data and realloc does not free() so
         // there'll be an implicit memory leak.
 			if(!aux){
-				fprintf(stderr, "Error trying to realloc size for array in upsert inode process.\n");
+				fprintf(stderr, "[!] ERROR  trying to realloc size for array in upsert inode process.\n");
 				exit(EXIT_FAILURE);
 			} else {
 				array->list = aux;
@@ -70,14 +86,45 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 
         //Initializing new elements of realocated array
 			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
-
 		}
+
+		// Creating temporal symlink
+
+		if(inode != NONEXISTING_FILE_INODE){
+			random_name = rand_string(random_name, 25);
+
+			char *tmp_file_path = strcat(tmp_dir, random_name);
+
+			if(symlink(path, random_name) == -1){
+				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
+				array->list[array->used].tmp_path = NULL;
+			} else {
+				array->list[array->used].tmp_path = strdup(tmp_file_path);
+			}
+		} else {
+			array->list[array->used].tmp_path = NULL;
+		}
+
 		array->list[array->used].path = strdup(path);
 		array->list[array->used].inode = inode;
-		array->list[array->used].fd_number = 0;
 		array->used++;
 	}
 
+}
+
+// 
+char *rand_string(char *str, size_t size)
+{
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
+    if (size) {
+        --size;
+        for (size_t n = 0; n < size; n++) {
+            int key = rand() % (int) (sizeof charset - 1);
+            str[n] = charset[key];
+        }
+        str[size] = '\0';
+    }
+    return str;
 }
 
 /*
@@ -89,6 +136,8 @@ void free_array(file_objects_info *array){
 	for(uint i = 0; i < array->used; i++){
 		free(array->list[i].path);
 		array->list[i].path = NULL;
+		free(array->list[i].tmp_path);
+		array->list[i].tmp_path = NULL;
 	}
 
 	free(array->list);

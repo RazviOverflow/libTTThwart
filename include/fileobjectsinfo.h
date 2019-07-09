@@ -10,10 +10,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#define NONEXISTING_FILE_INODE 0
+
 typedef struct{
 	char *path;
+	char *tmp_path;
 	ino_t inode;
-	int fd_number;
 } file_object_info;
 
 typedef struct{
@@ -24,10 +26,11 @@ typedef struct{
 
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
-void upsert_inode_in_array(file_objects_info *, const char *, ino_t);
+void upsert_inode_in_array(file_objects_info *, const char *, ino_t, char *);
 void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
+char *rand_string(char *, size_t);
 
 #endif
