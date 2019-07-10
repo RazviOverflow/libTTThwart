@@ -30,6 +30,8 @@ extern FILE* fopen_wrapper(const char*, const char*);
 
 extern int mkdir_wrapper(const char*, mode_t);
 
+extern int symlink_wrapper(const char *, const char *);
+
 /// <-------------------------------------------------> 
 
 #endif

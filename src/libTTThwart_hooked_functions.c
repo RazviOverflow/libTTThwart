@@ -938,11 +938,6 @@ int openat(int dirfd, const char *path, int flags, ...){
 */
 int symlink(const char *oldpath, const char *newpath){
 
-
-	if(original_symlink == NULL){
-		original_symlink = dlsym_wrapper(__func__);
-	}
-
 	int symlink_result;
 
 	if(LIBRARY_ON){
@@ -955,7 +950,7 @@ int symlink(const char *oldpath, const char *newpath){
 		
 		
 
-		symlink_result = original_symlink(oldpath, newpath);
+		symlink_result = symlink_wrapper(oldpath, newpath);
 
     /*
 		Upon successful completion, symlink() shall return 0; otherwise, it 
@@ -972,7 +967,7 @@ int symlink(const char *oldpath, const char *newpath){
 		}
 	}
 	else{
-		symlink_result = original_symlink(oldpath, newpath);
+		symlink_result = symlink_wrapper(oldpath, newpath);
 	}
 
 	return symlink_result;

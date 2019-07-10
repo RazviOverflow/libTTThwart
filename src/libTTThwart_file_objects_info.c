@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "libTTThwart_file_objects_info.h"
+#include "libTTThwart_wrappers.h"
 #include "zlog.h"
 
 /*
@@ -42,8 +43,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	// the new inode is different from the one already existing
 	int index = find_index_in_array(array, path);
 
-	char aux_random_name[25];
-	char *random_name;
+	char *random_name = rand_string(1);
 
 	if(index >= 0){
 		printf("HE ENTRADO EN INDEX >= 0\n");
@@ -55,7 +55,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		if(!array->list[index].tmp_path){
 			printf("HE ENTRADO INDEX PATH CUANDO ES NULL IN ARRAY DENTRO DE >= 0 \n");
 
-			random_name = rand_string(aux_random_name, 1);
+			printf("SE HA CALCULADO EL NOMBRE RANDOM: %s\n", random_name);
 
 			printf("SRECIBIDO %s\n", tmp_dir);
 
@@ -64,7 +64,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 			printf("SE VA A INTENTAR CREAR EL FICHERO TEMPORAL\n");
 			printf("SE VA A INTENTAR %s\n", tmp_dir);
 
-			if(symlink(path, random_name) == -1){
+			if(symlink_wrapper(path, random_name) == -1){
 				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
 				array->list[array->used].tmp_path = NULL;
 			} else {
@@ -102,17 +102,15 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		// Creating temporal symlink
 
 		if(inode != NONEXISTING_FILE_INODE){
-			random_name = rand_string(aux_random_name, 1);
 
 			printf("SRECIBIDO %s\n", tmp_dir);
 
 			char *tmp_file_path = strcat(tmp_dir, random_name);
 
-			
 			printf("SE VA A INTENTAR CREAR EL FICHERO TEMPORAL\n");
 			printf("SE VA A INTENTAR %s\n", tmp_dir);
 
-			if(symlink(path, random_name) == -1){
+			if(symlink_wrapper(path, random_name) == -1){
 				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
 				array->list[array->used].tmp_path = NULL;
 			} else {
@@ -131,18 +129,27 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 }
 
 // 
-char *rand_string(char *str, size_t size)
+char *rand_string(size_t length)
 {
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!";
-    if (size) {
-        --size;
-        for (size_t n = 0; n < size; n++) {
-            int key = rand() % (int) (sizeof charset - 1);
-            str[n] = charset[key];
-        }
-        str[size] = '\0';
-    }
-    return str;
+    static char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-#'?!"; // could be const
+	char *randomString = NULL;
+
+	if (length) {
+	    randomString = malloc(length +1); // sizeof(char) == 1, cf. C99
+
+	    if (randomString) {
+	        int l = (int) (sizeof(charset) -1); // (static/global, could be const or #define SZ, would be even better)
+	        int key;  // one-time instantiation (static/global would be even better)
+	        for (uint n = 0;n < length;n++) {        
+	            key = rand() % l;   // no instantiation, just assignment, no overhead from sizeof
+	            randomString[n] = charset[key];
+	        }
+
+	        randomString[length] = '\0';
+	    }
+	}
+
+	return randomString;
 }
 
 /*

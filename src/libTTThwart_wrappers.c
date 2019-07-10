@@ -232,13 +232,21 @@ FILE* fopen_wrapper(const char *path, const char *mode){
 
 int mkdir_wrapper(const char* pathname, mode_t mode){
 
-	printf("Se ha invocado mkdir wrapper con :%s\n", pathname);
-
 	if(original_mkdir == NULL){
 		original_mkdir = dlsym_wrapper("mkdir");
 	}
 
 	return original_mkdir(pathname, mode);
+
+}
+
+int symlink_wrapper(const char *target, const char *linkpath){
+
+	if(original_symlink == NULL){
+		original_symlink = dlsym_wrapper("symlink");
+	}
+
+	return original_symlink(target, linkpath);
 
 }
 /// ########## Wrappers ##########
