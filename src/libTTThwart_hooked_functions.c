@@ -138,8 +138,6 @@ static void before_main(void){
 	//printf("PATH Variable environment: %s\n", getenv("PATH"));
 	//printf("ENVIRON: %s\n", *__environ);
 
-	printf("ANTES DE LLAMAR A NADA\n");
-
 	if((getuid() != geteuid()) || (getgid() != geteuid())){
 		LIBRARY_ON = true;
 	}
@@ -147,8 +145,6 @@ static void before_main(void){
 	if(LIBRARY_ON){
 
 		create_log_dir_and_start_logger();
-
-		printf("ANTES DE LLAMAR A CREATE TEMPDIR\n");
 		create_temp_dir();
 
 		//zlog_init_stdout();
@@ -160,6 +156,9 @@ static void before_main(void){
 }
 
 static void after_main(void){
+
+	printf("I DO REACH HERE\n");
+
 
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
@@ -178,6 +177,8 @@ static void after_main(void){
 
 void create_log_dir_and_start_logger(){
 
+	zlog_init_stdout();
+
 	char *home = getenv("HOME");
 	if(!home){
 		fprintf(stderr, "[!] ERROR RETRIEVING HOME ENV VARIABLE.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
@@ -195,7 +196,7 @@ void create_log_dir_and_start_logger(){
 		if(folder_dir){
 			closedir(folder_dir);
 		} else {
-			if(mkdir(log_folder_dir, 0755) == -1){ // (Bear in mind umask)
+			if(mkdir_wrapper(log_folder_dir, 0755) == -1){ // (Bear in mind umask)
 				fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
 				zlog_init_stderr();
 				return;
@@ -215,7 +216,7 @@ void create_log_dir_and_start_logger(){
 			closedir(dir);
 			create_log_file_and_start_logger(log_dir);
 		} else if(errno == ENOENT){ //Directory does not exist; create
-			if(mkdir(log_dir, 0755) == -1){ // (Bear in mind umask)
+			if(mkdir_wrapper(log_dir, 0755) == -1){ // (Bear in mind umask)
 				fprintf(stderr, "[!] ERROR CREATING LOG DIRECTORY.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
 				zlog_init_stderr();
 				return;
@@ -272,18 +273,15 @@ void create_temp_dir(){
 		temp_dir = get_current_dir_name();
 	}
 
-	printf("SAQUI LLEGA");
+	char *temp_dir_aux = strcat(temp_dir, "/libTOCTTOU/tmp");
 
-	char *temp_dir_aux = strcat(temp_dir, "/libTOCTTOU/tmp/");
-
-	if(mkdir(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
+	if(mkdir_wrapper(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
 		fprintf(stderr, "[!] ERROR CREATING TMP DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
 	} else {
 		temp_dir = temp_dir_aux;
 	}
-	printf("SE HA CREADO EL TEMPDIR: %s\n", temp_dir);
+
 	g_temp_dir = strdup(temp_dir);
-	printf("SE HA AHORA GDIR VALE: %s\n", g_temp_dir);
 
 }
 
@@ -1702,8 +1700,6 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 
 		check_parameters_properties(sanitized_path, __func__);
 
-
-
 		mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 
     /*
@@ -1939,10 +1935,6 @@ long pathconf(const char *path, int name){
 
 int mkdir(const char *pathname, mode_t mode){
 
-	if(original_mkdir == NULL){
-		original_mkdir = dlsym_wrapper(__func__);
-	}
-
 	int mkdir_result;
 
 	if(LIBRARY_ON){
@@ -1953,7 +1945,7 @@ int mkdir(const char *pathname, mode_t mode){
 
 		check_parameters_properties(sanitized_pathname, __func__);
 
-		mkdir_result = original_mkdir(pathname, mode);
+		mkdir_result = mkdir_wrapper(pathname, mode);
 
 		if(mkdir_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
@@ -1962,7 +1954,7 @@ int mkdir(const char *pathname, mode_t mode){
 		}
 
 	} else {
-		mkdir_result = original_mkdir(pathname, mode);
+		mkdir_result = mkdir_wrapper(pathname, mode);
 	}
 
 	return mkdir_result;

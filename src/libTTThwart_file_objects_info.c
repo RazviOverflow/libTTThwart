@@ -33,7 +33,7 @@ void initialize_array(file_objects_info *array, size_t size){
     element.
 */
 void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
-    
+   	printf("HE ENTRADO EN UPSERTINODE IN ARRAY \n");
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(array, 2);
@@ -42,15 +42,20 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 	// the new inode is different from the one already existing
 	int index = find_index_in_array(array, path);
 
-	char *random_name= NULL;
+	char aux_random_name[25];
+	char *random_name;
 
 	if(index >= 0){
+		printf("HE ENTRADO EN INDEX >= 0\n");
 		if(inode != array->list[index].inode){
 			array->list[index].inode = inode;
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
 		}
+
 		if(!array->list[index].tmp_path){
-			random_name = rand_string(random_name, 25);
+			printf("HE ENTRADO INDEX PATH CUANDO ES NULL IN ARRAY DENTRO DE >= 0 \n");
+
+			random_name = rand_string(aux_random_name, 1);
 
 			printf("SRECIBIDO %s\n", tmp_dir);
 
@@ -69,6 +74,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		
 
 	} else  {
+		printf("HE ENTRADO INDEX PATH NO ESTA EN LA ESTRUCTURA\n");
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
 		if(array->used == array->size){
@@ -96,7 +102,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		// Creating temporal symlink
 
 		if(inode != NONEXISTING_FILE_INODE){
-			random_name = rand_string(random_name, 25);
+			random_name = rand_string(aux_random_name, 1);
 
 			printf("SRECIBIDO %s\n", tmp_dir);
 
@@ -120,6 +126,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 		array->list[array->used].inode = inode;
 		array->used++;
 	}
+		printf("HE SALIDO DE UPSERTINODE IN ARRAY \n");
 
 }
 

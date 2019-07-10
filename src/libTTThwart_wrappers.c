@@ -223,8 +223,6 @@ int execvpe_wrapper(const char *file, char *const argv[], char *const envp[]){
 
 FILE* fopen_wrapper(const char *path, const char *mode){
 
-	printf("INVOCADO FOPEN!!!\n");
-
 	if(original_fopen == NULL){
 		original_fopen = dlsym_wrapper("fopen");
 	}
@@ -232,4 +230,15 @@ FILE* fopen_wrapper(const char *path, const char *mode){
 	return original_fopen(path, mode);
 }
 
+int mkdir_wrapper(const char* pathname, mode_t mode){
+
+	printf("Se ha invocado mkdir wrapper con :%s\n", pathname);
+
+	if(original_mkdir == NULL){
+		original_mkdir = dlsym_wrapper("mkdir");
+	}
+
+	return original_mkdir(pathname, mode);
+
+}
 /// ########## Wrappers ##########
