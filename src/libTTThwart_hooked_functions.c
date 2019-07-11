@@ -154,9 +154,6 @@ static void before_main(void){
 
 static void after_main(void){
 
-	printf("I DO REACH HERE\n");
-
-
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		zlog_flush_buffer();
@@ -262,7 +259,7 @@ void create_log_file_and_start_logger(const char *log_dir){
 }
 
 void create_temp_dir(){
-
+	bool temp_folder_exists;
 	char *temp_dir = getenv("HOME");
 	char char_pid[10];
 	if(!temp_dir){
@@ -278,32 +275,44 @@ void create_temp_dir(){
 	char temp_dir_aux[total_tmp_dir_length];
 	snprintf(temp_dir_aux, total_tmp_dir_length, "%s%s%s", temp_dir, LIBRARY_FOLDER, TEMPORAL_LINKS_FOLDER);
 
-	printf("Se VA A CREAR TEMORAL 1st: %s\n", temp_dir_aux);
-
 	DIR *aux_dir = opendir(temp_dir_aux);
 	if(aux_dir){
 		// Directory already exists
+		temp_folder_exists = true;
 		closedir(aux_dir);
-	} else if(errno == ENONET){ 
+	} else if(errno == ENOENT){ 
 		// Directory does not exist; Create it
 		if(mkdir_wrapper(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
 			fprintf(stderr, "[!] ERROR CREATING TMP 1st DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));	
+		} else {
+			printf("Le fichier is creationne\n");
+			temp_folder_exists = true;
 		}
+	} else {
+		fprintf(stderr, "[!] ERROR CREATING TMP 1st DIRECTORY.\n[!] ERROR: %s\n[!] ABORTING\n", strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
 	// +3 becuase of "/", "_" and trailing null byte
 	total_tmp_dir_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + 3;
 	char temp_dir_aux2[total_tmp_dir_length];
 	snprintf(temp_dir_aux2, total_tmp_dir_length, "/%s_%s", GET_PROGRAM_NAME(), char_pid);
-
-	char *final_temp_dir = strcat(temp_dir_aux, temp_dir_aux2);
-
-	printf("Se VA A CREAR TEMORAL 2nd: %s\n", final_temp_dir);
+	char *final_temp_dir;
+	if(temp_folder_exists) {
+		final_temp_dir = strcat(temp_dir_aux, temp_dir_aux2);
+	} else {
+		final_temp_dir = strcat(temp_dir, temp_dir_aux2);
+	}
 
 	if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
 		fprintf(stderr, "[!] ERROR CREATING TMP 2nd DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
 	} else {
 		temp_dir = final_temp_dir;
+	}
+
+	// If th path doesn't end with "/", add it.
+	if(temp_dir[strlen(temp_dir)-1] != '/'){
+		temp_dir = strcat(temp_dir, "/");
 	}
 
 	g_temp_dir = strdup(temp_dir);
@@ -777,8 +786,6 @@ int access(const char *path, int mode){
 }
 
 FILE *fopen(const char *path, const char *mode){
-
-	printf("ME HAN LLAMADO CON PATH: %s y mode %s\n", path, mode);
 
 	if(original_fopen == NULL){
 		original_fopen = dlsym_wrapper(__func__);

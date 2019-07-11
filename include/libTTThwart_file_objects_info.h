@@ -31,6 +31,6 @@ void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);
 void remove_from_array_at_index(file_objects_info *, int);
-char* rand_string(size_t);
+char* rand_string(char *, size_t);
 
 #endif
