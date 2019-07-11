@@ -38,12 +38,9 @@
 #include "libTTThwart_hooked_functions.h"
 // Wrappers
 #include "libTTThwart_wrappers.h"
+// Global Variables
+#include "libTTThwart_global_variables.h"
 
-/// ########## GLOBAL VARIABLES ##########
-file_objects_info g_array;
-bool LIBRARY_ON; // Defaults to false
-char *g_temp_dir; // Directory for temporal files
-/// ########## GLOBAL VARIABLES ##########
 
 // Left-handed functions
  int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
@@ -186,11 +183,10 @@ void create_log_dir_and_start_logger(){
 		return;
 	} else {
 
-		char *folder_name = "libTOCTTOU";
-
-		int log_folder_dir_length = strlen(home) + strlen (folder_name) + 2;
+		// +1 because of trailing null byte
+		int log_folder_dir_length = strlen(home) + strlen (LIBRARY_FOLDER) + 1;
 		char log_folder_dir[log_folder_dir_length];
-		snprintf(log_folder_dir, log_folder_dir_length, "%s/%s", home, folder_name);
+		snprintf(log_folder_dir, log_folder_dir_length, "%s%s", home, LIBRARY_FOLDER);
 
 		DIR *folder_dir = opendir(log_folder_dir);
 		if(folder_dir){
@@ -206,10 +202,10 @@ void create_log_dir_and_start_logger(){
 
 		char *program_name = GET_PROGRAM_NAME();
 		// +3 because of "/" and null trailling byte
-		int log_dir_length = strlen(home) + strlen (folder_name) + strlen(program_name) + 3;
+		int log_dir_length = strlen(home) + strlen (LIBRARY_FOLDER) + strlen(program_name) + 3;
 		char log_dir[log_dir_length];
 
-		snprintf(log_dir, log_dir_length, "%s/%s/%s", home, folder_name, program_name);
+		snprintf(log_dir, log_dir_length, "%s%s/%s", home, LIBRARY_FOLDER, program_name);
 		
 		DIR *dir = opendir(log_dir);
 		if(dir){ //Directory exists
@@ -268,17 +264,46 @@ void create_log_file_and_start_logger(const char *log_dir){
 void create_temp_dir(){
 
 	char *temp_dir = getenv("HOME");
+	char char_pid[10];
 	if(!temp_dir){
 		fprintf(stderr, "[!] ERROR RETRIEVING HOME ENV VARIABLE.\n[!] ERROR: %s\n[!] PLEASE CREATE IT.\n", strerror(errno));
 		temp_dir = get_current_dir_name();
 	}
 
-	char *temp_dir_aux = strcat(temp_dir, "/libTOCTTOU/tmp");
+	sprintf(char_pid, "%d", getpid());
 
-	if(mkdir_wrapper(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
-		fprintf(stderr, "[!] ERROR CREATING TMP DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
+	// +1 becuase of trailing null byte 
+	int total_tmp_dir_length = strlen(temp_dir) + strlen(LIBRARY_FOLDER) + strlen(TEMPORAL_LINKS_FOLDER) + 1;
+
+	char temp_dir_aux[total_tmp_dir_length];
+	snprintf(temp_dir_aux, total_tmp_dir_length, "%s%s%s", temp_dir, LIBRARY_FOLDER, TEMPORAL_LINKS_FOLDER);
+
+	printf("Se VA A CREAR TEMORAL 1st: %s\n", temp_dir_aux);
+
+	DIR *aux_dir = opendir(temp_dir_aux);
+	if(aux_dir){
+		// Directory already exists
+		closedir(aux_dir);
+	} else if(errno == ENONET){ 
+		// Directory does not exist; Create it
+		if(mkdir_wrapper(temp_dir_aux, 0755) == -1){ // (Bear in mind umask)
+			fprintf(stderr, "[!] ERROR CREATING TMP 1st DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));	
+		}
+	}
+
+	// +3 becuase of "/", "_" and trailing null byte
+	total_tmp_dir_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + 3;
+	char temp_dir_aux2[total_tmp_dir_length];
+	snprintf(temp_dir_aux2, total_tmp_dir_length, "/%s_%s", GET_PROGRAM_NAME(), char_pid);
+
+	char *final_temp_dir = strcat(temp_dir_aux, temp_dir_aux2);
+
+	printf("Se VA A CREAR TEMORAL 2nd: %s\n", final_temp_dir);
+
+	if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
+		fprintf(stderr, "[!] ERROR CREATING TMP 2nd DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
 	} else {
-		temp_dir = temp_dir_aux;
+		temp_dir = final_temp_dir;
 	}
 
 	g_temp_dir = strdup(temp_dir);
@@ -1168,10 +1193,6 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 */
 int link(const char *oldpath, const char *newpath){
 
-	if(original_link == NULL){
-		original_link = dlsym_wrapper(__func__);
-	}
-
 	int link_result;
 
 	if(LIBRARY_ON){
@@ -1184,7 +1205,7 @@ int link(const char *oldpath, const char *newpath){
 
 
 
-		link_result = original_link(oldpath, newpath);
+		link_result = link_wrapper(oldpath, newpath);
 
    	/*
 		Upon successful completion, 0 shall be returned. Otherwise, -1 shall
@@ -1201,7 +1222,7 @@ int link(const char *oldpath, const char *newpath){
 		}
 
 	} else {
-		link_result = original_link(oldpath, newpath);
+		link_result = link_wrapper(oldpath, newpath);
 	}
 
 	return link_result;

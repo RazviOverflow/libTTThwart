@@ -249,4 +249,14 @@ int symlink_wrapper(const char *target, const char *linkpath){
 	return original_symlink(target, linkpath);
 
 }
+
+int link_wrapper(const char *oldpath, const char *newpath){
+
+	if(original_link == NULL){
+		original_link = dlsym_wrapper("link");
+	}
+
+	return original_link(oldpath, newpath);
+
+}
 /// ########## Wrappers ##########

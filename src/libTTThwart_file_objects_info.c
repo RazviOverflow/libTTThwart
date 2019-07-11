@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "libTTThwart_file_objects_info.h"
 #include "libTTThwart_wrappers.h"
@@ -64,8 +65,8 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 			printf("SE VA A INTENTAR CREAR EL FICHERO TEMPORAL\n");
 			printf("SE VA A INTENTAR %s\n", tmp_dir);
 
-			if(symlink_wrapper(path, random_name) == -1){
-				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
+			if(link_wrapper(path, tmp_file_path) == -1){
+				fprintf(stderr, "[!] ERROR trying to create temporal file.\n[!] ERROR: %s\n", strerror(errno));
 				array->list[array->used].tmp_path = NULL;
 			} else {
 				array->list[array->used].tmp_path = strdup(tmp_file_path);
@@ -110,7 +111,7 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 			printf("SE VA A INTENTAR CREAR EL FICHERO TEMPORAL\n");
 			printf("SE VA A INTENTAR %s\n", tmp_dir);
 
-			if(symlink_wrapper(path, random_name) == -1){
+			if(link_wrapper(path, tmp_file_path) == -1){
 				fprintf(stderr, "[!] ERROR trying to create temporal file.\n");
 				array->list[array->used].tmp_path = NULL;
 			} else {
