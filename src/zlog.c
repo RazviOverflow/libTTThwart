@@ -212,6 +212,9 @@ void zlogf_time(int msg_level, char const * fmt, ...)
         vsnprintf(buffer, ZLOG_BUFFER_STR_MAX_LEN, fmt, va);
         zlog_finish_buffer();
         va_end(va);
+
+        // I want zlogf_time to automatically log the message.
+        zlog_flush_buffer();
     }
 }
 
