@@ -34,6 +34,8 @@ extern int symlink_wrapper(const char *, const char *);
 
 extern int link_wrapper(const char *, const char *);
 
+extern int remove_wrapper(const char *);
+
 /// <-------------------------------------------------> 
 
 #endif

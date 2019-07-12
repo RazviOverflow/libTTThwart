@@ -259,4 +259,14 @@ int link_wrapper(const char *oldpath, const char *newpath){
 	return original_link(oldpath, newpath);
 
 }
+
+int remove_wrapper(const char *pathname){
+	
+	if(original_remove == NULL){
+		original_remove = dlsym_wrapper("remove");
+	}
+	
+	return original_remove(pathname);
+	
+}
 /// ########## Wrappers ##########

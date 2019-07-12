@@ -8,8 +8,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define NONEXISTING_FILE_INODE 0
-
 #define GET_PROGRAM_NAME() program_invocation_short_name
 
 void check_dlsym_error();
@@ -31,5 +29,7 @@ bool path_is_absolute(const char *);
 int file_does_exist(const char *);
 
 char * get_directory_from_fd(int);
+
+int remove_directory_and_content(char *);
 
 #endif

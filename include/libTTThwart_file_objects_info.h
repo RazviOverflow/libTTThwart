@@ -27,6 +27,7 @@ typedef struct{
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
 void upsert_inode_in_array(file_objects_info *, const char *, ino_t, char *);
+void upsert_nonexisting_inode_in_array(file_objects_info *, const char *, ino_t);
 void free_array(file_objects_info *);
 int find_index_in_array(file_objects_info *, const char *);
 file_object_info get_from_array_at_index(file_objects_info *, int);

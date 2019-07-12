@@ -9,8 +9,10 @@
 #include <dlfcn.h>
 #include <stddef.h>
 #include <limits.h>
+#include <ftw.h>
 
 #include "libTTThwart_internals.h"
+#include "libTTThwart_wrappers.h"
 #include "zlog.h"
 
 #undef GET_PROGRAM_NAME
@@ -30,7 +32,6 @@ void check_dlsym_error(){
 }
 
 void print_function_and_path(const char* func, const char* path, const char* sanitized_path){
-	printf("I REACH %s. THEY CALLED FIRST: %s\n", __func__, func);
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] User invoked %s via process %s on: %s\n", func, GET_PROGRAM_NAME(), path);
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Sanitized: %s\n", sanitized_path);
 }
@@ -58,6 +59,19 @@ bool path_is_absolute(const char *path){
 	return (path[0] == '/');
 }
 
+// __attribute__ ((unused)) Just to indicate GCC to not throw -Wunused-parameter warnings. 
+int unlink_recursively(const char *fpath, const struct stat *sb __attribute__ ((unused)), int typeflag __attribute__ ((unused)), struct FTW *ftwbuf __attribute__ ((unused))){
+    int remove_result = remove_wrapper(fpath);
 
+    if(remove_result == -1){
+    	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] ERROR while removing recursively temporal file: %s\n[!] ERROR: %s\n", fpath, strerror(errno));
+    }
+
+    return remove_result;
+}
+
+int remove_directory_and_content(char *path_to_remove){
+	return nftw(path_to_remove, unlink_recursively, 32, FTW_DEPTH | FTW_PHYS);
+}
 
 
