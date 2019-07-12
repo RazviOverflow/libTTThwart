@@ -135,9 +135,15 @@ static void before_main(void){
 	//printf("PATH Variable environment: %s\n", getenv("PATH"));
 	//printf("ENVIRON: %s\n", *__environ);
 
+	printf("I REACH %s\n", __func__);
+
+	/*
 	if((getuid() != geteuid()) || (getgid() != geteuid())){
 		LIBRARY_ON = true;
 	}
+	*/
+
+	LIBRARY_ON = true;
 
 	if(LIBRARY_ON){
 
@@ -150,15 +156,21 @@ static void before_main(void){
 		zlog_flush_buffer();
 	}
 
+	printf("I GET OUT OF %s\n", __func__);
+
 }
 
 static void after_main(void){
+
+	printf("I REACH %s\n", __func__);
 
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		zlog_flush_buffer();
 	}
 	free_array(&g_array);
+
+	printf("I GET OUT OF %s\n", __func__);
 
 }
 
@@ -170,6 +182,8 @@ static void after_main(void){
 
 
 void create_log_dir_and_start_logger(){
+
+	printf("I REACH %s\n", __func__);
 
 	zlog_init_stdout();
 
@@ -221,11 +235,16 @@ void create_log_dir_and_start_logger(){
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	printf("I GET OUT OF %s\n", __func__);
 	
 }
 
 
 void create_log_file_and_start_logger(const char *log_dir){
+
+	printf("I REACH %s\n", __func__);
+
 	time_t ltime;
 	ltime = time(NULL);
 	char char_pid[10];
@@ -256,9 +275,14 @@ void create_log_file_and_start_logger(const char *log_dir){
 		zlog_init(log_file_absolute_path);
 	}
 
+	printf("I GET OUT OF %s\n", __func__);
+
 }
 
 void create_temp_dir(){
+
+	printf("I REACH %s\n", __func__);
+
 	bool temp_folder_exists;
 	char *temp_dir = getenv("HOME");
 	char char_pid[10];
@@ -268,6 +292,13 @@ void create_temp_dir(){
 	}
 
 	sprintf(char_pid, "%d", getpid());
+
+	time_t ltime;
+	ltime = time(NULL);
+	char date_and_time[80];
+
+	struct tm *tm_struct = localtime(&ltime);
+	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
 
 	// +1 becuase of trailing null byte 
 	int total_tmp_dir_length = strlen(temp_dir) + strlen(LIBRARY_FOLDER) + strlen(TEMPORAL_LINKS_FOLDER) + 1;
@@ -294,15 +325,26 @@ void create_temp_dir(){
 	}
 
 	// +3 becuase of "/", "_" and trailing null byte
-	total_tmp_dir_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + 3;
+	total_tmp_dir_length = strlen(GET_PROGRAM_NAME()) + strlen(char_pid) + strlen(date_and_time) + 3;
 	char temp_dir_aux2[total_tmp_dir_length];
-	snprintf(temp_dir_aux2, total_tmp_dir_length, "/%s_%s", GET_PROGRAM_NAME(), char_pid);
+	snprintf(temp_dir_aux2, total_tmp_dir_length, "/%s_%s%s", GET_PROGRAM_NAME(), char_pid, date_and_time);
 	char *final_temp_dir;
 	if(temp_folder_exists) {
-		final_temp_dir = strcat(temp_dir_aux, temp_dir_aux2);
+		// Safe concatenation of strings
+		if(asprintf(&final_temp_dir, "%s%s", temp_dir_aux, temp_dir_aux2) == -1){
+			fprintf(stderr, "[!] ERROR saving memory for temporal directory name construction (concatenation).\n[!] ERROR: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
 	} else {
-		final_temp_dir = strcat(temp_dir, temp_dir_aux2);
+		// Safe concatenation of strings
+		if(asprintf(&final_temp_dir, "%s%s", temp_dir, temp_dir_aux2) == -1){
+			fprintf(stderr, "[!] ERROR saving memory for temporal directory name construction (concatenation).\n[!] ERROR: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
 	}
+
+	printf("Trying to create: %s\n", final_temp_dir);
 
 	if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
 		fprintf(stderr, "[!] ERROR CREATING TMP 2nd DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
@@ -312,10 +354,22 @@ void create_temp_dir(){
 
 	// If th path doesn't end with "/", add it.
 	if(temp_dir[strlen(temp_dir)-1] != '/'){
-		temp_dir = strcat(temp_dir, "/");
+		// Safe concatenation of strings
+		if(asprintf(&temp_dir, "%s%s", temp_dir, "/") == -1){
+			fprintf(stderr, "[!] ERROR saving memory for temporal directory name construction (concatenation).\n[!] ERROR: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
 	}
 
+	printf("EL DIRECTORIO QUE SE HA CALCULADO ES: %s\n", temp_dir);
+
 	g_temp_dir = strdup(temp_dir);
+
+	free(temp_dir);
+	free(final_temp_dir);
+
+	printf("I GET OUT OF %s\n", __func__);
 
 }
 
@@ -575,7 +629,9 @@ int file_does_exist(const char *pathname){
 /// ########## Hooked functions replacement code ##########
 
 int __xstat(int ver, const char *path, struct stat *buf)
-{
+{	
+
+	printf("I REACH %s with params %s\n", __func__, path);
 
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
@@ -584,10 +640,14 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 		upsert_inode_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 
+		printf("I REACH THE MIDDLE OF %s\n", __func__);
 	}
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
 	}
+
+	printf("I GET OUT OF %s\n", __func__);
+
 	return original_xstat(ver, path, buf);
 } 
 
@@ -653,6 +713,8 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 int open(const char *path, int flags, ...)
 {
 
+		printf("I REACH %s\n", __func__);
+
 	int open_result;
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
@@ -708,6 +770,8 @@ int open(const char *path, int flags, ...)
 
 		va_end(variable_arguments);
 	}
+
+	printf("I GET OUT OF %s\n", __func__);
 
 	return open_result;
 }

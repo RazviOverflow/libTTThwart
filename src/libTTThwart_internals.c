@@ -30,6 +30,7 @@ void check_dlsym_error(){
 }
 
 void print_function_and_path(const char* func, const char* path, const char* sanitized_path){
+	printf("I REACH %s. THEY CALLED FIRST: %s\n", __func__, func);
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] User invoked %s via process %s on: %s\n", func, GET_PROGRAM_NAME(), path);
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Sanitized: %s\n", sanitized_path);
 }
