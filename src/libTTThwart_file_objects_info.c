@@ -7,6 +7,7 @@
 #include "libTTThwart_file_objects_info.h"
 #include "libTTThwart_global_variables.h"
 #include "libTTThwart_wrappers.h"
+#include "libTTThwart_internals.h"
 #include "zlog.h"
 
 /*
@@ -36,7 +37,28 @@ void initialize_array(file_objects_info *array, size_t size){
     updates the corresponding inode instead of inserting new
     element.
 */
-void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
+void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
+
+	printf("IM USING UPSERT FOR EXT3EXT4");
+
+	if(inode == 0){
+		upsert_nonexisting_inode_in_array(array, path, inode);
+		return;
+	}
+
+	struct stat local_stat = get_file_metadata(path);
+
+	if(!starts_with("/etc", path)){
+		ino_t local_inode = local_stat.st_ino;
+
+		if(inode != local_inode){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when trying to upsert data. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, inode, local_inode, GET_PROGRAM_NAME());
+			fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
+			fflush(stdout);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
@@ -129,12 +151,75 @@ void upsert_inode_in_array(file_objects_info *array, const char *path, ino_t ino
 			array->list[array->used].tmp_path = NULL;
 		}
 
+		array->list[array->used].device_id = local_stat.st_dev;
+		array->list[array->used].file_mode = local_stat.st_mode;
 		array->list[array->used].path = strdup(path);
 		array->list[array->used].inode = inode;
 		array->used++;
 	}
 
 }
+
+void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir __attribute__((unused))){
+
+	printf("IM USING UPSERT FOR OTHER FS");
+
+	if(inode == 0){
+		upsert_nonexisting_inode_in_array(array, path, inode);
+		return;
+	}
+
+	struct stat local_stat = get_file_metadata(path);
+
+	if(!starts_with("/etc", path)){
+		ino_t local_inode = local_stat.st_ino;
+
+		if(inode != local_inode){
+			zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when trying to upsert data. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, inode, local_inode, GET_PROGRAM_NAME());
+			fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
+			fflush(stdout);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if(array->size == 0){
+		initialize_array(array, 2);
+	} 
+
+	int index = find_index_in_array(array, path);
+
+	if(index >= 0){
+		if(inode != array->list[index].inode){
+			array->list[index].inode = inode;
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
+		}
+	} else  {
+
+		if(array->used == array->size){
+
+			array->size *= 2;
+			file_object_info *aux = (file_object_info *)realloc(array->list,
+				array->size * sizeof(file_object_info));
+
+			if(!aux){
+				fprintf(stderr, "Error trying to realloc size for array in upsert inode process.\n");
+				exit(EXIT_FAILURE);
+			} else {
+				array->list = aux;
+			}
+
+			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
+
+		}
+		array->list[array->used].device_id = local_stat.st_dev;
+		array->list[array->used].file_mode = local_stat.st_mode;
+		array->list[array->used].path = strdup(path);
+		array->list[array->used].inode = inode;
+		array->used++;
+	}
+
+}
+
 
 void upsert_nonexisting_inode_in_array(file_objects_info *array, const char *path, ino_t inode){
     
@@ -176,6 +261,7 @@ void upsert_nonexisting_inode_in_array(file_objects_info *array, const char *pat
 			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
 
 		}
+		
 		array->list[array->used].path = strdup(path);
 		array->list[array->used].inode = inode;
 		array->list[array->used].tmp_path = NULL;
