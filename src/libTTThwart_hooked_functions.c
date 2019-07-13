@@ -377,7 +377,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 		}
 	} else { // if file_does_exist
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
-		upsert_nonexisting_inode_in_array(&g_array, path, NONEXISTING_FILE_INODE);
+		upsert_nonexisting_file_metadata_in_array(&g_array, path, NONEXISTING_FILE_INODE);
 	}
 }
 
@@ -556,7 +556,12 @@ int __xstat(int ver, const char *path, struct stat *buf)
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
+		
 
 	}
 	if ( original_xstat == NULL ) {
@@ -576,7 +581,11 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	}
 
 	if ( original_xstat64 == NULL ) {
@@ -595,7 +604,11 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	}	
 
 	if ( original_lxstat == NULL ) {
@@ -614,7 +627,11 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 	}
 
 	if ( original_lxstat64 == NULL ) {
@@ -762,11 +779,11 @@ int access(const char *path, int mode){
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		ino_t inode = get_inode(sanitized_path);
-
-		upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
-		
-		original_fopen = dlsym_wrapper("fopen");
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 
 	}
 	if(original_access == NULL){
@@ -875,9 +892,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-		check_parameters_properties(sanitized_path, __func__);
-
-		
+		check_parameters_properties(sanitized_path, __func__);	
 
 	/*
 		Note that the original function gets passed only path, not sanitized_path
@@ -1077,10 +1092,7 @@ int remove(const char *path) {
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
 
-
 		check_parameters_properties(sanitized_path, __func__);
-
-
 
 		remove_result = remove_wrapper(path);
 
@@ -1440,7 +1452,11 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 
 		readlink_result = original_readlink(pathname, buf, bufsiz);
 
-		upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
+		if(file_does_exist(sanitized_pathname)){
+			upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+		}
 
 		if(readlink_result == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
@@ -1478,6 +1494,12 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 		print_function_and_path(__func__, pathname, sanitized_path);
 
 		get_fs_and_initialize_checking_functions(sanitized_path);
+
+		if(file_does_exist(sanitized_path)){
+			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
+		} else {
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+		}
 
 		readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
 

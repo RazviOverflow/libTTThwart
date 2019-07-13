@@ -67,7 +67,7 @@ void upsert_file_data_in_array_otherfs(file_objects_info *, const char *, ino_t,
 // -- Array operations -- //
 void initialize_array(file_objects_info *, size_t);
 
-void upsert_nonexisting_inode_in_array(file_objects_info *, const char *, ino_t);
+void upsert_nonexisting_file_metadata_in_array(file_objects_info *, const char *, ino_t);
 
 void free_array(file_objects_info *);
 

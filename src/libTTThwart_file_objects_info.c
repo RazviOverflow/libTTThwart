@@ -39,12 +39,7 @@ void initialize_array(file_objects_info *array, size_t size){
 */
 void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
 
-	printf("IM USING UPSERT FOR EXT3EXT4");
-
-	if(inode == 0){
-		upsert_nonexisting_inode_in_array(array, path, inode);
-		return;
-	}
+	printf("IM USING UPSERT FOR EXT3EXT4\n");
 
 	struct stat local_stat = get_file_metadata(path);
 
@@ -162,12 +157,7 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 
 void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir __attribute__((unused))){
 
-	printf("IM USING UPSERT FOR OTHER FS");
-
-	if(inode == 0){
-		upsert_nonexisting_inode_in_array(array, path, inode);
-		return;
-	}
+	printf("IM USING UPSERT FOR OTHER FS\n");
 
 	struct stat local_stat = get_file_metadata(path);
 
@@ -221,7 +211,7 @@ void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *pat
 }
 
 
-void upsert_nonexisting_inode_in_array(file_objects_info *array, const char *path, ino_t inode){
+void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const char *path, ino_t inode){
     
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
