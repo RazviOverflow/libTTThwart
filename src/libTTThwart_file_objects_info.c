@@ -330,7 +330,6 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 	if(remove(temporal_file_to_delete) == -1){
 		// The execution ought to never enter this block.
 		fprintf(stderr, "[!] ERROR trying to delete temporal link previously created with name: %s.\n[!] ERROR: %s\n", aux.tmp_path, strerror(errno));
-		exit(EXIT_FAILURE);
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] ERROR trying to delete temporal link previously created with name: %s.\n[!] ERROR: %s\n", aux.tmp_path, strerror(errno));
 		zlog_flush_buffer();
 	}
