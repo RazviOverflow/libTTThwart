@@ -695,7 +695,7 @@ int open(const char *path, int flags, ...)
 	*/
 
 		if(open_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] OPEN ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] OPEN ERROR: %s\n", strerror(errno));
 		} else {
 		/*
 		If file didn't exist before actual open call and fstat returns
@@ -837,7 +837,7 @@ FILE *fopen(const char *path, const char *mode){
 		fopen_result = fopen_wrapper(path, mode);
 
 		if(fopen_result == NULL){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] FOPEN ERROR: %s\n", strerror(errno));
 		} else {
 			if(!path_exists_before && !fstat(fileno(fopen_result), &new_file)){
 			// A new file has been created.
@@ -874,7 +874,7 @@ int unlink(const char *path){
 		set appropriately.
 	*/
 		if(unlink_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UNLINK ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UNLINK ERROR: %s\n", strerror(errno));
 		} else {
 			int index = find_index_in_array(&g_array, sanitized_path);
 			if(index >= 0){
@@ -924,7 +924,7 @@ int unlinkat(int dirfd, const char *path, int flags){
 		is set to indicate the error.
    	*/
 		if(unlinkat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UNLINKAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UNLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 
 			int index = find_index_in_array(&g_array, sanitized_path);
@@ -976,7 +976,7 @@ int openat(int dirfd, const char *path, int flags, ...){
 		returned and errno is set to indicate the error.
 	*/
 		if(openat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] OPENAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] OPENAT ERROR: %s\n", strerror(errno));
 		} else {
 
 			if(!path_exists_before && !fstat(openat_result, &new_file)){
@@ -1027,7 +1027,7 @@ int symlink(const char *oldpath, const char *newpath){
 		shall return -1 and set errno to indicate the error.
     */
 		if(symlink_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] SYMLINK ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] SYMLINK ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_newpath);
@@ -1081,7 +1081,7 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		is set to indicate the error.
 	*/
 		if(symlinkat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] SYMLINKAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] SYMLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 			ino_t inode = get_inode(sanitized_new_path);
 			upsert_file_data_in_array(&g_array, sanitized_new_path, inode, g_temp_dir);
@@ -1119,7 +1119,7 @@ int remove(const char *path) {
 		set appropriately.
 	*/
 		if(remove_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] REMOVE ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] REMOVE ERROR: %s\n", strerror(errno));
 		} else {
 			int index = find_index_in_array(&g_array, sanitized_path);
 
@@ -1167,7 +1167,7 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 		occurred (in which case, errno is set appropriately).
     */
 		if(mknod_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNOD ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MKNOD ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_path);
@@ -1221,7 +1221,7 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 		set to indicate the error.
 	*/
 		if(mknodat_result == -1){ 
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKNODAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MKNODAT ERROR: %s\n", strerror(errno));
 		} else {
 			ino_t inode = get_inode(sanitized_path);
 			upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
@@ -1259,7 +1259,7 @@ int link(const char *oldpath, const char *newpath){
 		be returned and errno set to indicate the error.
    	*/
 		if(link_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINK ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] LINK ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_new_path);
@@ -1315,7 +1315,7 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 		set to indicate the error.
     */
 		if(linkat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] LINKAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] LINKAT ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(full_new_path);
@@ -1357,7 +1357,7 @@ int creat64(const char *path, mode_t mode){
 		one of the following values:
     */
 		if(creat64_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT64 ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CREAT64 ERROR: %s\n", strerror(errno));
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
@@ -1396,7 +1396,7 @@ int creat(const char *path, mode_t mode){
 		one of the following values:
     */
 		if(creat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CREAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CREAT ERROR: %s\n", strerror(errno));
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
@@ -1436,7 +1436,7 @@ int rmdir(const char *path){
 		If -1 is returned, the named directory shall not be changed.
 	*/
 		if(rmdir_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RMDIR ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] RMDIR ERROR: %s\n", strerror(errno));
 		} else {
 			int index = find_index_in_array(&g_array, sanitized_path);
 
@@ -1477,7 +1477,7 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 		}
 
 		if(readlink_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] READLINK ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_pathname);
@@ -1528,7 +1528,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
        	error.
     */
 		if(readlinkat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 
 			ino_t inode = get_inode(sanitized_path);
@@ -1568,7 +1568,7 @@ int rename(const char *oldpath, const char *newpath){
 	*/
 
 		if(rename_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
 		} else {
 
 			int index = find_index_in_array(&g_array, sanitized_old_path);
@@ -1625,7 +1625,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 	*/
 
 		if(renameat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] RENAME ERROR: %s\n", strerror(errno));
 		} else {
 
 			int index = find_index_in_array(&g_array, sanitized_old_path);
@@ -1668,7 +1668,7 @@ FILE *fopen64(const char *path, const char *mode){
 		fopen64_result = original_fopen64(path, mode);
 
 		if(fopen64_result == NULL){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FOPEN64 ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] FOPEN64 ERROR: %s\n", strerror(errno));
 		} else {
 			if(!path_exists_before && !fstat(fileno(fopen64_result), &new_file)){
 				upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
@@ -1706,7 +1706,7 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 		freopen_result= original_freopen(pathname, mode, stream);
 
 		if(freopen_result == NULL){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] FREOPEN ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] FREOPEN ERROR: %s\n", strerror(errno));
 		} else {
 			if(!file_exists_before && !fstat(fileno(freopen_result), &new_file)){
 			// A new file has been created.
@@ -1745,7 +1745,7 @@ int mkfifo(const char *pathname, mode_t mode){
     	error, -1 is returned (in which case, errno is set appropriately).
     */
 		if(mkfifo_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKFIFO ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MKFIFO ERROR: %s\n", strerror(errno));
 		} else {
 
 			upsert_file_data_in_array(&g_array, pathname, get_inode(pathname), g_temp_dir);
@@ -1787,7 +1787,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
        	error.
     */
 		if(mkfifoat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
 		} else {
 
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
@@ -1821,7 +1821,7 @@ int chmod(const char *pathname, mode_t mode){
 		chmod_result =  original_chmod(pathname, mode);
 
 		if(chmod_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHMOD ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHMOD ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		chmod_result =  original_chmod(pathname, mode);
@@ -1852,7 +1852,7 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 		chown_result =  original_chown(pathname, owner, group);
 
 		if(chown_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHOWN ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHOWN ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		chown_result =  original_chown(pathname, owner, group);
@@ -1883,7 +1883,7 @@ int truncate(const char *path, off_t length){
 		truncate_result = original_truncate(path, length);
 
 		if(truncate_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] TRUNCATE ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		truncate_result = original_truncate(path, length);
@@ -1911,7 +1911,7 @@ int truncate64(const char *path, off_t length){
 		truncate64_result = original_truncate64(path, length);
 
 		if(truncate64_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] TRUNCATE64 ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] TRUNCATE64 ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -1943,7 +1943,7 @@ int utime(const char *filename, const struct utimbuf *times){
 		utime_result = original_utime(filename, times);
 
 		if(utime_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIME ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UTIME ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		utime_result = original_utime(filename, times);
@@ -1971,7 +1971,7 @@ int utimes(const char *filename, const struct timeval *times){
 		utimes_result = original_utimes(filename, times);
 
 		if(utimes_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] UTIMES ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UTIMES ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		utimes_result = original_utimes(filename, times);
@@ -2001,7 +2001,7 @@ long pathconf(const char *path, int name){
 		pathconf_result = original_pathconf(path, name);
 
 		if(pathconf_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] PATHCONF ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] PATHCONF ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -2026,7 +2026,7 @@ int mkdir(const char *pathname, mode_t mode){
 		mkdir_result = mkdir_wrapper(pathname, mode);
 
 		if(mkdir_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MKDIR ERROR: %s\n", strerror(errno));
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 		}
@@ -2062,7 +2062,7 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 		mkdirat_result = original_mkdirat(dirfd, pathname, mode);
 
 		if(mkdirat_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MKDIRAT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MKDIRAT ERROR: %s\n", strerror(errno));
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
@@ -2089,7 +2089,7 @@ int chdir(const char *path){
 		chdir_result = chdir_wrapper(path);
 
 		if(chdir_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHDIR ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHDIR ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -2120,7 +2120,7 @@ int chroot(const char *path){
 		chroot_result = original_chroot(path);
 
 		if(chroot_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] CHROOT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHROOT ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -2149,7 +2149,7 @@ int execl(const char *pathname, const char *arg, ...){
 	va_end(variable_arguments);
 
 	if(execl_result == -1){
-		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECL ERROR: %s\n", strerror(errno));
+		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECL ERROR: %s\n", strerror(errno));
 	}
 
 	return execl_result;
@@ -2178,7 +2178,7 @@ int execlp(const char *file, const char *arg, ...){
 		va_end(variable_arguments);
 
 		if(execlp_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLP ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECLP ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		va_list variable_arguments;
@@ -2215,7 +2215,7 @@ int execle(const char *pathname, const char *arg, ...){
 		va_end(variable_arguments);
 
 		if(execle_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECLE ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECLE ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		va_list variable_arguments;
@@ -2243,7 +2243,7 @@ int execv(const char *pathname, char *const argv[]){
 		execv_result = execv_wrapper(pathname, argv);
 
 		if(execv_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECV ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECV ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		execv_result = execv_wrapper(pathname, argv);
@@ -2269,7 +2269,7 @@ int execvp(const char *file, char *const argv[]){
 	// If execv succeeds this code will never be executed
 
 		if(execvp_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		execvp_result = execvp_wrapper(file, argv);
@@ -2296,7 +2296,7 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 	// If execv succeeds this code will never be executed
 
 		if(execve_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
 		}
 	} else {
 		execve_result = execve_wrapper(pathname, argv, envp);
@@ -2323,7 +2323,7 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 	// If execv succeeds this code will never be executed
 
 		if(execvpe_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -2351,7 +2351,7 @@ FILE * popen(const char *command, const char *type){
 		file = original_popen(command, type);
 
 		if(file == NULL){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] POPEN ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] POPEN ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
@@ -2383,7 +2383,7 @@ int mount(const char *source, const char *target, const char *filesystemtype, un
 		mount_result = original_mount(source, target, filesystemtype, mountflags, data);
 
 		if(mount_result == -1){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] MOUNT ERROR: %s\n", strerror(errno));
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MOUNT ERROR: %s\n", strerror(errno));
 		}
 
 	} else {
