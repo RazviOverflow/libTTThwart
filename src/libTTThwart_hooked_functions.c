@@ -1531,6 +1531,7 @@ int rename(const char *oldpath, const char *newpath){
 
 		check_parameters_properties(sanitized_new_path, __func__);
 
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
 		rename_result = original_rename(oldpath, newpath);
 
@@ -1587,7 +1588,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 
 		check_parameters_properties(sanitized_new_path, __func__);
 
-
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
 		renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 
@@ -1630,12 +1631,12 @@ FILE *fopen64(const char *path, const char *mode){
 
 		print_function_and_path(__func__, path, sanitized_path);
 
+		get_fs_and_initialize_checking_functions(sanitized_path);
+
 		check_parameters_properties(sanitized_path, __func__);
 
 		bool path_exists_before = file_does_exist(sanitized_path);
 		struct stat new_file;
-
-
 
 		fopen64_result = original_fopen64(path, mode);
 
@@ -1669,6 +1670,8 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
 		check_parameters_properties(sanitized_pathname, __func__);
+
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
 
 		bool file_exists_before = file_does_exist(sanitized_pathname);
 		struct stat new_file;
@@ -1706,9 +1709,9 @@ int mkfifo(const char *pathname, mode_t mode){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(pathname, __func__);
-
-
 
 		mkfifo_result = original_mkfifo(pathname, mode);
 
@@ -1747,6 +1750,8 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 		}
 
 		print_function_and_path(__func__, pathname, sanitized_path);
+
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
 		check_parameters_properties(sanitized_path, __func__);
 
@@ -1787,8 +1792,9 @@ int chmod(const char *pathname, mode_t mode){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
-		check_parameters_properties(sanitized_pathname, __func__);
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
 
+		check_parameters_properties(sanitized_pathname, __func__);
 
 		chmod_result =  original_chmod(pathname, mode);
 
@@ -1817,9 +1823,9 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(sanitized_pathname, __func__);
-
-
 
 		chown_result =  original_chown(pathname, owner, group);
 
@@ -1848,9 +1854,9 @@ int truncate(const char *path, off_t length){
 
 		print_function_and_path(__func__, path, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathnamr);
+
 		check_parameters_properties(sanitized_pathname, __func__);
-
-
 
 		truncate_result = original_truncate(path, length);
 
@@ -1878,6 +1884,8 @@ int truncate64(const char *path, off_t length){
 
 		print_function_and_path(__func__, path, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(sanitized_pathname, __func__);
 
 		truncate64_result = original_truncate64(path, length);
@@ -1903,14 +1911,13 @@ int utime(const char *filename, const struct utimbuf *times){
 
 	if(LIBRARY_ON){
 
-
 		const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
 
 		print_function_and_path(__func__, filename, sanitized_filename);
 
+		get_fs_and_initialize_checking_functions(sanitized_filename);
+
 		check_parameters_properties(sanitized_filename, __func__);
-
-
 
 		utime_result = original_utime(filename, times);
 
@@ -1937,6 +1944,8 @@ int utimes(const char *filename, const struct timeval *times){
 		const char *sanitized_filename = sanitize_and_get_absolute_path(filename);
 
 		print_function_and_path(__func__, filename, sanitized_filename);
+
+		get_fs_and_initialize_checking_functions(sanitized_filename);
 
 		check_parameters_properties(sanitized_filename, __func__);
 
@@ -1967,8 +1976,9 @@ long pathconf(const char *path, int name){
 
 		print_function_and_path(__func__, path, sanitized_path);
 
-		check_parameters_properties(sanitized_path, __func__);
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
+		check_parameters_properties(sanitized_path, __func__);
 
 		pathconf_result = original_pathconf(path, name);
 
@@ -1992,6 +2002,8 @@ int mkdir(const char *pathname, mode_t mode){
 		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
+
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
 
 		check_parameters_properties(sanitized_pathname, __func__);
 
@@ -2029,6 +2041,8 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
 		print_function_and_path(__func__, pathname, sanitized_path);
 
+		get_fs_and_initialize_checking_functions(sanitized_path);
+
 		check_parameters_properties(sanitized_path, __func__);
 
 		mkdirat_result = original_mkdirat(dirfd, pathname, mode);
@@ -2047,7 +2061,6 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 
 int chdir(const char *path){
 
-
 	int chdir_result;
 
 	if(LIBRARY_ON){
@@ -2055,6 +2068,8 @@ int chdir(const char *path){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 		print_function_and_path(__func__, path, sanitized_path);
+
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
 		check_parameters_properties(sanitized_path, __func__);
 
@@ -2076,12 +2091,13 @@ int chroot(const char *path){
 
 	int chroot_result;
 
-
 	if(LIBRARY_ON){
 
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
 		print_function_and_path(__func__, path, sanitized_path);
+
+		get_fs_and_initialize_checking_functions(sanitized_path);
 
 		if(original_chroot == NULL){
 			original_chroot = dlsym_wrapper(__func__);
@@ -2108,6 +2124,8 @@ int execl(const char *pathname, const char *arg, ...){
 	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
 	print_function_and_path(__func__, pathname, sanitized_pathname);
+
+	get_fs_and_initialize_checking_functions(sanitized_pathname);
 
 	check_parameters_properties(sanitized_pathname, __func__);
 
@@ -2137,6 +2155,8 @@ int execlp(const char *file, const char *arg, ...){
 		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
 		print_function_and_path(__func__, file, sanitized_file);
+
+		get_fs_and_initialize_checking_functions(sanitized_file);
 
 		check_parameters_properties(sanitized_file, __func__);
 
@@ -2175,6 +2195,8 @@ int execle(const char *pathname, const char *arg, ...){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(sanitized_pathname, __func__);
 
 		va_list variable_arguments;
@@ -2210,6 +2232,8 @@ int execv(const char *pathname, char *const argv[]){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(sanitized_pathname, __func__);
 
 		execv_result = execv_wrapper(pathname, argv);
@@ -2233,6 +2257,8 @@ int execvp(const char *file, char *const argv[]){
 		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
 		print_function_and_path(__func__, file, sanitized_file);
+
+		get_fs_and_initialize_checking_functions(sanitized_file);
 
 		check_parameters_properties(sanitized_file, __func__);
 
@@ -2261,6 +2287,8 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 
 		print_function_and_path(__func__, pathname, sanitized_pathname);
 
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
+
 		check_parameters_properties(sanitized_pathname, __func__);
 
 		execve_result = execve_wrapper(pathname, argv, envp);
@@ -2287,6 +2315,8 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 		const char *sanitized_file = sanitize_and_get_absolute_path(file);
 
 		print_function_and_path(__func__, file, sanitized_file);
+
+		get_fs_and_initialize_checking_functions(sanitized_file);
 
 		check_parameters_properties(sanitized_file, __func__);
 
@@ -2348,9 +2378,9 @@ int mount(const char *source, const char *target, const char *filesystemtype, un
 
 		print_function_and_path(__func__, source, sanitized_source);
 
+		get_fs_and_initialize_checking_functions(sanitized_source);
+
 		check_parameters_properties(sanitized_source, __func__);
-
-
 
 		mount_result = original_mount(source, target, filesystemtype, mountflags, data);
 
