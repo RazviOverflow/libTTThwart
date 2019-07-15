@@ -1,8 +1,11 @@
-/* RazviOverflow
- This file must be compiled with the following command:
-	gcc -shared -Wall -Wextra -fPIC ALLinONE.c -o ALLinONE.so -std=c99 -ldl
- 
- Glibc min version => 2.19
+/* 
+Authors:
+	Razvan Raducu @Razvieu
+	Ricardo J. Rodriguez @RicardoJRdez
+
+Compilation:
+	Simply use 'make' from the root directory. If you want debug messages 
+	compile with 'make debug'
 */
 #define _GNU_SOURCE
 
@@ -159,11 +162,11 @@ static void after_main(void){
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] DELETING TEMPORAL DIRECTORY %s\n", g_temp_dir);
 		
-		/*
+		
 		if(remove_directory_and_content(g_temp_dir) == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG,"[!] ERROR DELETING TEMPORAL DIRECTORY %s\n[!] ERROR: %s\n", g_temp_dir, strerror(errno));
 		}
-		*/
+		
 
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		
@@ -335,14 +338,6 @@ void create_temp_dir(){
 
 /// ########## Logic ##########
 
-/*
-    Checks properties of the given parameters, this is, the given path and 
-    inode. Checking properties in this context means checking if a 
-    file_object_info with the same path already exists in the array. If it
-    doesn't, insert it and return true, othwerwise (if it does) compare 
-    the given inode and the inode of the file_object_info. If they're equal
-    return true, otherwise return false (TOCTTOU detected). 
-*/
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s.\n", caller_function_name, path);
@@ -399,11 +394,6 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 	}
 }
 
-/*
-	Function to get full path of a given parameter without resolving, expanding
-	symbolic links. That's why realpath() is useless. 
-	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
-*/
 const char * sanitize_and_get_absolute_path(const char * src) {
 
 		char *res;
@@ -503,12 +493,7 @@ const char * sanitize_and_get_absolute_path(const char * src) {
         return res;
 }
 
-/*
-	Function to get full path of a given parameter without resolving, expanding
-	symbolic links but using a directory file descriptor as current working dir. It is assumed that the file 
-	is indeed within that directory. The function translates the file descriptor
-	into the actual directory (string).
-*/
+
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd) {
 
 	// changing current working directory
@@ -528,10 +513,7 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 }
 
 
-/*
-	Function used to retrieve as string the full directory path pointed to
-	by a given file descriptor. 
-*/
+
 char * get_directory_from_fd(int directory_fd){
 	char *original_working_dir = get_current_dir_name();
 
@@ -549,16 +531,6 @@ char * get_directory_from_fd(int directory_fd){
 }
 
 /// ########## Logic ##########
-
-/// <-------------------------------------------------> 
-
-/// ########## Core and useful functions ##########
-
-
-
-
-
-/// ########## Core and useful functions ##########
 
 /// <-------------------------------------------------> 
 

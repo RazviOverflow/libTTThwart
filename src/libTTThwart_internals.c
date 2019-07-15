@@ -55,10 +55,6 @@ int get_number_of_variable_arguments_char_pointer_type(va_list variable_argument
 	return number_of_arguments;
 }
 
-/*
-	Function used to determine whether a path is absolute. If it isn't it's, 
-	obviosuly, because it is relative.
-*/
 bool path_is_absolute(const char *path){
 	return (path[0] == '/');
 }
@@ -112,10 +108,6 @@ void get_fs_and_initialize_checking_functions(const char *path){
 
 }
 
-/*
-    Retrieves the corresponding inode of a given path. If path is a symlink
-    it retrieves the inode of the target rather than the symlink itself. 
-*/
 ino_t get_inode(const char *path){
 	int fd;
 	ino_t inode;
