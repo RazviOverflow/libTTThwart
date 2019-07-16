@@ -3,18 +3,29 @@
 
 #include <stdbool.h>
 
-/// ########## GLOBAL VARIABLES ##########
-
+/*
+	Global folder used to create all log files as well as temporal hard links.
+*/
 #define LIBRARY_FOLDER "/libTOCTTOU"
-#define TEMPORAL_LINKS_FOLDER "/tmpLINK"
 
+/*
+	Global <file_objects_info> array that's used to maintain all the information
+	about file metadata.
+*/
 file_objects_info g_array;
 
-bool LIBRARY_ON; // Defaults to false
+/*
+	Global boolean that indicates whether the libary must be used. Bear in mind
+	that one of the premises of TOCTTOU vulnerabilities is the attacker has
+	lesser privileges than the vulnerable program. This is, the program is
+	a setuid-bit-on program. (EUID = UID); where UID = RUID
+*/
+bool LIBRARY_ON; 
 
-char *g_temp_dir; // Directory for temporal files
-
-
-/// ########## GLOBAL VARIABLES ##########
+/*
+	Globlar variable that indcates the directory of temporal hard links, in case
+	there are any. 
+*/
+char *g_temp_dir; 
 
 #endif

@@ -36,7 +36,8 @@ Compilation:
 			and inode. 
 
 
-	[1] Modeling and preventing TOCTTOU vulnerabilities in Unix-style file systems. 
+	[1] Modeling and preventing TOCTTOU vulnerabilities in Unix-style file systems.
+			J Wei, C Pu - Computers & Security, 2010 - Elsevier
 */
 
 // Left-handed functions <checkFuncion>

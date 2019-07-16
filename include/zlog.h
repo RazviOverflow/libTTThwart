@@ -17,37 +17,39 @@ extern const char* zlog_file_log_name;
 
 // Start API
 
-// initialize zlog: flush to a log file
+// Initialize zlog: flush to a log file.
 void zlog_init(char const* log_file);
-// initialize zlog: flush to a STDOUT
+
+// Initialize zlog: flush to a STDOUT.
 void zlog_init_stdout(void);
-// initialize zlog: flush to a STDERR
+
+// Initialize zlog: flush to a STDERR.
 void zlog_init_stderr(void);
-// creating a flushing thread
+
+// Creating a flushing thread.
 void zlog_init_flush_thread();
-// finish using the zlog; clean up
+
+// Finish using the zlog; clean up.
 void zlog_finish();
-// explicitely flush the buffer in memory
+
+// Explicitely flush the buffer in memory.
 void zlog_flush_buffer();
 
-// log an entry; using the printf format
+// Log an entry; using the printf format.
 void zlogf(int msg_level, char const * fmt, ...);
 
-// log an entry with a timestamp
+// Log an entry with a timestamp.
 void zlogf_time(int msg_level, char const * fmt, ...);
 
-// log an entry with the filename and location;
+// Log an entry with the filename and location;
 //   the first 2 arguments can be replaced by ZLOG_LOC which 
 //   will be filled by the compiler
 void zlog(int msg_level, char* filename, int line, char const * fmt, ...);
 
-// log an entry with the filename and location with a timestamp
+// Log an entry with the filename and location with a timestamp.
 void zlog_time(int msg_level, char* filename, int line, char const * fmt, ...);
 
-// return where logs are being written (file absolute path)
+// Return where logs are being written (file absolute path).
 const char* zlog_get_log_file_name();
-
-
-// End API
 
 #endif

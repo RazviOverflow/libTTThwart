@@ -10,10 +10,7 @@
 #include "libTTThwart_internals.h"
 #include "zlog.h"
 
-/*
-    Initializes the given array with the given size, allocating
-    the corresponding memory.
-*/
+
 void initialize_array(file_objects_info *array, size_t size){
 
 	array->list = (file_object_info *) calloc(size, sizeof(file_object_info)); 
@@ -25,18 +22,6 @@ void initialize_array(file_objects_info *array, size_t size){
 
 }
 
-/*
-    Inserts into the given array the given path and inode.  
-    Before inserting elements into the given array, the array 
-    must be initialized.
-    If there is not enough room in the array to insert a new
-    file_object_info element, the size of the array gets doubled.
-    After the element is inserted, "used" member of the given
-    array is postincremented.
-    If the path already exists in the array, the function 
-    updates the corresponding inode instead of inserting new
-    element.
-*/
 void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
 
 	printf("IM USING UPSERT FOR EXT3EXT4\n");
@@ -155,6 +140,7 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 
 }
 
+
 void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir __attribute__((unused))){
 
 	printf("IM USING UPSERT FOR OTHER FS\n");
@@ -210,7 +196,6 @@ void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *pat
 
 }
 
-
 void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const char *path, ino_t inode){
     
     // If array has not been yet initialized, initialize it. 
@@ -260,11 +245,6 @@ void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const c
 
 }
 
-
-/*
-    Frees the memory used by the given array. This function
-    is ment to be called at the end of the program.
-*/
 void free_array(file_objects_info *array){
 
 	for(uint i = 0; i < array->used; i++){
@@ -284,11 +264,6 @@ void free_array(file_objects_info *array){
 
 }
 
-/*
-    Find the index of the given path in the given array. If array's
-    size is not bigger than 0, it means the array has not yet been 
-    initialized, so there is no way the element could be found. 
-*/
 int find_index_in_array(file_objects_info *array, const char *path){
 
 	int returnValue = -1;
@@ -306,18 +281,10 @@ int find_index_in_array(file_objects_info *array, const char *path){
 	}
 }
 
-/*
-   Retrieve the file_object_info element at the given index in the
-   given array. 
-*/
 file_object_info get_from_array_at_index(file_objects_info *array, int index){
 	return array->list[index];
 }
 
-/*
-	Removes the element at index index from the array. Please note it's index,
-	not position. Index starts at 0.
-*/
 void remove_from_array_at_index(file_objects_info *array, int index){
 
 	file_object_info aux = get_from_array_at_index(array, index);

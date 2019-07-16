@@ -10,16 +10,6 @@
 #include "libTTThwart_internals.h"
 #include "libTTThwart_hooked_functions.h"
 
-
-/// ########## Wrappers ##########
-
-/*
-    The correct way to test for an error is to call dlerror() 
-    to clear any old error conditions, then call dlsym(), and 
-    then call dlerror() again, saving its return value into a
-    variable, and check whether this saved value is not NULL.
-    https://linux.die.net/man/3/dlsym
-*/
 void* dlsym_wrapper(const char *original_function){
 
 	dlerror();
@@ -33,12 +23,6 @@ void* dlsym_wrapper(const char *original_function){
 	return function_handler;
 }
 
-/*
-    The open wrapper guarantees, insures original_open is initialized.
-    It's used by other inner functions in order to avoid open() recursivity
-    and overhead. In adittion, it deals with ellipsis (variable 
-    arguments) since open is a variadic function.
-*/
 int open_wrapper(const char *path, int flags, va_list variable_arguments){
 
 	if ( original_open == NULL ) {
@@ -83,10 +67,6 @@ int open64_wrapper(const char *path, int flags, va_list variable_arguments){
 	
 }
 
-/*
-	Openat wrapper is exactly the same as open wrapper but for
-	 openat.
-*/
 int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
 
 	if(original_openat == NULL){
@@ -109,9 +89,6 @@ int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_argu
 
 }
 
-/*
-	Same as open_wrapper.
-*/
 int chdir_wrapper(const char *path){
 	
 	if(original_chdir == NULL){
@@ -121,17 +98,6 @@ int chdir_wrapper(const char *path){
 	return original_chdir(path);
 }
 
-
-/*
-	Wrapper for all execlX functions family. This wrapper treats the variable
-	arguments and calls the corresponding execlX function according to:
-	[function argument value] : [execlX function]
-	0 : execl https://code.woboq.org/userspace/glibc/posix/execl.c.html
-	1 : execlp https://code.woboq.org/userspace/glibc/posix/execlp.c.html
-	2 : execle https://code.woboq.org/userspace/glibc/posix/execle.c.html
-
-	Additional info: https://code.woboq.org/userspace/glibc/posix/execl.c.html
-*/
 int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
 	int execlX_result = -1;
 
@@ -269,4 +235,3 @@ int remove_wrapper(const char *pathname){
 	return original_remove(pathname);
 	
 }
-/// ########## Wrappers ##########
