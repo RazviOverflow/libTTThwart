@@ -14,6 +14,8 @@
 */
 
 /*
+	
+	Function: dlsym_wrapper
     The correct way to test for an error is to call dlerror() 
     to clear any old error conditions, then call dlsym(), and 
     then call dlerror() again, saving its return value into a

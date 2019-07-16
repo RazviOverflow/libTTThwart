@@ -1,0 +1,1 @@
+NDFramePage.OnPageTitleLoaded("File:libTTThwart_wrappers.h","libTTThwart_wrappers.h");NDSummary.OnSummaryLoaded("File:libTTThwart_wrappers.h",[["C/C++","C"]],[["Functions","Function"],["Groups","Group"]],[[1,0,1,"Functions","Functions"],[2,0,0,"dlsym_wrapper","dlsym_wrapper"]]);

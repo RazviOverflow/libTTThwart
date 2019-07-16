@@ -1531,7 +1531,7 @@ int rename(const char *oldpath, const char *newpath){
 
 		check_parameters_properties(sanitized_new_path, __func__);
 
-		get_fs_and_initialize_checking_functions(sanitized_path);
+		get_fs_and_initialize_checking_functions(sanitized_new_path);
 
 		rename_result = original_rename(oldpath, newpath);
 
@@ -1588,7 +1588,7 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 
 		check_parameters_properties(sanitized_new_path, __func__);
 
-		get_fs_and_initialize_checking_functions(sanitized_path);
+		get_fs_and_initialize_checking_functions(sanitized_new_path);
 
 		renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 
@@ -1854,7 +1854,7 @@ int truncate(const char *path, off_t length){
 
 		print_function_and_path(__func__, path, sanitized_pathname);
 
-		get_fs_and_initialize_checking_functions(sanitized_pathnamr);
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
 
 		check_parameters_properties(sanitized_pathname, __func__);
 
