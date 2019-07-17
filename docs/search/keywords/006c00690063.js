@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("lic",["Information"],[["License",,[[,,,,0,"File:libTTThwart_internals.h:License"]]]]);
+NDSearch.OnPrefixDataLoaded("lic",["Information"],[["License",,[[,,,,0,"File:libTTThwart_file_objects_info.h:License"]]]]);

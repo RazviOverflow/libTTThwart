@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("fil",["Function"],[["file_does_exist",,[[,,,,0,"File:libTTThwart_internals.h:file_does_exist"]]]]);
+NDSearch.OnPrefixDataLoaded("fil",["Constant","Function","Type"],[["file",,[[,"Nonexisting file inode",,,0,"File:libTTThwart_file_objects_info.h:Nonexisting_file_inode"]]],["file_does_exist",,[[,,,,1,"File:libTTThwart_internals.h:file_does_exist"]]],["file_object_info",,[[,,,,2,"File:libTTThwart_file_objects_info.h:file_object_info"]]],["file_objects_info",,[[,,,,2,"File:libTTThwart_file_objects_info.h:file_objects_info"]]]]);

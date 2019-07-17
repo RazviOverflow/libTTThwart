@@ -1,3 +1,15 @@
+/*
+	About: License
+
+		Whatever
+
+	Authors:
+
+		<Razvan Raducu: https://twitter.com/Razvieu>
+
+		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+*/
+
 #ifndef FILE_OBJECTS_INFO_H_
 #define FILE_OBJECTS_INFO_H_
 
@@ -10,10 +22,19 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+	Constant: Nonexisting file inode
+
+	NONEXISTING_FILE_INODE - Consant whose value is 0. It's used when <get_inode>
+	is invoked over a file that does not exist. In that case, <get_inode> returns
+	NON_EXISTING_FILE_INODE.
+*/
 #define NONEXISTING_FILE_INODE 0
 
 /*
-	Represents specific metadata of each  file used by any of the hooked functions.  
+	Typedef: file_object_info
+
+	Represents specific metadata of each file used by any of the hooked functions.  
 
 	Members:
 		- Inode. Inode of the given file. 
@@ -32,6 +53,8 @@ typedef struct{
 } file_object_info;
 
 /*
+	Typedef: file_objects_info
+
 	Main structure of the whole library. It is a global array containing different
 	<file_object_info> entries. 
 
@@ -49,6 +72,8 @@ typedef struct{
 
 
 /*
+	Pointer to function: upsert_file_data_in_array
+
 	Upserts (updates or inserts) the corresponding data of a given file into the
 	global structure (array) that's used to assure files consistency between 
 	operations. The data that's being saved is:
@@ -72,6 +97,8 @@ typedef struct{
 void (*upsert_file_data_in_array)(file_objects_info *, const char *, ino_t, char *);
 
 /*
+	Function: upsert_file_data_in_array_ext3ext4
+
 	Implementation of upsert_file_data_in_array for ext3 and ext4 file systems. 
 	The main difference is that these filesystems reuse inodes so hardlinks must
 	be created in order to ensure inode consistency.
@@ -82,62 +109,116 @@ void (*upsert_file_data_in_array)(file_objects_info *, const char *, ino_t, char
     the array gets doubled. After the element is inserted, "used" member of the 
     given array is postincremented. If the path already exists in the array, the 
     function updates the corresponding inode instead of inserting new element.
+
+    Parameters: 
+    	array - <file_objects_info> array to insert into.
+    	path - Sanitized path to insert.
+    	inode - Inode to insert.
+    	tmp_dir - Temporal hardlinks directory to insert, in case there's any. 
 */
-void upsert_file_data_in_array_ext3ext4(file_objects_info *, const char *, ino_t, char *);
+void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir);
 
 /*
+	Function: upsert_file_data_in_array_otherfs
+
 	Implementation of upsert_file_data_in_array for other FS than ext3 and ext4.
 	As far as I am concerned as of right now, there is no need to ensure inode
 	consistency because only ext3 and ext4 reuse them. Last 
+	
+	Parameters:
+    	array - <file_objects_info> array to insert into.
+    	path - Sanitized path to insert.
+    	inode - Inode to insert.
+    	tmp_dir - Temporal hardlinks directory to insert, in case there's any. 
+
 */
-void upsert_file_data_in_array_otherfs(file_objects_info *, const char *, ino_t, char *);
+void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir);
 
 /*
+	Function: initialize_array
+
     Initializes the given <file_objects_info> array with the given size, allocating
     the corresponding memory. The allocation is made via <calloc> and the function
     performs error checking. 
+
+    Parameters:
+    	array - Pointer to <file_objects_info> array to initialize.
+    	size - Initial size to allocate memory. 
 */
-void initialize_array(file_objects_info *, size_t);
+void initialize_array(file_objects_info *array, size_t size);
 
 /*
+	Function: upsert_nonexisting_file_metadata_in_array
+
 	Inserts into the given array the <file_object_info> entry with the given path
 	and inode as well as other metadata just like <upsert_file_data_in_array_otherfs>
 	does. The difference is that the inode will be 0 (zero), the temporal path will
 	be null while device_id and file_mode will get ther default (int) value.
-*/
-void upsert_nonexisting_file_metadata_in_array(file_objects_info *, const char *, ino_t);
 
-/*
+	Parameters:
+		array - <file_objects_info> array to insert into.
+    	path - Sanitized path to insert.
+    	inode - Inode to insert.
+*/
+void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const char *path, ino_t inode);
+
+/*	
+	Function: free_array
+
     Frees the memory used by the given array. This function is ment to be called 
     at the end of the program, in <after_main> destructor function. 
+
+    Parameters:
+		array - Array of type <file_objects_info> that must be freed. 
 */
-void free_array(file_objects_info *);
+void free_array(file_objects_info *array);
 
 /*
+	Function: find_index_in_array
+
     Find the index of the given path in the given array. The first check performed
     is asserting array size is bigger than 0 (zero) because othwerwise means the
     array has not yet been initialized, so there is no way the element could be 
     found in it. If array size is bigger than 0 (zero) the search is performed in
     linear, sequential manner. From the first element to the last.
 
+    Parameters:
+		array - Array of type <file_objects_info> to go across and search in. 
+		Path - Path to search. 
+
     Returns:
-    	- Index of the element (if found); otherwise -1.  
+    	Index of the element (if found); otherwise -1.  
 */
-int find_index_in_array(file_objects_info *, const char *);
+int find_index_in_array(file_objects_info *array, const char *path);
 
 
 /*
+	Function: get_from_array_at_index
+
    	Retrieves the <file_object_info> element at the given index in the given array. 
 
+	Parameters:
+		array - Array of type <file_objects_info> to go across and search in. 
+		index - Index (postion) from "array" to retrieve. 
+
    	Returns:
-   		- <file_object_info> element at the given index. 
+   		<file_object_info> element at the given index. 
 */
-file_object_info get_from_array_at_index(file_objects_info *, int);
+file_object_info get_from_array_at_index(file_objects_info *array, int index);
 
 /*
+	Function: remove_from_array_at_index
+
 	Removes the element at index "index" from the array. Please note it's index,
 	not position. Indexes start at 0.
+
+	Parameters:
+		array - Array of type <file_objects_info> to go across. 
+		index - Index (postion) from "array" to delete. 
+
+	Returns:
+
 */
-void remove_from_array_at_index(file_objects_info *, int);
+void remove_from_array_at_index(file_objects_info *array, int index);
 
 #endif

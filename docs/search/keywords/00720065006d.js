@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("rem",["Function"],[["remove_directory_and_content",,[[,,,,0,"File:libTTThwart_internals.h:remove_directory_and_content"]]]]);
+NDSearch.OnPrefixDataLoaded("rem",["Function"],[["remove_directory_and_content",,[[,,,,0,"File:libTTThwart_internals.h:remove_directory_and_content"]]],["remove_from_array_at_index",,[[,,,,0,"File:libTTThwart_file_objects_info.h:remove_from_array_at_index"]]]]);
