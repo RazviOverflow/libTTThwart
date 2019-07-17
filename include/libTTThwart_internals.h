@@ -16,7 +16,7 @@
 	on that, initialize <check_parameters_properties> function accordingly. Please
 	refer to that function in order to know what different initializations means. 
 */
-void get_fs_and_initialize_checking_functions(const char *);
+void get_fs_and_initialize_checking_functions(const char *path);
 
 /*
 	Just a wrapper to check dlsym errors. This wrapper complies wit the recommendations
@@ -28,7 +28,7 @@ void check_dlsym_error();
 	Function used to log what function was called, what path it was called with
 	and its sanitized version. 
 */
-void print_function_and_path(const char *, const char *, const char *);
+void print_function_and_path(const char *func, const char *path, const char *sanitized_path);
 
 /*
 	Function used to calculate the number of arguments given a variable char argument
@@ -37,7 +37,7 @@ void print_function_and_path(const char *, const char *, const char *);
 	Returns:
 		The number of char parameters. 
 */
-int get_number_of_variable_arguments_char_pointer_type(va_list );
+int get_number_of_variable_arguments_char_pointer_type(va_list variable_arguments);
 
 /*
 	Function used to get the corresponding inode of a given path.
@@ -45,12 +45,12 @@ int get_number_of_variable_arguments_char_pointer_type(va_list );
 	Returns:
 		The inode. 
 */
-ino_t get_inode(const char *);
+ino_t get_inode(const char *path);
 
 /*
 	Function used to determine whether a path is absolute.
 */
-bool path_is_absolute(const char *);
+bool path_is_absolute(const char *path);
 
 /*
 	Function used to determine whether a file exists at the moment of invocation. 
@@ -61,7 +61,7 @@ bool path_is_absolute(const char *);
 		0 for false.
 		1 for true. 
 */
-int file_does_exist(const char *);
+int file_does_exist(const char *pathname);
 
 /*
 	Funcrtion used to recursively delete a given directory.
@@ -69,7 +69,7 @@ int file_does_exist(const char *);
 	Returns:
 		Value indicating whethere there were errors.
 */
-int remove_directory_and_content(char *);
+int remove_directory_and_content(char *path_to_remove);
 
 /*
 	Function used to retrieve metadata of a given path. In order to do so, the
@@ -78,7 +78,7 @@ int remove_directory_and_content(char *);
 	Returns:
 		struct stat containing all the metadata of the given path. 
 */
-struct stat get_file_metadata(const char *);
+struct stat get_file_metadata(const char *path);
 
 /*
 	Function used to check whether the given str parameter start with the given
@@ -88,6 +88,6 @@ struct stat get_file_metadata(const char *);
 		True if str starts with pre.
 		False otherwise. 
 */
-bool starts_with(const char *, const char *);
+bool starts_with(const char *pre, const char *str);
 
 #endif
