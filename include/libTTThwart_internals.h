@@ -1,9 +1,17 @@
 /*
 	About: License
 
+		Whatever
+
 	Authors:
-		Razvan Raducu @Razvieu
-		Ricardo J. Rodriguez @RicardoJRdez
+
+		<Razvan Raducu: https://twitter.com/Razvieu>
+
+		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+		
+	Compilation:
+		Simply use 'make' from the root directory. If you want debug messages 
+		compile with 'make debug'
 */
 
 #ifndef LIBTTHWART_INTERNALS_H_
@@ -17,7 +25,7 @@
 #include <fcntl.h>
 
 /*
-	Preprocessor definitions: GET_PROGRAM_NAME()
+	Constant: GET_PROGRAM_NAME()
 	
 	Function used to retrieve the actual process name. 
 */

@@ -1,0 +1,1 @@
+NDSummary.OnToolTipsLoaded("File:libTTThwart_hooked_functions.h",{45:"<div class=\"NDToolTip TInformation LC\"><div class=\"TTSummary\">Whatever</div></div>"});

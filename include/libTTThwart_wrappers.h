@@ -1,7 +1,17 @@
 /*
 	About: License
 
-	This code is licensed under: // TODO MUST BE COMPLETED
+		Whatever
+
+	Authors:
+
+		<Razvan Raducu: https://twitter.com/Razvieu>
+
+		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+		
+	Compilation:
+		Simply use 'make' from the root directory. If you want debug messages 
+		compile with 'make debug'
 */
 
 #ifndef LIBTTHWART_WRAPPERS_H

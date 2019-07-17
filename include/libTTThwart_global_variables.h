@@ -8,8 +8,11 @@
 		<Razvan Raducu: https://twitter.com/Razvieu>
 
 		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+		
+	Compilation:
+		Simply use 'make' from the root directory. If you want debug messages 
+		compile with 'make debug'
 */
-
 #ifndef FILE_GLOBAL_VARIABLES_H_
 #define FILE_GLOBAL_VARIABLES_H_
 

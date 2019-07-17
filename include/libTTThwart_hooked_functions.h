@@ -1,11 +1,17 @@
-/* 
-Authors:
-	Razvan Raducu @Razvieu
-	Ricardo J. Rodriguez @RicardoJRdez
+/*
+	About: License
 
-Compilation:
-	Simply use 'make' from the root directory. If you want debug messages 
-	compile with 'make debug'
+		Whatever
+
+	Authors:
+
+		<Razvan Raducu: https://twitter.com/Razvieu>
+
+		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+		
+	Compilation:
+		Simply use 'make' from the root directory. If you want debug messages 
+		compile with 'make debug'
 */
 
 #ifndef LIBTTHWART_HOOKED_FUNCTIONS_H_
