@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("sco",["Information"],[["scope",,[[,"Wrappers\' scope.",,"wrappers\'scope.",0,"File:libTTThwart_wrappers.h:Wrappers\'scope."]]]]);

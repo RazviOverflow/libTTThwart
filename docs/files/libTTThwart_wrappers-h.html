@@ -8,14 +8,40 @@
 
 <body onload="NDLoader.OnLoad('Content');" class="NDPage NDContentPage">
 
-<a name="Functions"></a><a name="Topic1"></a><div class="CTopic TGroup LC first">
+<a name="Information"></a><a name="Topic3"></a><div class="CTopic TGroup LC first">
+ <div class="CTitle">Information</div>
+</div>
+
+<a name="License"></a><a name="Topic8"></a><div class="CTopic TInformation LC">
+ <div class="CTitle">License</div>
+ <div class="CBody"><p>This code is licensed under: // TODO MUST BE COMPLETED</p></div>
+</div>
+
+<a name="Wrappers'scope."></a><a name="Topic5"></a><div class="CTopic TInformation LC">
+ <div class="CTitle">Wrappers' scope.</div>
+ <div class="CBody"><p>All the wrappers defined here are used for function calls within the library.&nbsp; The use of wrappers is very important because it avoids recursive calls of whatever function. For example, let's say there is a need to call open within the library. If the libarary were to call open(), since open() is a hooked function, the call would be recursive. We need to directly call original functions from within the library and we achieve that by using wrappers.</p></div>
+</div>
+
+<a name="Functions"></a><a name="Topic1"></a><div class="CTopic TGroup LC">
  <div class="CTitle">Functions</div>
 </div>
 
-<a name="dlsym_wrapper"></a><a name="Topic2"></a><div class="CTopic TFunction LC last">
+<a name="dlsym_wrapper"></a><a name="Topic4"></a><div class="CTopic TFunction LC">
  <div class="CTitle">dlsym_wrapper</div>
- <div id="NDPrototype2" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">extern</span> <span class="SHKeyword">void</span> * dlsym_wrapper(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PType first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PName last">char *</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>
- <div class="CBody"><p>The correct way to test for an error is to call dlerror() to clear any old error conditions, then call dlsym(), and then call dlerror() again, saving its return value into a variable, and check whether this saved value is not NULL.&nbsp; <a href="https://linux.die.net/man/3/dlsym" target="_top">https://&#8203;linux&#8203;.die&#8203;.net&#8203;/man&#8203;/3&#8203;/dlsym</a></p></div>
+ <div id="NDPrototype4" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">extern</span> <span class="SHKeyword">void</span> * dlsym_wrapper(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PType first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PName last">char *</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>
+ <div class="CBody"><p>The correct way to test for an error is to call dlerror() to clear any old error conditions, then call dlsym(), and then call dlerror() again, saving its return value into a variable, and check whether this saved value is not NULL.&nbsp; Please refer to <a href="http://man7.org/linux/man-pages/man3/dlsym.3.html" target="_top">Linux Programmer's Manual (man-pages) official dlsym() docs</a></p></div>
+</div>
+
+<a name="open_wrapper"></a><a name="Topic6"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">open_wrapper</div>
+ <div id="NDPrototype6" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">extern</span> <span class="SHKeyword">int</span> open_wrapper(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PType first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PName last">char *,</td></tr><tr><td class="first"></td><td class="PName last">int,</td></tr><tr><td class="first"></td><td class="PName last">va_list</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>
+ <div class="CBody"><p>The open wrapper guarantees, insures original_open is initialized.&nbsp; It's used by other inner functions in order to avoid open() recursivity and overhead. In adittion, it deals with ellipsis (variable arguments) since open is a variadic function.</p></div>
+</div>
+
+<a name="open64_wrapper"></a><a name="Topic7"></a><div class="CTopic TFunction LC last">
+ <div class="CTitle">open64_wrapper</div>
+ <div id="NDPrototype7" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">extern</span> <span class="SHKeyword">int</span> open64_wrapper(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PType first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PName last">char*,</td></tr><tr><td class="first"></td><td class="PName last">int,</td></tr><tr><td class="first"></td><td class="PName last">va_list</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>
+ <div class="CBody"><p>Exactly the same as <a href="../index.html#File:libTTThwart_wrappers.h:open_wrapper" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,6);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >open_wrapper</a> but for files larger than 2 GiB-1 size.&nbsp; Please refer to <a href="https://en.wikipedia.org/wiki/Large-file_support" target="_top">Large-file support Linux extensions</a></p></div>
 </div>
 
 </body></html>

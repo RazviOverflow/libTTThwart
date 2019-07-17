@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("ope",["Function"],[["open_wrapper",,[[,,,,0,"File:libTTThwart_wrappers.h:open_wrapper"]]],["open64_wrapper",,[[,,,,0,"File:libTTThwart_wrappers.h:open64_wrapper"]]]]);
