@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("g_t",["Variable"],[["g_temp_dir",,[[,,,,0,"File:libTTThwart_global_variables.h:g_temp_dir"]]]]);

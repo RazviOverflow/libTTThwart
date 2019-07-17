@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("lib",["Constant","Variable"],[["LIBARRY_FOLDER",,[[,,,,0,"File:libTTThwart_global_variables.h:LIBARRY_FOLDER"]]],["LIBRARY_ON",,[[,,,,1,"File:libTTThwart_global_variables.h:LIBRARY_ON"]]]]);
