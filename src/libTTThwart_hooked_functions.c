@@ -60,73 +60,62 @@ Authors:
 
 
 // Left-handed functions
- int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
- int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
- int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
- int (*original_lxstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
- int (*original_access)(const char *path, int mode) = NULL;
- int (*original_rmdir)(const char *path) = NULL;
- int (*original_unlink)(const char *path) = NULL;
- int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
- int (*original_remove)(const char *path) = NULL;
- ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz) = NULL; // readlink(2)
- ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
+int (*original_xstat)(int ver, const char *path, struct stat *buf) = NULL;
+int (*original_xstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+int (*original_lxstat)(int ver, const char *path, struct stat *buf) = NULL;
+int (*original_lxstat64)(int ver, const char *path, struct stat64 *buf) = NULL;
+int (*original_access)(const char *path, int mode) = NULL;
+int (*original_rmdir)(const char *path) = NULL;
+int (*original_unlink)(const char *path) = NULL;
+int (*original_unlinkat)(int dirfd, const char *path, int flags) = NULL;
+int (*original_remove)(const char *path) = NULL;
+ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz) = NULL; // readlink(2)
+ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
 
 // Both-handed functions
- int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
- int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath) = NULL;
- int (*original_link)(const char *oldpath, const char *newpath) = NULL;
- int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
- int (*original_rename)(const char *oldpath, const char *newpath) = NULL;
- int (*original_renameat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) = NULL;
-// int (*original_renameat2)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags) = NULL;
- int (*original_creat64)(const char *path, mode_t mode) = NULL;
- int (*original_creat)(const char *path, mode_t mode) = NULL;
- int (*original_open)(const char *path, int flags, ...) = NULL; 
- int (*original_open64)(const char *path, int flags, ...) = NULL; 
- int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
- FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
- FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
- FILE *(*original_freopen)(const char *pathname, const char *mode, FILE *stream) = NULL;
- int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
- int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
- int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
- int (*original_mkfifoat)(int dirfd, const char *pathname, mode_t mode) = NULL;
- int (*original_chmod)(const char *pathname, mode_t mode) = NULL;
- int (*original_chown)(const char *pathname, uid_t owner, gid_t group) = NULL;
- int (*original_truncate)(const char *path, off_t length) = NULL;
- int (*original_truncate64)(const char *path, off64_t length) = NULL;
- int (*original_utime)(const char *filename, const struct utimbuf *times) = NULL;
- int (*original_utimes)(const char *filename, const struct timeval times[2]) = NULL;
- long(*original_pathconf)(const char *path, int name) = NULL;
- int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
- int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode) = NULL;
- int (*original_chdir)(const char *path) = NULL;
- int (*original_chroot)(const char *path) = NULL;
-// int (*original_pivot_root)(const char *new_root, const char *putold) = NULL;
+int (*original_symlink)(const char *oldpath, const char *newpath) = NULL;
+int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath) = NULL;
+int (*original_link)(const char *oldpath, const char *newpath) = NULL;
+int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags) = NULL;
+int (*original_rename)(const char *oldpath, const char *newpath) = NULL;
+int (*original_renameat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath) = NULL;
+int (*original_creat64)(const char *path, mode_t mode) = NULL;
+int (*original_creat)(const char *path, mode_t mode) = NULL;
+int (*original_open)(const char *path, int flags, ...) = NULL; 
+int (*original_open64)(const char *path, int flags, ...) = NULL; 
+int (*original_openat)(int dirfd, const char *path, int flags, ...) = NULL;
+FILE *(*original_fopen)(const char *path, const char *mode) = NULL;
+FILE *(*original_fopen64)(const char *path, const char *mode) = NULL;
+FILE *(*original_freopen)(const char *pathname, const char *mode, FILE *stream) = NULL;
+int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev) = NULL;
+int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev) = NULL;
+int (*original_mkfifo)(const char *pathname, mode_t mode) = NULL;
+int (*original_mkfifoat)(int dirfd, const char *pathname, mode_t mode) = NULL;
+int (*original_chmod)(const char *pathname, mode_t mode) = NULL;
+int (*original_chown)(const char *pathname, uid_t owner, gid_t group) = NULL;
+int (*original_truncate)(const char *path, off_t length) = NULL;
+int (*original_truncate64)(const char *path, off64_t length) = NULL;
+int (*original_utime)(const char *filename, const struct utimbuf *times) = NULL;
+int (*original_utimes)(const char *filename, const struct timeval times[2]) = NULL;
+long(*original_pathconf)(const char *path, int name) = NULL;
+int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
+int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode) = NULL;
+int (*original_chdir)(const char *path) = NULL;
+int (*original_chroot)(const char *path) = NULL;
 
 /* execl* family is being hooked but there is no need for particular pointers 
 	to functions since they internally call execv, execvp and execve respectively*/
 // int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
 // int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
 // int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
-
 // int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
 // int (*original_execvp)(const char *file, char *const argv[]) = NULL;
- int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
- int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
+int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
+int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
 
-// doubts
- FILE *(*original_popen)(const char *command, const char *type) = NULL;
+FILE *(*original_popen)(const char *command, const char *type) = NULL;
 // int (*original_pclose)(FILE *stream) = NULL;
- int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
-/// <-------------------------------------------------> 
-
-/// ########## Coconstructor and Destructor ##########
-static void before_main(void) __attribute__((constructor));
-static void after_main(void) __attribute__((destructor));
-/// ########## Coconstructor and Destructor ##########
-
+int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
 /// <-------------------------------------------------> 
 
 /// ########## Prototype declaration ##########
@@ -138,25 +127,17 @@ void create_temp_dir();
 
 /// <-------------------------------------------------> 
 
-
-/// <------------------------------------------------->
-
-
-
-/// <-------------------------------------------------> 
-
 /// ########## Coconstructor and Destructor ##########
 
-static void before_main(void){
+static void before_main(void) __attribute__((constructor));
+static void after_main(void) __attribute__((destructor));
 
-	//printf("PATH Variable environment: %s\n", getenv("PATH"));
-	//printf("ENVIRON: %s\n", *__environ);
+static void before_main(void){
 
 	if((getuid() != geteuid()) || (getgid() != geteuid())){
 		LIBRARY_ON = true;
 	}
 	
-
 	if(LIBRARY_ON){
 
 		create_log_dir_and_start_logger();
@@ -167,8 +148,6 @@ static void before_main(void){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] I AM %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		
 	}
-
-
 }
 
 static void after_main(void){
@@ -176,18 +155,15 @@ static void after_main(void){
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] DELETING TEMPORAL DIRECTORY %s\n", g_temp_dir);
 		
-		
 		if(remove_directory_and_content(g_temp_dir) == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG,"[!] ERROR DELETING TEMPORAL DIRECTORY %s\n[!] ERROR: %s\n", g_temp_dir, strerror(errno));
 		}
 		
-
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] I WAS  %s w/ PID: %d and PPID: %d [+]\n", GET_PROGRAM_NAME(), getpid(), getppid());
 		
 	}
 
 	free_array(&g_array);
-
 }
 
 /// ########## Coconstructor and Destructor ##########
@@ -195,7 +171,6 @@ static void after_main(void){
 /// <-------------------------------------------------> 
 
 /// ########## Logger ##########
-
 
 void create_log_dir_and_start_logger(){
 
@@ -248,10 +223,8 @@ void create_log_dir_and_start_logger(){
 			fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-	}
-	
+	}	
 }
-
 
 void create_log_file_and_start_logger(const char *log_dir){
 
@@ -284,7 +257,6 @@ void create_log_file_and_start_logger(const char *log_dir){
 	} else {
 		zlog_init(log_file_absolute_path);
 	}
-
 }
 
 void create_temp_dir(){
@@ -316,26 +288,6 @@ void create_temp_dir(){
 	char final_temp_dir[total_tmp_dir_length];
 	snprintf(final_temp_dir, total_tmp_dir_length, "%s/%s_%s_%s/", temp_dir, program_name, char_pid, date_and_time);
 
-	/*
-	DIR *aux_dir = opendir(final_temp_dir);
-	if(aux_dir){
-		// Directory already exists
-		temp_folder_exists = true;
-		closedir(aux_dir);
-	} else if(errno == ENOENT){ 
-		// Directory does not exist; Create it
-		if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
-			fprintf(stderr, "[!] ERROR CREATING TMP 1st DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));	
-		} else {
-			printf("Le fichier is creationne\n");
-			temp_folder_exists = true;
-		}
-	} else {
-		fprintf(stderr, "[!] ERROR CREATING TMP 1st DIRECTORY.\n[!] ERROR: %s\n[!] ABORTING\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	*/
-
 	if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
 		fprintf(stderr, "[!] ERROR CREATING TMP 2nd DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
 		g_temp_dir = strdup(get_current_dir_name());
@@ -343,7 +295,6 @@ void create_temp_dir(){
 	} 
 
 	g_temp_dir = strdup(final_temp_dir);
-
 }
 
 /// ########## Logger ##########
@@ -390,17 +341,11 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			// at line at the beggining of the function, some external
 			// process modified the file in-between. {@INODE_RACE}
 			if((aux.inode != inode_aux) || (inode_aux == NONEXISTING_FILE_INODE) || (inode_aux != inode)){
-			//printf("FILE %s EXISTS: %d\n", path, exists);
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode, GET_PROGRAM_NAME());
 				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
 				exit(EXIT_FAILURE);
-			} else {
-				// #### EMPTY BLOCK TODO!
-				//printf("NODES ARE EQUAL!!! :) HAPPINESS");d
-				printf("######### INODES ARE EQUAL: inode from file: %lu == %lu inode from aux structure\n", aux.inode, inode);
-			}
-			
+			} // else inodes are equal, nothing to do.
 		}
 	} else { // if file_does_exist
 		zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s that does not exist. Inserting in array with negative %d inode.\n", caller_function_name, path, NONEXISTING_FILE_INODE);
@@ -421,84 +366,82 @@ const char * sanitize_and_get_absolute_path(const char * src) {
         // Relative path
         if (src_len == 0 || src[0] != '/') {
 
-                char cwd[PATH_MAX];
-                size_t cwd_len;
+            char cwd[PATH_MAX];
+            size_t cwd_len;
 
-                // Copy into cwd the null-terminated current working 
-                // directory with a max length of sizeof(cwd)
-                if (getcwd(cwd, sizeof(cwd)) == NULL) {
-                        return NULL;
-                }
+            // Copy into cwd the null-terminated current working 
+            // directory with a max length of sizeof(cwd)
+            if (getcwd(cwd, sizeof(cwd)) == NULL) {
+                return NULL;
+            }
 
-                cwd_len = strlen(cwd);
-                res = malloc(cwd_len + 1 + src_len + 1);
-                // Copies cwd_len bytes from cwd to res
-                memcpy(res, cwd, cwd_len);
-                res_len = cwd_len;
+            cwd_len = strlen(cwd);
+            res = malloc(cwd_len + 1 + src_len + 1);
+            // Copies cwd_len bytes from cwd to res
+            memcpy(res, cwd, cwd_len);
+            res_len = cwd_len;
                 
         } else {
         // Absolute path
-                //res = malloc((src_len > 0 ? src_len : 1) + 1);
-        		res = malloc(src_len + 1);
-                res_len = 0;
+            //res = malloc((src_len > 0 ? src_len : 1) + 1);
+    		res = malloc(src_len + 1);
+            res_len = 0;
                 
         }
 
         end_pointer = &src[src_len];
 
-
         for (pointer = src; pointer < end_pointer; pointer =next_pointer+1) {
-                size_t len;
+            size_t len;
 
-                // Scans the initial end_pointer-pointer bytes of the memory area pointed 
-                // to by pointer for the first instance of '/'
-                next_pointer = memchr(pointer, '/', end_pointer-pointer);
+            // Scans the initial end_pointer-pointer bytes of the memory area pointed 
+            // to by pointer for the first instance of '/'
+            next_pointer = memchr(pointer, '/', end_pointer-pointer);
 
-                if (next_pointer == NULL) {
-                        next_pointer = end_pointer;
+            if (next_pointer == NULL) {
+                next_pointer = end_pointer;
+            }
+
+            len = next_pointer-pointer;
+
+            switch(len) {
+            case 2:
+                if (pointer[0] == '.' && pointer[1] == '.') {
+                	// memrchr is like memchr, except that it searches 
+                	// backward from the end of the res_len bytes pointed
+                	// to by res instead of forward from the beginning
+                    const char * slash = memrchr(res, '/', res_len);
+                    if (slash != NULL) {
+                    	// This way the last node from the current
+                    	// directory is deleted. Lets say res starts
+                    	// @ 0x2 mem address and slash is @ 0x10.
+                    	// res_len would be 0x8 which is exactly
+                    	// the length between 0x2 and 0x10.
+                        res_len = slash - res;
+                    }
+                    // Continue applies only to loop statements. 
+                    //That is, this jumps right to next for iteration,
+                    // skipping the remaining code.
+                    continue; 
                 }
+                break;
+            case 1:
+                if (pointer[0] == '.') {
+                    continue;
 
-
-                len = next_pointer-pointer;
-
-
-                switch(len) {
-                case 2:
-                        if (pointer[0] == '.' && pointer[1] == '.') {
-                        	// memrchr is like memchr, except that it searches 
-                        	// backward from the end of the res_len bytes pointed
-                        	// to by res instead of forward from the beginning
-                                const char * slash = memrchr(res, '/', res_len);
-                                if (slash != NULL) {
-                                	// This way the last node from the current
-                                	// directory is deleted. Lets say res starts
-                                	// @ 0x2 mem address and slash is @ 0x10.
-                                	// res_len would be 0x8 which is exactly
-                                	// the length between 0x2 and 0x10.
-                                        res_len = slash - res;
-                                }
-                                // Continue applies only to loop statements. 
-                                //That is, this jumps right to next for iteration,
-                                // skipping the remaining code.
-                                continue; 
-                        }
-                        break;
-                case 1:
-                        if (pointer[0] == '.') {
-                                continue;
-
-                        }
-                        break;
-                case 0:
-                        continue;
                 }
-                res[res_len++] = '/';
-                memcpy(&res[res_len], pointer, len);
-                res_len += len;
+                break;
+            case 0:
+                continue;
+            }
+
+            res[res_len++] = '/';
+            memcpy(&res[res_len], pointer, len);
+            res_len += len;
         }
 
         if (res_len == 0) {
-                res[res_len++] = '/';
+            res[res_len++] = '/';
         }
         // Marks the end of the new sanitized and absoluted path, thus discarding
         // whatever follows res_len
@@ -506,7 +449,6 @@ const char * sanitize_and_get_absolute_path(const char * src) {
 
         return res;
 }
-
 
 const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd) {
 
@@ -525,8 +467,6 @@ const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char 
 
     return res;
 }
-
-
 
 char * get_directory_from_fd(int directory_fd){
 	char *original_working_dir = get_current_dir_name();
@@ -550,8 +490,7 @@ char * get_directory_from_fd(int directory_fd){
 
 /// ########## Hooked functions replacement code ##########
 
-int __xstat(int ver, const char *path, struct stat *buf)
-{	
+int __xstat(int ver, const char *path, struct stat *buf){
 
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
@@ -565,8 +504,6 @@ int __xstat(int ver, const char *path, struct stat *buf)
 		} else {
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
-		
-
 	}
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
@@ -575,8 +512,7 @@ int __xstat(int ver, const char *path, struct stat *buf)
 	return original_xstat(ver, path, buf);
 } 
 
-int __xstat64(int ver, const char *path, struct stat64 *buf)
-{
+int __xstat64(int ver, const char *path, struct stat64 *buf){
 
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
@@ -598,8 +534,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf)
 	return original_xstat64(ver, path, buf);
 }
 
-int __lxstat(int ver, const char *path, struct stat *buf)
-{
+int __lxstat(int ver, const char *path, struct stat *buf){
 	
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
@@ -622,8 +557,8 @@ int __lxstat(int ver, const char *path, struct stat *buf)
 	return original_lxstat(ver,path, buf);
 }
 
-int __lxstat64(int ver, const char *path, struct stat64 *buf)
-{
+int __lxstat64(int ver, const char *path, struct stat64 *buf){
+
 	if(LIBRARY_ON){
 		const char *sanitized_path = sanitize_and_get_absolute_path(path);
 
@@ -652,8 +587,7 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf)
 	has been indeed created (via fstat). If it has, we simply update its 
 	corresponding array entry or insert it.
 */
-int open(const char *path, int flags, ...)
-{
+int open(const char *path, int flags, ...){
 
 	int open_result;
 	if(LIBRARY_ON){
@@ -798,9 +732,6 @@ int access(const char *path, int mode){
 
 }
 
-
-
-
 FILE *fopen(const char *path, const char *mode){
 
 	if(original_fopen == NULL){
@@ -839,9 +770,11 @@ FILE *fopen(const char *path, const char *mode){
 }
 
 int unlink(const char *path){
+
 	if(original_unlink == NULL){
 		original_unlink = dlsym_wrapper(__func__);
 	}
+
 	int unlink_result;
 	if(LIBRARY_ON){
 
@@ -971,7 +904,6 @@ int openat(int dirfd, const char *path, int flags, ...){
 				
 				upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 				
-
 			}
 
 		}
@@ -985,7 +917,6 @@ int openat(int dirfd, const char *path, int flags, ...){
 	return openat_result;
 
 }
-
 
 /*
 	Creates a symbolic link called newpath that poins to oldpath.
@@ -1027,7 +958,6 @@ int symlink(const char *oldpath, const char *newpath){
 	}
 
 	return symlink_result;
-
 }
 
 /*
@@ -1035,14 +965,12 @@ int symlink(const char *oldpath, const char *newpath){
 */
 int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 
-
 	if(original_symlinkat == NULL){
 		original_symlinkat = dlsym_wrapper(__func__);
 	}
 	int symlinkat_result;
 
 	if(LIBRARY_ON){
-
 
 		const char *sanitized_new_path;
 
@@ -1057,8 +985,6 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 		get_fs_and_initialize_checking_functions(sanitized_new_path);
 
 		check_parameters_properties(sanitized_new_path, __func__);
-		
-
 
 		symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 
@@ -1077,7 +1003,6 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 	}
 
 	return symlinkat_result;
-
 }
 
 /*
@@ -1118,7 +1043,6 @@ int remove(const char *path) {
 	}
 
 	return remove_result;
-
 }
 
 /*
@@ -1144,8 +1068,6 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 
 		check_parameters_properties(sanitized_path, __func__);
 
-
-
 		mknod_result = original_xmknod(ver, path, mode, dev);
 
     /*
@@ -1166,7 +1088,6 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 	}
 
 	return mknod_result;
-
 }
 
 /*
@@ -1175,7 +1096,6 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 	directory file descriptor.
 */
 int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
-
 
 	if(original_xmknodat == NULL){
 		original_xmknodat = dlsym_wrapper(__func__);
@@ -1199,7 +1119,6 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 
 		check_parameters_properties(sanitized_path, __func__);
 
-
 		mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 
 	/*
@@ -1219,7 +1138,6 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 
 	return mknodat_result;
 }
-
 
 /*
 	Creates a new hardlink called newpath that points to oldpath. 
@@ -1259,16 +1177,13 @@ int link(const char *oldpath, const char *newpath){
 	}
 
 	return link_result;
-
 }
-
 
 /*
 	Creates a new hardlink called newpath in directory pointed to by newdirfd. The hardlink newpath
 	points to file oldpath, which is located in directroy pointed to by olddirfd. 
 */
 int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath, int flags){
-
 
 	if(original_linkat == NULL){
 		original_linkat = dlsym_wrapper(__func__);
@@ -1292,8 +1207,6 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 
 		check_parameters_properties(full_new_path, __func__);
 
-
-
 		linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 
     /*
@@ -1313,7 +1226,6 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 	}
 
 	return linkat_result;
-
 }
 
 int creat64(const char *path, mode_t mode){
@@ -1352,7 +1264,6 @@ int creat64(const char *path, mode_t mode){
 	}
 
 	return creat64_result;
-
 }
 
 int creat(const char *path, mode_t mode){
@@ -1391,8 +1302,6 @@ int creat(const char *path, mode_t mode){
 	}
 
 	return creat_result;
-
-
 }
 
 int rmdir(const char *path){
@@ -1400,7 +1309,6 @@ int rmdir(const char *path){
 	if(original_rmdir == NULL){
 		original_rmdir = dlsym_wrapper(__func__);
 	}
-
 
 	int rmdir_result;
 
@@ -1436,7 +1344,6 @@ int rmdir(const char *path){
 	}
 
 	return rmdir_result;
-
 }
 
 ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
@@ -1478,7 +1385,6 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 }
 
 ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
-
 
 	if(original_readlinkat == NULL){
 		original_readlinkat = dlsym_wrapper(__func__);
@@ -1529,7 +1435,6 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 }
 
 int rename(const char *oldpath, const char *newpath){
-
 
 	if(original_rename == NULL){
 		original_rename = dlsym_wrapper(__func__);
@@ -1666,7 +1571,6 @@ FILE *fopen64(const char *path, const char *mode){
 	}
 
 	return fopen64_result;
-
 }
 
 FILE *freopen(const char *pathname, const char *mode, FILE *stream){
@@ -1780,9 +1684,7 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 		if(mkfifoat_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] READLINKAT ERROR: %s\n", strerror(errno));
 		} else {
-
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
-
 		}
 	} else {
 		mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
@@ -1792,7 +1694,6 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 }
 
 int chmod(const char *pathname, mode_t mode){
-
 
 	if(original_chmod == NULL){
 		original_chmod = dlsym_wrapper(__func__);
@@ -1820,7 +1721,6 @@ int chmod(const char *pathname, mode_t mode){
 	}
 
 	return chmod_result;
-
 }
 
 int chown(const char *pathname, uid_t owner, gid_t group){
@@ -1851,7 +1751,6 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 	}
 
 	return chown_result;
-
 }
 
 int truncate(const char *path, off_t length){
@@ -1977,7 +1876,6 @@ int utimes(const char *filename, const struct timeval *times){
 
 long pathconf(const char *path, int name){
 
-
 	if(original_pathconf == NULL){
 		original_pathconf = dlsym_wrapper(__func__);
 	}
@@ -2098,7 +1996,6 @@ int chdir(const char *path){
 	}
 
 	return chdir_result;
-
 }
 
 int chroot(const char *path){
@@ -2130,34 +2027,43 @@ int chroot(const char *path){
 	}
 
 	return chroot_result;
-
 }
 
 int execl(const char *pathname, const char *arg, ...){
 
-	const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
+	int execl_result;
 
-	print_function_and_path(__func__, pathname, sanitized_pathname);
+	if(LIBRARY_ON){
+		const char *sanitized_pathname = sanitize_and_get_absolute_path(pathname);
 
-	get_fs_and_initialize_checking_functions(sanitized_pathname);
+		print_function_and_path(__func__, pathname, sanitized_pathname);
 
-	check_parameters_properties(sanitized_pathname, __func__);
+		get_fs_and_initialize_checking_functions(sanitized_pathname);
 
-	va_list variable_arguments;
-	va_start(variable_arguments, arg);
+		check_parameters_properties(sanitized_pathname, __func__);
 
-	int execl_result = execlX_wrapper(0, pathname, arg, variable_arguments);
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
 
-	// If execl succeeds this code will never be executed
+		execl_result = execlX_wrapper(0, pathname, arg, variable_arguments);
 
-	va_end(variable_arguments);
+		// If execl succeeds this code will never be executed
 
-	if(execl_result == -1){
-		zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECL ERROR: %s\n", strerror(errno));
+		va_end(variable_arguments);
+
+		if(execl_result == -1){
+			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECL ERROR: %s\n", strerror(errno));
+		}
+	} else {
+		va_list variable_arguments;
+		va_start(variable_arguments, arg);
+
+		execl_result = execlX_wrapper(0, pathname, arg, variable_arguments);
+
+		va_end(variable_arguments);
 	}
 
 	return execl_result;
-
 }
 
 int execlp(const char *file, const char *arg, ...){
@@ -2179,7 +2085,7 @@ int execlp(const char *file, const char *arg, ...){
 
 		execlp_result = execlX_wrapper(1, file, arg, variable_arguments);
 
-	// If execlp succeeds this code will never be executed
+		// If execlp succeeds this code will never be executed
 
 		va_end(variable_arguments);
 
@@ -2196,7 +2102,6 @@ int execlp(const char *file, const char *arg, ...){
 	}
 
 	return execlp_result;
-
 }
 
 int execle(const char *pathname, const char *arg, ...){
@@ -2218,7 +2123,7 @@ int execle(const char *pathname, const char *arg, ...){
 
 		execle_result = execlX_wrapper(2, pathname, arg, variable_arguments);
 
-	// If execle succeeds this code will never be executed
+		// If execle succeeds this code will never be executed
 
 		va_end(variable_arguments);
 
@@ -2233,7 +2138,6 @@ int execle(const char *pathname, const char *arg, ...){
 	}
 
 	return execle_result;
-
 }
 
 int execv(const char *pathname, char *const argv[]){
@@ -2278,7 +2182,7 @@ int execvp(const char *file, char *const argv[]){
 
 		execvp_result = execvp_wrapper(file, argv);
 
-	// If execv succeeds this code will never be executed
+		// If execv succeeds this code will never be executed
 
 		if(execvp_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
@@ -2288,7 +2192,6 @@ int execvp(const char *file, char *const argv[]){
 	}
 
 	return execvp_result;
-
 }
 
 int execve(const char *pathname, char *const argv[], char *const envp[]){
@@ -2307,7 +2210,7 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 
 		execve_result = execve_wrapper(pathname, argv, envp);
 
-	// If execv succeeds this code will never be executed
+		// If execv succeeds this code will never be executed
 
 		if(execve_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
@@ -2317,7 +2220,6 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 	}
 
 	return execve_result;
-
 }
 
 int execvpe(const char *file, char *const argv[], char *const envp[]){
@@ -2336,7 +2238,7 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 
 		execvpe_result = execvpe_wrapper(file, argv, envp);
 
-	// If execv succeeds this code will never be executed
+		// If execv succeeds this code will never be executed
 
 		if(execvpe_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
@@ -2347,7 +2249,6 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 	}
 
 	return execvpe_result;
-
 }
 
 FILE * popen(const char *command, const char *type){
@@ -2375,7 +2276,6 @@ FILE * popen(const char *command, const char *type){
 	}
 
 	return file;
-
 }
 
 int mount(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data){
@@ -2407,7 +2307,6 @@ int mount(const char *source, const char *target, const char *filesystemtype, un
 	}
 
 	return mount_result;
-
 }
 
 //#########################

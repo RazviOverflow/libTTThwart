@@ -48,8 +48,6 @@ void initialize_array(file_objects_info *array, size_t size){
 
 void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir){
 
-	printf("IM USING UPSERT FOR EXT3EXT4\n");
-
 	struct stat local_stat = get_file_metadata(path);
 
 	if(!starts_with("/etc", path)){
@@ -63,7 +61,6 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 		}
 	}
 
-
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(array, 2);
@@ -72,12 +69,9 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 	// If element is already in array simply update its inode in case the
 	// the new inode is different from the one already existing
 	int index = find_index_in_array(array, path);
-
 	uint random_name_length = 25;
 	uint full_random_name_length;
-
 	char random_name[random_name_length];
-
 	char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-#?!@[]()"; // could be const
 
 	// -1 because there must be room for the trailing null byte
@@ -85,6 +79,7 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
         int key = rand() % (int) (sizeof charset - 1);
         random_name[n] = charset[key];
     }
+
     random_name[random_name_length] = '\0';
    
     // +1 because of trailing null byte
@@ -164,14 +159,12 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 
 }
 
-
 void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir __attribute__((unused))){
-
-	printf("IM USING UPSERT FOR OTHER FS\n");
 
 	struct stat local_stat = get_file_metadata(path);
 
 	if(!starts_with("/etc", path)){
+
 		ino_t local_inode = local_stat.st_ino;
 
 		if(inode != local_inode){
@@ -194,7 +187,6 @@ void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *pat
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "Updated inode (now %lu) of path %s\n", inode, path);
 		}
 	} else  {
-
 		if(array->used == array->size){
 
 			array->size *= 2;
@@ -209,8 +201,8 @@ void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *pat
 			}
 
 			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
-
 		}
+
 		array->list[array->used].device_id = local_stat.st_dev;
 		array->list[array->used].file_mode = local_stat.st_mode;
 		array->list[array->used].path = strdup(path);
@@ -239,16 +231,15 @@ void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const c
     // If number of elements (used) in the array equals its size, it means
     // the array requires more room. It's size gets doubled
 		if(array->used == array->size){
-		////printf("Size of array %X is about to get doubled.\n", &(*array));
-		//printf("Size of array is about to get doubled\n");
+			
+			// It is never a good idea to do something like:
+	        // array->list = realloc... because if realloc fails you lose the
+	        // reference to your original data and realloc does not free() so
+	        // there'll be an implicit memory leak.
 			array->size *= 2;
 			file_object_info *aux = (file_object_info *)realloc(array->list,
 				array->size * sizeof(file_object_info));
 
-        // It is never a good idea to do something like:
-        // array->list = realloc... because if realloc fails you lose the
-        // reference to your original data and realloc does not free() so
-        // there'll be an implicit memory leak.
 			if(!aux){
 				fprintf(stderr, "Error trying to realloc size for array in upsert inode process.\n");
 				exit(EXIT_FAILURE);
@@ -256,9 +247,8 @@ void upsert_nonexisting_file_metadata_in_array(file_objects_info *array, const c
 				array->list = aux;
 			}
 
-        //Initializing new elements of realocated array
+        	//Initializing new elements of realocated array
 			memset(&array->list[array->used], 0, sizeof(file_object_info) * (array->size - array->used));
-
 		}
 		
 		array->list[array->used].path = strdup(path);
@@ -280,7 +270,6 @@ void free_array(file_objects_info *array){
 
 	free(array->list);
 	array->list = NULL;
-
 	array->used = 0;
 	array->size = 0;
 
@@ -296,7 +285,7 @@ int find_index_in_array(file_objects_info *array, const char *path){
 		for(uint i = 0; i < array->used; i++){
 			if(!strcmp(array->list[i].path, path)){
 				returnValue = i;
-			break;
+				break;
 			}
 		}
 		return returnValue;
@@ -316,25 +305,21 @@ void remove_from_array_at_index(file_objects_info *array, int index){
 	char *temporal_file_to_delete = aux.tmp_path;
 
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Temporal file: %s is about to be deleted.\n", temporal_file_to_delete);
-	zlog_flush_buffer();
 
 	if(remove(temporal_file_to_delete) == -1){
 		// The execution ought to never enter this block.
 		fprintf(stderr, "[!] ERROR trying to delete temporal link previously created with name: %s.\n[!] ERROR: %s\n", aux.tmp_path, strerror(errno));
 		zlogf_time(ZLOG_INFO_LOG_MSG, "[!] ERROR trying to delete temporal link previously created with name: %s.\n[!] ERROR: %s\n", aux.tmp_path, strerror(errno));
-		zlog_flush_buffer();
 	}
 
 	int number_elements = array->used;
-	if(index < number_elements){
 
+	if(index < number_elements){
 		for(int i = index; i < number_elements; i++){
 			array->list[i] = array->list[i+1];
 		}
-
 	} 
 
 	array->used--;
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Temporal file: %s was deleted.\n", temporal_file_to_delete);
-	zlog_flush_buffer();
 }

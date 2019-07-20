@@ -66,7 +66,6 @@ int open_wrapper(const char *path, int flags, va_list variable_arguments){
 	} else {
 		return original_open(path, flags);
 	}
-	
 }
 
 int open64_wrapper(const char *path, int flags, va_list variable_arguments){
@@ -88,7 +87,6 @@ int open64_wrapper(const char *path, int flags, va_list variable_arguments){
 	} else {
 		return original_open64(path, flags);
 	}
-	
 }
 
 int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_arguments){
@@ -110,7 +108,6 @@ int openat_wrapper(int dirfd, const char *path, int flags, va_list variable_argu
 	} else {
 		return original_openat(dirfd, path, flags);
 	}
-
 }
 
 int chdir_wrapper(const char *path){
@@ -123,12 +120,14 @@ int chdir_wrapper(const char *path){
 }
 
 int execlX_wrapper(int function, const char *pathname, const char *arg, va_list variable_arguments){
+
 	int execlX_result = -1;
 
 	if(function == 0 || function == 1 ){
 		va_list aux_list;
 		va_copy(aux_list, variable_arguments);
 		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+
 		if(number_of_arguments == -1){
 			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
@@ -160,6 +159,7 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		va_list aux_list;
 		va_copy(aux_list, variable_arguments);
 		int number_of_arguments = get_number_of_variable_arguments_char_pointer_type(aux_list);
+
 		if(number_of_arguments == -1){
 			fprintf(stderr,"Error when retrieveng variable arguments. Aborting\n. Error: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);		
@@ -173,9 +173,11 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		char **envp;
 		argv[0] = (char *) arg;
 		ptrdiff_t i;
+
 		for(i = 1; i<= number_of_arguments; i++){
 			argv[i] = va_arg(aux_list, char *);
 		}
+
 		envp = va_arg(variable_arguments, char **);
 		va_end(aux_list);
 
@@ -196,6 +198,7 @@ int execvp_wrapper(const char *file, char *const argv[]){
 }
 
 int execve_wrapper(const char *pathname, char *const argv[], char *const envp[]){
+
 	if ( original_execve == NULL ) {
 		original_execve = dlsym_wrapper("execve");
 	}
@@ -227,7 +230,6 @@ int mkdir_wrapper(const char* pathname, mode_t mode){
 	}
 
 	return original_mkdir(pathname, mode);
-
 }
 
 int symlink_wrapper(const char *target, const char *linkpath){
@@ -237,7 +239,6 @@ int symlink_wrapper(const char *target, const char *linkpath){
 	}
 
 	return original_symlink(target, linkpath);
-
 }
 
 int link_wrapper(const char *oldpath, const char *newpath){
@@ -247,7 +248,6 @@ int link_wrapper(const char *oldpath, const char *newpath){
 	}
 
 	return original_link(oldpath, newpath);
-
 }
 
 int remove_wrapper(const char *pathname){
@@ -257,5 +257,4 @@ int remove_wrapper(const char *pathname){
 	}
 	
 	return original_remove(pathname);
-	
 }

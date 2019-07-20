@@ -64,7 +64,6 @@ void print_function_and_path(const char* func, const char* path, const char* san
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "[+] Sanitized: %s\n", sanitized_path);
 }
 
-
 int get_number_of_variable_arguments_char_pointer_type(va_list variable_arguments){
 	ptrdiff_t number_of_arguments;
 
@@ -129,7 +128,6 @@ void get_fs_and_initialize_checking_functions(const char *path){
 	} else {
 		upsert_file_data_in_array = upsert_file_data_in_array_ext3ext4;
 	}
-
 }
 
 ino_t get_inode(const char *path){
@@ -179,9 +177,7 @@ struct stat get_file_metadata(const char *path){
 	close(fd);
 
 	return file_stat;
-
 }
-
 
 int file_does_exist(const char *pathname){
 	
@@ -194,7 +190,6 @@ int file_does_exist(const char *pathname){
 		close(fd);
 		return 1;
 	}
-	
 }
 
 bool starts_with(const char *pre, const char *str){
