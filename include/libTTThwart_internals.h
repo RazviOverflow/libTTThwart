@@ -9,9 +9,8 @@
 
 		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
 		
-	Compilation:
-		Simply use 'make' from the root directory. If you want debug messages 
-		compile with 'make debug'
+	Code: 
+		You can find the source code associated with this header <here: https://github.com/RazviOverflow/ld.so.preload/blob/master/src/libTTThwart_internals.c>.	
 */
 
 #ifndef LIBTTHWART_INTERNALS_H_

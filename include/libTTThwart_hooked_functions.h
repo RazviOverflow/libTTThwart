@@ -9,9 +9,9 @@
 
 		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
 		
-	Compilation:
-		Simply use 'make' from the root directory. If you want debug messages 
-		compile with 'make debug'
+	Code: 
+		You can find the source code associated with this header <here: https://github.com/RazviOverflow/ld.so.preload/blob/master/src/libTTThwart_hooked_functions.c>.
+
 */
 
 #ifndef LIBTTHWART_HOOKED_FUNCTIONS_H_
