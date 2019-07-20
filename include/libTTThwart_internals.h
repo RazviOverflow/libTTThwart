@@ -41,7 +41,7 @@
 /*
 	Constant: GET_PROGRAM_NAME()
 	
-	Function used to retrieve the actual process name. 
+	Function used to retrieve the actual program's name. 
 */
 #define GET_PROGRAM_NAME() program_invocation_short_name
 
