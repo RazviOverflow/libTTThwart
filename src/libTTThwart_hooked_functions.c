@@ -102,20 +102,20 @@ int (*original_mkdir)(const char *pathname, mode_t mode) = NULL;
 int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode) = NULL;
 int (*original_chdir)(const char *path) = NULL;
 int (*original_chroot)(const char *path) = NULL;
-
-/* execl* family is being hooked but there is no need for particular pointers 
-	to functions since they internally call execv, execvp and execve respectively*/
-// int (*original_execl)(const char *pathname, const char *arg, ...) = NULL;
-// int (*original_execlp)(const char *file, const char *arg, ...) = NULL;
-// int (*original_execle)(const char *pathname, const char *arg, ...) = NULL;
-// int (*original_execv)(const char *pathname, char *const argv[]) = NULL;
-// int (*original_execvp)(const char *file, char *const argv[]) = NULL;
 int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]) = NULL;
 int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]) = NULL;
 
 FILE *(*original_popen)(const char *command, const char *type) = NULL;
-// int (*original_pclose)(FILE *stream) = NULL;
 int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data) = NULL;
+
+/* execl* family is being hooked but there is no need for particular pointers 
+	to functions since they internally call execv, execvp and execve respectively
+	(*original_execl)(const char *pathname, const char *arg, ...)
+	(*original_execlp)(const char *file, const char *arg, ...)
+	(*original_execle)(const char *pathname, const char *arg, ...)
+	(*original_execv)(const char *pathname, char *const argv[])
+	(*original_execvp)(const char *file, char *const argv[])
+*/
 /// <-------------------------------------------------> 
 
 /// ########## Prototype declaration ##########
@@ -177,7 +177,7 @@ void create_log_dir_and_start_logger(){
 	zlog_init_stdout();
 
 	char *home = getenv("HOME");
-	if(!home){
+	if(home == NULL){
 		fprintf(stderr, "[!] ERROR RETRIEVING HOME ENV VARIABLE.\n[!] ERROR: %s\n[!] ALL LOGS WILL BE REDIRECTED TO STDERR (2).\n", strerror(errno));
 		zlog_init_stderr();
 		return;
@@ -189,7 +189,7 @@ void create_log_dir_and_start_logger(){
 		snprintf(log_folder_dir, log_folder_dir_length, "%s%s", home, LIBRARY_FOLDER);
 
 		DIR *folder_dir = opendir(log_folder_dir);
-		if(folder_dir){
+		if(folder_dir != NULL){
 			closedir(folder_dir);
 		} else {
 			if(mkdir_wrapper(log_folder_dir, 0755) == -1){ // (Bear in mind umask)
@@ -197,7 +197,6 @@ void create_log_dir_and_start_logger(){
 				zlog_init_stderr();
 				return;
 			}
-			closedir(folder_dir);
 		}
 
 		char *program_name = GET_PROGRAM_NAME();
@@ -208,7 +207,7 @@ void create_log_dir_and_start_logger(){
 		snprintf(log_dir, log_dir_length, "%s%s/%s", home, LIBRARY_FOLDER, program_name);
 		
 		DIR *dir = opendir(log_dir);
-		if(dir){ //Directory exists
+		if(dir != NULL){ //Directory exists
 			closedir(dir);
 			create_log_file_and_start_logger(log_dir);
 		} else if(errno == ENOENT){ //Directory does not exist; create
@@ -235,7 +234,7 @@ void create_log_file_and_start_logger(const char *log_dir){
 
 	struct tm *tm_struct = localtime(&ltime);
 
-	sprintf(char_pid, "%d", getpid());
+	snprintf(char_pid, sizeof(char_pid), "%d", getpid());
 	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
 	
 	//+2 because  of "/" and because strlen excludes the terminating null byte
@@ -271,14 +270,19 @@ void create_temp_dir(){
 
 	char char_pid[10];
 
-	sprintf(char_pid, "%d", getpid());
+	snprintf(char_pid, sizeof(char_pid), "%d", getpid());
 
 	time_t ltime;
-	ltime = time(NULL);
+	
 	char date_and_time[80];
 
-	struct tm *tm_struct = localtime(&ltime);
-	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
+	time(&ltime);
+
+	struct tm tm_struct;
+
+	localtime_r(&ltime, &tm_struct);
+	
+	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", &tm_struct);
 
 	char *program_name = GET_PROGRAM_NAME();
 
@@ -504,6 +508,8 @@ int __xstat(int ver, const char *path, struct stat *buf){
 		} else {
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
+
+		free((void *)sanitized_path);
 	}
 	if ( original_xstat == NULL ) {
 		original_xstat = dlsym_wrapper(__func__);
@@ -526,6 +532,8 @@ int __xstat64(int ver, const char *path, struct stat64 *buf){
 		} else {
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
+
+		free((void *)sanitized_path);
 	}
 
 	if ( original_xstat64 == NULL ) {
@@ -548,6 +556,8 @@ int __lxstat(int ver, const char *path, struct stat *buf){
 		} else {
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
+
+		free((void *)sanitized_path);
 	}	
 
 	if ( original_lxstat == NULL ) {
@@ -571,6 +581,8 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf){
 		} else {
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
+
+		free((void *)sanitized_path);
 	}
 
 	if ( original_lxstat64 == NULL ) {
@@ -637,6 +649,8 @@ int open(const char *path, int flags, ...){
 			}
 
 		}
+
+		free((void *)sanitized_path);
 	} else {
 
 		va_list variable_arguments;
@@ -696,6 +710,8 @@ int open64(const char *path, int flags, ...){
 			}
 
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		va_list variable_arguments;
 		va_start(variable_arguments, flags);
@@ -723,6 +739,7 @@ int access(const char *path, int mode){
 			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
 		}
 
+		free((void *)sanitized_path);
 	}
 	if(original_access == NULL){
 		original_access = dlsym_wrapper(__func__);
@@ -761,6 +778,8 @@ FILE *fopen(const char *path, const char *mode){
 				upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 			}
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		fopen_result = fopen_wrapper(path, mode);
 	}
@@ -800,6 +819,8 @@ int unlink(const char *path){
 				remove_from_array_at_index(&g_array, index);
 			}
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		unlink_result = original_unlink(path);
 	}
@@ -852,6 +873,8 @@ int unlinkat(int dirfd, const char *path, int flags){
 				remove_from_array_at_index(&g_array, index);
 			}
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		unlinkat_result = original_unlinkat(dirfd, path, flags);
 	}
@@ -907,6 +930,8 @@ int openat(int dirfd, const char *path, int flags, ...){
 			}
 
 		}
+
+		free((void *)sanitized_path);
 	} else{
 		va_list variable_arguments;
 		va_start(variable_arguments, flags);
@@ -935,8 +960,6 @@ int symlink(const char *oldpath, const char *newpath){
 
 		check_parameters_properties(sanitized_newpath, __func__);
 		
-		
-
 		symlink_result = symlink_wrapper(oldpath, newpath);
 
     /*
@@ -952,6 +975,8 @@ int symlink(const char *oldpath, const char *newpath){
 			upsert_file_data_in_array(&g_array, sanitized_newpath, inode, g_temp_dir);
 			
 		}
+
+		free((void *)sanitized_newpath);
 	}
 	else{
 		symlink_result = symlink_wrapper(oldpath, newpath);
@@ -998,6 +1023,8 @@ int symlinkat(const char *oldpath, int newdirfd, const char *newpath){
 			ino_t inode = get_inode(sanitized_new_path);
 			upsert_file_data_in_array(&g_array, sanitized_new_path, inode, g_temp_dir);
 		}
+
+		free((void *)sanitized_new_path);
 	} else {
 		symlinkat_result = original_symlinkat(oldpath, newdirfd, newpath);
 	}
@@ -1038,6 +1065,8 @@ int remove(const char *path) {
 				remove_from_array_at_index(&g_array, index);
 			}
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		remove_result = remove_wrapper(path);
 	}
@@ -1083,6 +1112,8 @@ int __xmknod(int ver, const char *path, mode_t mode, dev_t *dev){
 			upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_path);
 	} else {
 		mknod_result = original_xmknod(ver, path, mode, dev);
 	}
@@ -1132,6 +1163,8 @@ int __xmknodat(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev){
 			upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 		}
 
+		free((void *)sanitized_path);
+
 	} else {
 		mknodat_result = original_xmknodat(ver, dirfd, path, mode, dev);
 	}
@@ -1171,6 +1204,8 @@ int link(const char *oldpath, const char *newpath){
 			upsert_file_data_in_array(&g_array, sanitized_new_path, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_new_path);
 
 	} else {
 		link_result = link_wrapper(oldpath, newpath);
@@ -1221,6 +1256,9 @@ int linkat(int olddirfd, const  char *oldpath, int newdirfd, const char *newpath
 			upsert_file_data_in_array(&g_array, full_new_path, inode, g_temp_dir);
 
 		}
+
+		free((void *)full_new_path);
+
 	} else {
 		linkat_result = original_linkat(olddirfd, oldpath, newdirfd, newpath, flags);
 	}
@@ -1259,6 +1297,9 @@ int creat64(const char *path, mode_t mode){
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		creat64_result = original_creat64(path, mode);
 	}
@@ -1297,6 +1338,9 @@ int creat(const char *path, mode_t mode){
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		creat_result = original_creat(path, mode);
 	}
@@ -1339,6 +1383,9 @@ int rmdir(const char *path){
 			//g_array.list[index].inode = -1;
 			}
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		rmdir_result = original_rmdir(path);
 	}
@@ -1377,6 +1424,9 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 			upsert_file_data_in_array(&g_array, sanitized_pathname, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		readlink_result = original_readlink(pathname, buf, bufsiz);
 	}
@@ -1427,6 +1477,9 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 			upsert_file_data_in_array(&g_array, sanitized_path, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);
 	}
@@ -1472,6 +1525,9 @@ int rename(const char *oldpath, const char *newpath){
 			upsert_file_data_in_array(&g_array, newpath, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_new_path);
+
 	} else {
 		rename_result = original_rename(oldpath, newpath);
 	}
@@ -1529,6 +1585,10 @@ int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpat
 			upsert_file_data_in_array(&g_array, newpath, inode, g_temp_dir);
 
 		}
+
+		free((void *)sanitized_new_path);
+		free((void *)sanitized_old_path);
+
 	} else {
 		renameat_result = original_renameat(olddirfd, oldpath, newdirfd, newpath);
 	}
@@ -1566,6 +1626,9 @@ FILE *fopen64(const char *path, const char *mode){
 				upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 			}
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		fopen64_result = original_fopen64(path, mode);
 	}
@@ -1594,8 +1657,6 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 		bool file_exists_before = file_does_exist(sanitized_pathname);
 		struct stat new_file;
 
-
-
 		freopen_result= original_freopen(pathname, mode, stream);
 
 		if(freopen_result == NULL){
@@ -1606,6 +1667,9 @@ FILE *freopen(const char *pathname, const char *mode, FILE *stream){
 				upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 			}
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		freopen_result= original_freopen(pathname, mode, stream);
 	}
@@ -1644,6 +1708,9 @@ int mkfifo(const char *pathname, mode_t mode){
 			upsert_file_data_in_array(&g_array, pathname, get_inode(pathname), g_temp_dir);
 
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		mkfifo_result = original_mkfifo(pathname, mode);
 	}
@@ -1686,6 +1753,9 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		mkfifoat_result = original_mkfifoat(dirfd, pathname, mode);
 	}
@@ -1716,6 +1786,9 @@ int chmod(const char *pathname, mode_t mode){
 		if(chmod_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHMOD ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		chmod_result =  original_chmod(pathname, mode);
 	}
@@ -1746,6 +1819,9 @@ int chown(const char *pathname, uid_t owner, gid_t group){
 		if(chown_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHOWN ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		chown_result =  original_chown(pathname, owner, group);
 	}
@@ -1776,6 +1852,9 @@ int truncate(const char *path, off_t length){
 		if(truncate_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] TRUNCATE ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		truncate_result = original_truncate(path, length);
 	}
@@ -1807,6 +1886,8 @@ int truncate64(const char *path, off_t length){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] TRUNCATE64 ERROR: %s\n", strerror(errno));
 		}
 
+		free((void *)sanitized_pathname);
+
 	} else {
 		truncate64_result = original_truncate64(path, length);
 	}
@@ -1837,6 +1918,9 @@ int utime(const char *filename, const struct utimbuf *times){
 		if(utime_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UTIME ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_filename);
+
 	} else {
 		utime_result = original_utime(filename, times);
 	}
@@ -1867,6 +1951,9 @@ int utimes(const char *filename, const struct timeval *times){
 		if(utimes_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] UTIMES ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_filename);
+
 	} else {
 		utimes_result = original_utimes(filename, times);
 	}
@@ -1898,6 +1985,8 @@ long pathconf(const char *path, int name){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] PATHCONF ERROR: %s\n", strerror(errno));
 		}
 
+		free((void *)sanitized_path);
+
 	} else {
 		pathconf_result = original_pathconf(path, name);
 	}
@@ -1926,6 +2015,8 @@ int mkdir(const char *pathname, mode_t mode){
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 		}
+
+		free((void *)sanitized_pathname);
 
 	} else {
 		mkdir_result = mkdir_wrapper(pathname, mode);
@@ -1964,6 +2055,9 @@ int mkdirat(int dirfd, const char *pathname, mode_t mode){
 		} else {
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		}
+
+		free((void *)sanitized_path);
+
 	} else {
 		mkdirat_result = original_mkdirat(dirfd, pathname, mode);
 	}
@@ -1990,6 +2084,8 @@ int chdir(const char *path){
 		if(chdir_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHDIR ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_path);
 
 	} else {
 		chdir_result = chdir_wrapper(path);
@@ -2021,6 +2117,8 @@ int chroot(const char *path){
 		if(chroot_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHROOT ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_path);
 
 	} else {
 		chroot_result = original_chroot(path);
@@ -2054,6 +2152,9 @@ int execl(const char *pathname, const char *arg, ...){
 		if(execl_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECL ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		va_list variable_arguments;
 		va_start(variable_arguments, arg);
@@ -2092,6 +2193,9 @@ int execlp(const char *file, const char *arg, ...){
 		if(execlp_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECLP ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_file);
+
 	} else {
 		va_list variable_arguments;
 		va_start(variable_arguments, arg);
@@ -2130,6 +2234,10 @@ int execle(const char *pathname, const char *arg, ...){
 		if(execle_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECLE ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
+
 	} else {
 		va_list variable_arguments;
 		va_start(variable_arguments, arg);
@@ -2159,6 +2267,9 @@ int execv(const char *pathname, char *const argv[]){
 		if(execv_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECV ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		execv_result = execv_wrapper(pathname, argv);
 	}
@@ -2187,6 +2298,9 @@ int execvp(const char *file, char *const argv[]){
 		if(execvp_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVP ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_file);
+
 	} else {
 		execvp_result = execvp_wrapper(file, argv);
 	}
@@ -2215,6 +2329,9 @@ int execve(const char *pathname, char *const argv[], char *const envp[]){
 		if(execve_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVE ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_pathname);
+
 	} else {
 		execve_result = execve_wrapper(pathname, argv, envp);
 	}
@@ -2243,6 +2360,8 @@ int execvpe(const char *file, char *const argv[], char *const envp[]){
 		if(execvpe_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] EXECVPE ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_file);
 
 	} else {
 		execvpe_result = execvpe_wrapper(file, argv, envp);
@@ -2301,6 +2420,8 @@ int mount(const char *source, const char *target, const char *filesystemtype, un
 		if(mount_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] MOUNT ERROR: %s\n", strerror(errno));
 		}
+
+		free((void *)sanitized_source);
 
 	} else {
 		mount_result = original_mount(source, target, filesystemtype, mountflags, data);

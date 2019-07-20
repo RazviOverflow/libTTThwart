@@ -50,17 +50,6 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 
 	struct stat local_stat = get_file_metadata(path);
 
-	if(!starts_with("/etc", path)){
-		ino_t local_inode = local_stat.st_ino;
-
-		if(inode != local_inode){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when trying to upsert data. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, inode, local_inode, GET_PROGRAM_NAME());
-			fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
-			fflush(stdout);
-			exit(EXIT_FAILURE);
-		}
-	}
-
     // If array has not been yet initialized, initialize it. 
 	if(array->size == 0){
 		initialize_array(array, 2);
@@ -162,18 +151,6 @@ void upsert_file_data_in_array_ext3ext4(file_objects_info *array, const char *pa
 void upsert_file_data_in_array_otherfs(file_objects_info *array, const char *path, ino_t inode, char *tmp_dir __attribute__((unused))){
 
 	struct stat local_stat = get_file_metadata(path);
-
-	if(!starts_with("/etc", path)){
-
-		ino_t local_inode = local_stat.st_ino;
-
-		if(inode != local_inode){
-			zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when trying to upsert data. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, inode, local_inode, GET_PROGRAM_NAME());
-			fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
-			fflush(stdout);
-			exit(EXIT_FAILURE);
-		}
-	}
 
 	if(array->size == 0){
 		initialize_array(array, 2);

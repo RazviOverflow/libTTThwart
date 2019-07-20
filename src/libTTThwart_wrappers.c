@@ -145,13 +145,11 @@ int execlX_wrapper(int function, const char *pathname, const char *arg, va_list 
 		}
 
 		va_end(aux_list);
-		switch(function){
-			case 0:
-				execlX_result = execve_wrapper(pathname, argv, __environ);
-				break;
-			case 1:
-				execlX_result = execvpe_wrapper(pathname, argv, __environ);
-				break;
+
+		if(function == 0){
+			execlX_result = execve_wrapper(pathname, argv, __environ);
+		} else { // function == 1
+			execlX_result = execvpe_wrapper(pathname, argv, __environ);
 		}
 
 	} else if(function == 2){
