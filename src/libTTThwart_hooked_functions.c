@@ -1,11 +1,25 @@
 /* 
+	Copyright 2019 Razvan Raducu and Ricardo J. Rodriguez
+
+	This file is part of libTTThwart.so.
+
+    libTTThwart.so is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    libTTThwart.so is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with libTTThwart.so.  If not, see <https://www.gnu.org/licenses/>.
+
 Authors:
 	Razvan Raducu @Razvieu
 	Ricardo J. Rodriguez @RicardoJRdez
 
-Compilation:
-	Simply use 'make' from the root directory. If you want debug messages 
-	compile with 'make debug'
 */
 #define _GNU_SOURCE
 

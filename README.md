@@ -81,3 +81,26 @@ sudo chmod u+s vulnerable
 Logging is carried out by Zlog, a C in-memory logging library. It allocates a buffer in memory for logging, and flush the buffer to the log file (or stdout) when the buffer is full, or it is instructed explicitly by the program or flushing thread. 
 
 Zlog is originally written by Zhiqiang Ma and it was modified to fulfill the project needs. You can find the modified library here (https://github.com/RazviOverflow/zlog) and the original here (https://github.com/zma/zlog). 
+
+## Docs
+
+All the code is documented. You can either read the comments directly into the .h (headers) file or use the HTML generated docs. In order to use the latter, simply open [index.html](https://github.com/RazviOverflow/ld.so.preload/blob/master/docs/index.html) file located in docs folder.
+
+## LICENSE
+
+Copyright 2019 Razvan Raducu and Ricardo J. Rodriguez
+
+This file is part of libTTThwart.so.
+
+libTTThwart.so is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+libTTThwart.so is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with libTTThwart.so.  If not, see <https://www.gnu.org/licenses/>.

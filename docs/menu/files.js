@@ -1,1 +1,1 @@
-NDMenu.OnSectionLoaded("files.js",[[1,"libTTThwart_file_objects_info.h"],[1,"libTTThwart_global_variables.h"],[1,"libTTThwart_hooked_functions.h"],[1,"libTTThwart_internals.h"],[1,"libTTThwart_wrappers.h"]]);
+NDMenu.OnSectionLoaded("files.js",[[1,"libTTThwart_file_objects_info.h"],[1,"libTTThwart_global_variables.h"],[1,"libTTThwart_hooked_functions.h"],[1,"libTTThwart_internals.h"],[1,"libTTThwart_wrappers.h"],[1,"License.txt"],[1,"README.txt"]]);

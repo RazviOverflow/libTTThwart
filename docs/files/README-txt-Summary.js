@@ -1,0 +1,1 @@
+NDFramePage.OnPageTitleLoaded("File:README.txt","README.txt");NDSummary.OnSummaryLoaded("File:README.txt",[["Text File","TextFile"]],[["Sections","Section"]],[[69,0,0,"Instructions for compilation","Instructions_for_compilation"]]);
