@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("che",["Function"],[["check_dlsym_error",,[[,,,,0,"File:libTTThwart_internals.h:check_dlsym_error"]]]]);
+NDSearch.OnPrefixDataLoaded("che",["Function"],[["check_dlsym_error",,[[,,,,0,"File:libTTThwart_internals.h:check_dlsym_error"]]],["check_parameters_properties",,[[,,,,0,"File:libTTThwart_internals.h:check_parameters_properties"]]]]);

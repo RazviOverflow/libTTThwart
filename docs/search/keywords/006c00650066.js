@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("lef",["Variable"],[["Left-handed",,[[,"Left-handed hooked functions",,,0,"File:libTTThwart_hooked_functions.h:Left-handed_hooked_functions"]]]]);

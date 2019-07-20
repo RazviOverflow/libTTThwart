@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("mkd",["Function"],[["mkdir_wrapper",,[[,,,,0,"File:libTTThwart_wrappers.h:mkdir_wrapper"]]]]);

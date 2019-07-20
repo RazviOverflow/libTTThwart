@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("bot",["Variable"],[["Both-handed",,[[,"Both-handed hooked functions",,,0,"File:libTTThwart_hooked_functions.h:Both-handed_hooked_functions"]]]]);

@@ -33,6 +33,85 @@
 
 
 /*
+	Function: check_parameters_properties
+
+    Checks properties of the given parameters, this is, the given path and 
+    inode. Checking properties in this context means checking if a 
+    <file_object_info> with the same path already exists in the array. If it
+    doesn't, insert it; othwerwise (if it does) compare 
+    the given inode and the inode of the <file_object_info> as well as the
+    file mode and the device id. If they're equal continue execution; otherwise
+    abort execution because a possible TOCTTOU is detected.
+
+    Checking parameters is different based on the FILE SYSTEM of the given path.
+    At the moment, the function only considers two file systems:
+
+    	- EXT2/EXT3/EXT4 (their magic number is the same). When the path is located
+    	in a ext2/3/4 file system, temporal hardlinks are created in order to
+    	ensure the inode is not reused. One "feature" of such filesystems is that 
+    	they reuse inode as soon as a given inode has 0 links pointing to it. 
+    	- OTHER FS. When the path is allocated on any other possible file system
+    	the checkings performed are the same with the exception of temporal hard
+    	links creation. We do not need hard links because inodes are not reused. 
+
+    In order to see this function initialization, please refer to <get_fs_and_initialize_checking_functions>.
+
+    Parameters:
+    	path - absolute path of the file whose metadata must be checked.
+    	caller_function_name -  name of the function from which the checking was
+    		called. 
+*/
+void check_parameters_properties(const char *path, const char *caller_function_name);
+
+/*	
+	Function: sanitize_and_get_absolute_path
+
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links. That's why realpath() is useless. 
+	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
+
+	Parameters:
+		src - Path to sanitize and absolutize.
+
+	Returns:
+		The sanitized and absolutized path. 
+
+*/
+const char * sanitize_and_get_absolute_path(const char *);
+
+/*
+	Function: sanitize_and_get_absolute_path_from_dir_file_descriptor
+
+	Function to get full path of a given parameter without resolving, expanding
+	symbolic links but using a directory file descriptor as current working dir. 
+	It is assumed that the file is indeed within that directory. The function 
+	translates the file descriptor into the actual directory (string).
+
+	Parameters: 
+		src - Path to sanitize according to directory_fd.
+		directory_fd - File descriptor pointing to certain directroy. 
+
+	Returns:
+		The sanitized function according to directory_fd.
+*/
+const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *src, int directory_fd);
+
+/*
+	Function: get_directory_from_fd
+
+	Function used to retrieve as string the full directory path pointed to
+	by a given file descriptor. 
+	
+	Parameters:
+		directory_fd - File descriptor pointing to some directroy.
+
+	Returns:
+		The name of the directory pointed to by directory_fd. 
+
+*/
+char * get_directory_from_fd(int directory_fd);
+
+/*
 	Function: get_fs_and_initialize_checking_functions
 
 	Determines what the file system of a given path is and, based

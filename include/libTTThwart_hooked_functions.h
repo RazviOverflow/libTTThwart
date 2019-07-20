@@ -23,20 +23,23 @@
 #include <sys/time.h>
 #include <stdarg.h>
 
-/*
-	You can find here the declaration of every single pointer to the original
+/*	
+	About: General Information
+
+	You can find in this file the declaration of every single *pointer to* the original
 	functions that are being hooked. We need pointers to original functions
 	because after all the hooking and checkin process happens, we need to call
 	the original function in order to make this library transparent to the user.
 
 	We devide functions in two blocks based on [1]:
+
 	- Given a "vulnerable sequence" <checkFunction, useFunction> we have:
-		Functions that are on the left size of the sequence (only check).
+			- Functions that are *only on the left part of the vulnerable sequence* (only check).
 			These functions will only upsert information into the file metadata
 			structure. 
 
-		Functions that are on each or both sides of the sequence, either check, 
-		use or both.
+			- Functions that are *either on the left or rgiht (both sides) of the 
+			vulnerable sequence, either check, use or both.*
 			These functions will either upsert information into the file metadata
 			structure or will perform all the corresponding checkings given a path
 			and inode. 
@@ -44,164 +47,122 @@
 
 	[1] Modeling and preventing TOCTTOU vulnerabilities in Unix-style file systems.
 			J Wei, C Pu - Computers & Security, 2010 - Elsevier
+
+	_Please notice how there are no function that are only on the right part, the
+	 use side, of the vulnerable sequence._
 */
 
-// Left-handed functions <checkFuncion>
+/*
+	Title: Hooked functions
+
+	Variables: Left-handed hooked functions
+		original_xstat - Function pointer to original stat() function. 
+		original_xstat64 - Function pointer to original stat64() function. 
+		original_lxstat - Function pointer to original lstat() function.
+		original_lxtat64 - Function pointer to original lstat64() function.
+		original_access - Function pointer to original access() function.
+		original_rmdir - Function pointer to original rmdir() function.
+		original_unlink - Function pointer to original unlink() function.
+		original_unlinkat - Function pointer to original unlinkat() function.
+		original_remove - Function pointer to original remove() function.
+		original_readlink - Function pointer to original readlink() function.
+		original_readlinkat - Function pointer to original readlinkat() function.
+
+*/
 extern int (*original_xstat)(int ver, const char *path, struct stat *buf);
-
 extern int (*original_xstat64)(int ver, const char *path, struct stat64 *buf);
-
 extern int (*original_lxstat)(int ver, const char *path, struct stat *buf);
-
 extern int (*original_lxstat64)(int ver, const char *path, struct stat64 *buf);
-
 extern int (*original_access)(const char *path, int mode);
-
 extern int (*original_rmdir)(const char *path);
-
 extern int (*original_unlink)(const char *path);
-
 extern int (*original_unlinkat)(int dirfd, const char *path, int flags);
-
 extern int (*original_remove)(const char *path);
-
 extern ssize_t (*original_readlink)(const char *pathname, char *buf, size_t bufsiz); // readlink(2)
-
 extern ssize_t (*original_readlinkat)(int dirfd, const char *pathname, char *buf, size_t bufsiz);
 
-
-// Both-handed functions <useFunction>
+/*
+	Variables: Both-handed hooked functions
+		original_symlink - Function pointer to original symlink() function. 
+		original_symlinkat - Function pointer to original symlinkat() function. 
+		original_link - Function pointer to original link() function. 
+		original_linkat - Function pointer to original linkat() function. 
+		original_rename - Function pointer to original rename() function. 
+		original_renameat - Function pointer to original renameat() function. 
+		original_creat64 - Function pointer to original creat64() function. 
+		original_creat - Function pointer to original creat() function. 
+		original_open - Function pointer to original open() function. 
+		original_open64 - Function pointer to original open64() function. 
+		original_openat - Function pointer to original openat() function. 
+		original_fopen - Function pointer to original fopen() function. 
+		original_fopen64 - Function pointer to original fopen64() function. 
+		original_freopen - Function pointer to original freopen() function. 
+		original_xmknod - Function pointer to original xmknode() function. 
+		original_xmknodat - Function pointer to original xmknodat() function. 
+		original_mkfifo - Function pointer to original mkfifo() function. 
+		original_mkfifoat - Function pointer to original mkfifoat() function. 
+		original_chmod - Function pointer to original chmod() function. 
+		original_chown - Function pointer to original chown() function. 
+		original_truncate - Function pointer to original truncate() function. 
+		original_truncate64 - Function pointer to original truncate64() function. 
+		original_utime - Function pointer to original utime() function. 
+		original_utimes - Function pointer to original utimes() function. 
+		original_pathconf - Function pointer to original pathconf() function. 
+		original_mkdir - Function pointer to original mdkir() function. 
+		original_mkdirat - Function pointer to original mkdirat() function. 
+		original_chdir - Function pointer to original chdir() function. 
+		original_chroot - Function pointer to original chroot() function. 
+		original_execve - Function pointer to original execve() function. 
+		original_execvpe - Function pointer to original execvpe() function. 
+		original_popen - Function pointer to original popen() function. 
+		original_mount - Function pointer to original mount() function. 
+*/
 extern int (*original_symlink)(const char *oldpath, const char *newpath);
-
 extern int (*original_symlinkat)(const char *oldpath, int newdirfd, const char *newpath);
-
 extern int (*original_link)(const char *oldpath, const char *newpath);
-
 extern int (*original_linkat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
-
 extern int (*original_rename)(const char *oldpath, const char *newpath);
-
 extern int (*original_renameat)(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
-
 extern int (*original_creat64)(const char *path, mode_t mode);
-
 extern int (*original_creat)(const char *path, mode_t mode);
-
 extern int (*original_open)(const char *path, int flags, ...); 
-
 extern int (*original_open64)(const char *path, int flags, ...); 
-
 extern int (*original_openat)(int dirfd, const char *path, int flags, ...);
-
 extern FILE *(*original_fopen)(const char *path, const char *mode);
-
 extern FILE *(*original_fopen64)(const char *path, const char *mode);
-
 extern FILE *(*original_freopen)(const char *pathname, const char *mode, FILE *stream);
-
 extern int (*original_xmknod)(int ver, const char *path, mode_t mode, dev_t *dev);
-
 extern int (*original_xmknodat)(int ver, int dirfd, const char *path, mode_t mode, dev_t *dev);
-
 extern int (*original_mkfifo)(const char *pathname, mode_t mode);
-
 extern int (*original_mkfifoat)(int dirfd, const char *pathname, mode_t mode);
-
 extern int (*original_chmod)(const char *pathname, mode_t mode);
-
 extern int (*original_chown)(const char *pathname, uid_t owner, gid_t group);
-
 extern int (*original_truncate)(const char *path, off_t length);
-
 extern int (*original_truncate64)(const char *path, off64_t length);
-
 extern int (*original_utime)(const char *filename, const struct utimbuf *times);
-
 extern int (*original_utimes)(const char *filename, const struct timeval times[2]);
-
 extern long(*original_pathconf)(const char *path, int name);
-
 extern int (*original_mkdir)(const char *pathname, mode_t mode);
-
 extern int (*original_mkdirat)(int dirfd, const char *pathname, mode_t mode);
-
 extern int (*original_chdir)(const char *path);
-
 extern int (*original_chroot)(const char *path);
-
 extern int (*original_execve)(const char *pathname, char *const argv[], char *const envp[]);
-
 extern int (*original_execvpe)(const char *file, char *const argv[], char *const envp[]);
-
 extern FILE *(*original_popen)(const char *command, const char *type);
-
 extern int (*original_mount)(const char *source, const char *target, const char *filesystemtype, unsigned long mountflags, const void *data);
 
+/* 
 
+	Variables: execl* family
+	
+	execl* family is being hooked but there is no need for particular function 
+	pointers since they internally call execv, execvp and execve respectively
 
-/* execl* family is being hooked but there is no need for particular pointers 
-
-	to functions since they internally call execv, execvp and execve respectively*/
-
+*/
 //extern int (*original_execl)(const char *pathname, const char *arg, ...);
-
 //extern int (*original_execlp)(const char *file, const char *arg, ...);
-
 //extern int (*original_execle)(const char *pathname, const char *arg, ...);
-
 //extern int (*original_execv)(const char *pathname, char *const argv[]);
-
 //extern int (*original_execvp)(const char *file, char *const argv[]);
-
-
-/*
-    Checks properties of the given parameters, this is, the given path and 
-    inode. Checking properties in this context means checking if a 
-    file_object_info with the same path already exists in the array. If it
-    doesn't, insert it; othwerwise (if it does) compare 
-    the given inode and the inode of the file_object_info as well as the
-    file mode and the device id. If they're equal continue execution; otherwise
-    abort execution because a possible TOCTTOU is detected.
-
-    Parameters:
-    	Path: absolute path of the file whose metadata must be checked.
-    	Caller_function_name: name of the function from which the checking was
-    		called. 
-
-    Checking parameters is different based on the FILE SYSTEM of the given path.
-    At the moment, the function only considers two file systems:
-    	EXT2/EXT3/EXT4 (their magic number is the same). When the path is located
-    	in a ext2/3/4 file system, temporal hardlinks are created in order to
-    	ensure the inode is not reused. One "feature" of such filesystems is that 
-    	they reuse inode as soon as a given inode has 0 links pointing to it. 
-
-    	OTHER FS. When the path is allocated on any other possible file system
-    	the checkings performed are the same with the exception of temporal hard
-    	links creation. We do not need hard links because inodes are not reused. 
-
-    In order to see this function initialization, please refer to >get_fs_and_initialize_checking_functions>
-*/
-void check_parameters_properties(const char *, const char *);
-
-/*
-	Function to get full path of a given parameter without resolving, expanding
-	symbolic links. That's why realpath() is useless. 
-	Based on: https://stackoverflow.com/questions/4774116/realpath-without-resolving-symlinks/34202207#34202207
-*/
-const char * sanitize_and_get_absolute_path(const char *);
-
-/*
-	Function to get full path of a given parameter without resolving, expanding
-	symbolic links but using a directory file descriptor as current working dir. 
-	It is assumed that the file is indeed within that directory. The function 
-	translates the file descriptor into the actual directory (string).
-*/
-const char * sanitize_and_get_absolute_path_from_dir_file_descriptor(const char *, int);
-
-/*
-	Function used to retrieve as string the full directory path pointed to
-	by a given file descriptor. 
-*/
-char * get_directory_from_fd(int);
 
 #endif

@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("hoo",["Section","Variable"],[["Hooked",,[[,"Hooked functions",,,0,"File:libTTThwart_hooked_functions.h:Hooked_functions"],[,"Both-handed hooked functions",,,1,"File:libTTThwart_hooked_functions.h:Both-handed_hooked_functions"],[,"Left-handed hooked functions",,,1,"File:libTTThwart_hooked_functions.h:Left-handed_hooked_functions"]]]]);

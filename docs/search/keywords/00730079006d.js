@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("sym",["Function"],[["symlink_wrapper",,[[,,,,0,"File:libTTThwart_wrappers.h:symlink_wrapper"]]]]);

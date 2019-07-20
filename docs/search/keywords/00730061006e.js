@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("san",["Function"],[["sanitize_and_get_absolute_path",,[[,,,,0,"File:libTTThwart_internals.h:sanitize_and_get_absolute_path"]]],["sanitize_and_get_absolute_path_from_dir_file_descriptor",,[[,,,,0,"File:libTTThwart_internals.h:sanitize_and_get_absolute_path_from_dir_file_descriptor"]]]]);
