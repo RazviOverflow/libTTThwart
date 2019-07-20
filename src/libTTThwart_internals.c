@@ -116,13 +116,18 @@ void get_fs_and_initialize_checking_functions(const char *path){
 	       	EXT3_SUPER_MAGIC      0xef53
 	       	EXT4_SUPER_MAGIC      0xef53
 		*/
+		if(struct_statfs.f_type == EXT2_SUPER_MAGIC){
+			upsert_file_data_in_array = upsert_file_data_in_array_ext3ext4;
+		} else {
+			upsert_file_data_in_array = upsert_file_data_in_array_otherfs;
+		}
 
-		switch(struct_statfs.f_type){
+		switch(){
 			case EXT2_SUPER_MAGIC: 
-				upsert_file_data_in_array = upsert_file_data_in_array_ext3ext4;
+				
 				break;
 			default:
-				upsert_file_data_in_array = upsert_file_data_in_array_otherfs;
+				
 				break;
 		}
 	} else {
@@ -193,7 +198,7 @@ int file_does_exist(const char *pathname){
 }
 
 bool starts_with(const char *pre, const char *str){
-    size_t lenpre = strlen(pre),
-           lenstr = strlen(str);
+    size_t lenpre = strlen(pre);
+    size_t lenstr = strlen(str);
     return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
 }

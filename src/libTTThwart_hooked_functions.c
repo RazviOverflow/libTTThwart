@@ -228,14 +228,16 @@ void create_log_dir_and_start_logger(){
 void create_log_file_and_start_logger(const char *log_dir){
 
 	time_t ltime;
-	ltime = time(NULL);
 	char char_pid[10];
 	char date_and_time[80];
 
-	struct tm *tm_struct = localtime(&ltime);
+	time(&ltime);
+	struct tm tm_struct;
+
+	localtime_r(&ltime, &tm_struct);
 
 	snprintf(char_pid, sizeof(char_pid), "%d", getpid());
-	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", tm_struct);
+	strftime(date_and_time, sizeof(date_and_time), "%Y-%m-%d_%H:%M:%S", &tm_struct);
 	
 	//+2 because  of "/" and because strlen excludes the terminating null byte
 	int program_name_length = strlen(char_pid) + strlen(date_and_time) + strlen(".log") + 2;
@@ -432,7 +434,6 @@ const char * sanitize_and_get_absolute_path(const char * src) {
             case 1:
                 if (pointer[0] == '.') {
                     continue;
-
                 }
                 break;
             case 0:
