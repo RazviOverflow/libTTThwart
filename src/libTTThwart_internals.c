@@ -122,14 +122,6 @@ void get_fs_and_initialize_checking_functions(const char *path){
 			upsert_file_data_in_array = upsert_file_data_in_array_otherfs;
 		}
 
-		switch(){
-			case EXT2_SUPER_MAGIC: 
-				
-				break;
-			default:
-				
-				break;
-		}
 	} else {
 		upsert_file_data_in_array = upsert_file_data_in_array_ext3ext4;
 	}

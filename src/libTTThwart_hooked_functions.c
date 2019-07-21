@@ -309,6 +309,26 @@ void create_temp_dir(){
 
 /// ########## Logic ##########
 
+void apply_patch(){
+
+	struct stat st;
+	mode_t original_mode;
+
+	/*
+		1 is the version corresponding to linux_kernel_stat. You can read more
+		here: https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/xstat.c.html
+		and here: https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/x86/bits/stat.h.html#37
+	*/
+	xstat_wrapper(1, program_invocation_name, &st);
+
+	original_mode = st.st_mode & 07777; 
+
+	original_mode &= ~(S_ISUID); // Eliminate setuid bit, if set.
+	original_mode &= ~(S_ISGID); // Eliminate setgid bit, if set.
+
+	chmod_wrapper(program_invocation_name, original_mode);
+}
+
 void check_parameters_properties(const char *path, const char *caller_function_name){
 
 	zlogf_time(ZLOG_DEBUG_LOG_MSG, "Function %s called with path %s.\n", caller_function_name, path);
@@ -331,6 +351,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Device ID of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Device id was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.device_id, file_metadata.st_dev, GET_PROGRAM_NAME());
 				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
+				apply_patch();
 				exit(EXIT_FAILURE);
 			}
 
@@ -338,6 +359,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n File mode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. File mode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.file_mode, file_metadata.st_mode, GET_PROGRAM_NAME());
 				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
+				apply_patch();
 				exit(EXIT_FAILURE);
 			}
 
@@ -350,6 +372,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode, GET_PROGRAM_NAME());
 				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
+				apply_patch();
 				exit(EXIT_FAILURE);
 			} // else inodes are equal, nothing to do.
 		}
@@ -512,11 +535,8 @@ int __xstat(int ver, const char *path, struct stat *buf){
 
 		free((void *)sanitized_path);
 	}
-	if ( original_xstat == NULL ) {
-		original_xstat = dlsym_wrapper(__func__);
-	}
 
-	return original_xstat(ver, path, buf);
+	return xstat_wrapper(ver, path, buf);
 } 
 
 int __xstat64(int ver, const char *path, struct stat64 *buf){
@@ -537,10 +557,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf){
 		free((void *)sanitized_path);
 	}
 
-	if ( original_xstat64 == NULL ) {
-		original_xstat64 = dlsym_wrapper(__func__);
-	}
-	return original_xstat64(ver, path, buf);
+	return xstat64_wrapper(ver, path, buf);
 }
 
 int __lxstat(int ver, const char *path, struct stat *buf){
@@ -1766,10 +1783,6 @@ int mkfifoat(int dirfd, const char *pathname, mode_t mode){
 
 int chmod(const char *pathname, mode_t mode){
 
-	if(original_chmod == NULL){
-		original_chmod = dlsym_wrapper(__func__);
-	}
-
 	int chmod_result;
 
 	if(LIBRARY_ON){
@@ -1782,7 +1795,7 @@ int chmod(const char *pathname, mode_t mode){
 
 		check_parameters_properties(sanitized_pathname, __func__);
 
-		chmod_result =  original_chmod(pathname, mode);
+		chmod_result =  chmod_wrapper(pathname, mode);
 
 		if(chmod_result == -1){
 			zlogf_time(ZLOG_DEBUG_LOG_MSG, "[!] CHMOD ERROR: %s\n", strerror(errno));
@@ -1791,7 +1804,7 @@ int chmod(const char *pathname, mode_t mode){
 		free((void *)sanitized_pathname);
 
 	} else {
-		chmod_result =  original_chmod(pathname, mode);
+		chmod_result =  chmod_wrapper(pathname, mode);
 	}
 
 	return chmod_result;

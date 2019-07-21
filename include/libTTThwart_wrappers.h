@@ -33,6 +33,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 /*
 	About: Wrappers' scope.
@@ -284,5 +285,49 @@ extern int link_wrapper(const char *oldpath, const char *newpath);
 		Original return value of remove call.
 */
 extern int remove_wrapper(const char *);
+
+/*
+	Function: xstat_wrapper
+
+	Wrapper for __xstat() function. __xstat is glibc's implementation of <POSIX: https://en.wikipedia.org/wiki/C_POSIX_library> stat().
+
+	Parameters:
+		ver - Call's version according to https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/baselib-xstat-1.html
+		path - Path of file or directory to stat.
+		buf - Struct to save the data into. 
+
+	Returns:
+		Original return value of __xstat or stat call.
+*/
+extern int xstat_wrapper(int ver, const char *path, struct stat *buf);
+
+/*
+	Function: xstat64__wrapper
+
+	Wrapper for __xstat64() function. __xstat64 is glibc's implementation of <Large File Support: http://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/normativerefs.html#STD.LFS> stat64().
+
+	Parameters:
+		ver - Call's version accodring to http://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/baselib-xstat64-1.html
+		path - Path of file or directory to stat.
+		buf - Struct to save the data into. 
+
+	Returns:
+		Original return value of __xstat64 or stat64 call.
+*/
+extern int xstat64_wrapper(int ver, const char *path, struct stat64 *buf);
+
+/*
+	Function: chmod_wrapper
+
+	Wrapper for chmod() function.
+
+	Parameters:
+		pathname - Name of file or directory whose mode is about to change.
+		mode - Mode to change to.
+
+	Returns:
+		Original return value of chmod call.
+*/
+extern int chmod_wrapper(const char *pathname, mode_t mode);
 
 #endif

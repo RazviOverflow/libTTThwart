@@ -110,10 +110,20 @@
  <div class="CBody"><p>Wrapper for link() function.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">oldpath<div class="CDLParameterType"><span class="SHKeyword">const</span> <span class="SHKeyword">char</span>*</div></td><td class="CDLDefinition"><p>File or directory to which the new link (hard) will point to.</p></td></tr><tr><td class="CDLEntry">newpath<div class="CDLParameterType"><span class="SHKeyword">const</span> <span class="SHKeyword">char</span>*</div></td><td class="CDLDefinition"><p>Path of the new link.</p></td></tr></table><div class="CHeading">Returns</div><p>Original return value of link call.</p></div>
 </div>
 
-<a name="remove_wrapper"></a><a name="Topic60"></a><div class="CTopic TFunction LC last">
+<a name="remove_wrapper"></a><a name="Topic60"></a><div class="CTopic TFunction LC">
  <div class="CTitle">remove_wrapper</div>
  <div id="NDPrototype60" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">extern</span> <span class="SHKeyword">int</span> remove_wrapper(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PType first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PName last">char *</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>
  <div class="CBody"><p>Wrapper for remove() function.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">pathname</td><td class="CDLDefinition"><p>File or directory to remove.</p></td></tr></table><div class="CHeading">Returns</div><p>Original return value of remove call.</p></div>
+</div>
+
+<a name="xstat_wrapper"></a><a name="Topic73"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">xstat_wrapper</div>
+ <div class="CBody"><p>Wrapper for __xstat() function. __xstat is glibc's implementation of <a href="https://en.wikipedia.org/wiki/C_POSIX_library" target="_top">POSIX</a> stat().</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">ver</td><td class="CDLDefinition"><p>Call's version according to <a href="https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/baselib-xstat-1.html" target="_top">https://&#8203;refspecs&#8203;.linuxfoundation&#8203;.org&#8203;/LSB_1&#8203;.3&#8203;.0&#8203;/gLSB&#8203;/gLSB&#8203;/baselib-xstat-1&#8203;.html</a></p></td></tr><tr><td class="CDLEntry">path</td><td class="CDLDefinition"><p>Path of file or directory to stat.</p></td></tr><tr><td class="CDLEntry">buf</td><td class="CDLDefinition"><p>Struct to save the data into.</p></td></tr></table><div class="CHeading">Returns</div><p>Original return value of __xstat or stat call.</p></div>
+</div>
+
+<a name="xstat64__wrapper"></a><a name="Topic72"></a><div class="CTopic TFunction LC last">
+ <div class="CTitle">xstat64__wrapper</div>
+ <div class="CBody"><p>Wrapper for __xstat64() function. __xstat64 is glibc's implementation of <a href="http://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/normativerefs.html#STD.LFS" target="_top">Large File Support</a> stat64().</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">ver</td><td class="CDLDefinition"><p>Call's version accodring to <a href="http://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/baselib-xstat64-1.html" target="_top">http://&#8203;refspecs&#8203;.linuxbase&#8203;.org&#8203;/LSB_3&#8203;.0&#8203;.0&#8203;/LSB-PDA&#8203;/LSB-PDA&#8203;/baselib-xstat64-1&#8203;.html</a></p></td></tr><tr><td class="CDLEntry">path</td><td class="CDLDefinition"><p>Path of file or directory to stat.</p></td></tr><tr><td class="CDLEntry">buf</td><td class="CDLDefinition"><p>Struct to save the data into.</p></td></tr></table><div class="CHeading">Returns</div><p>Original return value of __xstat64 or stat64 call.</p></div>
 </div>
 
 </body></html>

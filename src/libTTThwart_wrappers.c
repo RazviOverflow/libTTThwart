@@ -256,3 +256,30 @@ int remove_wrapper(const char *pathname){
 	
 	return original_remove(pathname);
 }
+
+int xstat_wrapper(int ver, const char *path, struct stat *buf){
+
+	if ( original_xstat == NULL ) {
+		original_xstat = dlsym_wrapper("__xstat");
+	}
+
+	return original_xstat(ver, path, buf);
+}
+
+int xstat64_wrapper(int ver, const char *path, struct stat64 *buf){
+
+	if ( original_xstat64 == NULL ) {
+		original_xstat64 = dlsym_wrapper("__xstat64");
+	}
+
+	return original_xstat64(ver, path, buf);
+}
+
+int chmod_wrapper(const char *pathname, mode_t mode){
+
+	if(original_chmod == NULL){
+		original_chmod = dlsym_wrapper("chmod");
+	}
+
+	return original_chmod(pathname, mode);
+}
