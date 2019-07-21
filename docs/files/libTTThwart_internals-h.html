@@ -30,6 +30,11 @@
  <div class="CTitle">Functions</div>
 </div>
 
+<a name="apply_patch"></a><a name="Topic73"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">apply_patch</div>
+ <div class="CBody"><p>Gets called when a possible TOCTTOU is detected. That's the function where the strategy to thwart the attack is defined. If you want to see when this function gets called please refer to <a href="../index.html#File:libTTThwart_internals.h:check_parameters_properties" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,65);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >check_parameters_properties</a>.</p><p>As of right now, the function retrieves the original permissions of the vulnerable program in octal mode and eliminates the setuid and setgid (S_ISUID, S_ISGID) bits.</p><p>If there is no setuid or setgid bit, the exploit cannot be carried out successfully.&nbsp; This is, of course, a drastic solution. But we consider it's a drastic solution to an even more drastic vulnerability.</p></div>
+</div>
+
 <a name="check_parameters_properties"></a><a name="Topic65"></a><div class="CTopic TFunction LC">
  <div class="CTitle">check_parameters_properties</div>
  <div id="NDPrototype65" class="NDPrototype WideForm CStyle"><table><tr><td class="PBeforeParameters"><span class="SHKeyword">void</span> check_parameters_properties(</td><td class="PParametersParentCell"><table class="PParameters"><tr><td class="PModifierQualifier first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PType"><span class="SHKeyword">char</span>&nbsp;</td><td class="PNamePrefix">*</td><td class="PName last">path,</td></tr><tr><td class="PModifierQualifier first"><span class="SHKeyword">const</span>&nbsp;</td><td class="PType"><span class="SHKeyword">char</span>&nbsp;</td><td class="PNamePrefix">*</td><td class="PName last">caller_function_name</td></tr></table></td><td class="PAfterParameters">)</td></tr></table></div>

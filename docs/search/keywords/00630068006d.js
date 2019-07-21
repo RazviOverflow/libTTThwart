@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("chm",["Function"],[["chmod_wrapper",,[[,,,,0,"File:libTTThwart_wrappers.h:chmod_wrapper"]]]]);
