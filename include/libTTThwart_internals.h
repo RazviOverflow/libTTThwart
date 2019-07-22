@@ -48,7 +48,7 @@
 /*
 	Function: apply_patch
 
-	Gets called when a possible TOCTTOU is detected. That's the function where the
+	Gets called when a possible TOCTTOU is detected. This is the function where the
 	strategy to thwart the attack is defined. If you want to see when this function
 	gets called please refer to <check_parameters_properties>.
 
