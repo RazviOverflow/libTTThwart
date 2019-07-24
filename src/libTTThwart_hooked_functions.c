@@ -18,7 +18,9 @@
 
 Authors:
 	Razvan Raducu @Razvieu
-	Ricardo J. Rodriguez @RicardoJRdez
+
+Academic coordinator: 
+	Ricardo J. Rodriguez https://webdiis.unizar.es/~ricardo/
 
 */
 #define _GNU_SOURCE

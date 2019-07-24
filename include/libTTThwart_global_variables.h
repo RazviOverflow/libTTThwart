@@ -22,7 +22,13 @@
 
 		<Razvan Raducu: https://twitter.com/Razvieu>
 
-		<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+	Academic coordinator:: 
+
+		<Ricardo J. Rodríguez: https://webdiis.unizar.es/~ricardo/>
+
+	Code: 
+		You can find the source code associated with this header <here: https://github.com/RazviOverflow/ld.so.preload/blob/master/include/libTTThwart_global_variables.h>.
+
 		
 */
 #ifndef FILE_GLOBAL_VARIABLES_H_

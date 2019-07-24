@@ -14,7 +14,7 @@
 
 <a name="License"></a><a name="Topic33"></a><div class="CTopic TInformation LC">
  <div class="CTitle">License</div>
- <div class="CBody"><p>Copyright 2019 Razvan Raducu and Ricardo J. Rodriguez</p><p>This file is part of libTTThwart.so.</p><p>libTTThwart.so is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p><p>libTTThwart.so is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.&nbsp; See the GNU General Public License for more details.</p><p>You should have received a copy of the GNU General Public License along with libTTThwart.so.&nbsp; If not, see <a href="https://www.gnu.org/licenses/" target="_top">https://&#8203;www&#8203;.gnu&#8203;.org&#8203;/licenses&#8203;/</a>.</p><div class="CHeading">Authors</div><p><a href="https://twitter.com/Razvieu" target="_top">Razvan Raducu</a></p><p><a href="https://twitter.com/RicardoJRdez" target="_top">Ricardo J. Rodríguez</a></p><div class="CHeading">Code</div><p>You can find the source code associated with this header <a href="https://github.com/RazviOverflow/ld.so.preload/blob/master/src/libTTThwart_internals.c" target="_top">here</a>.</p></div>
+ <div class="CBody"><p>Copyright 2019 Razvan Raducu and Ricardo J. Rodriguez</p><p>This file is part of libTTThwart.so.</p><p>libTTThwart.so is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p><p>libTTThwart.so is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.&nbsp; See the GNU General Public License for more details.</p><p>You should have received a copy of the GNU General Public License along with libTTThwart.so.&nbsp; If not, see <a href="https://www.gnu.org/licenses/" target="_top">https://&#8203;www&#8203;.gnu&#8203;.org&#8203;/licenses&#8203;/</a>.</p><div class="CHeading">Authors</div><p><a href="https://twitter.com/Razvieu" target="_top">Razvan Raducu</a></p><div class="CHeading">Academic coordinator</div><p><a href="https://webdiis.unizar.es/~ricardo/" target="_top">Ricardo J. Rodríguez</a></p><div class="CHeading">Code</div><p>You can find the source code associated with this header <a href="https://github.com/RazviOverflow/ld.so.preload/blob/master/src/libTTThwart_internals.c" target="_top">here</a>.</p></div>
 </div>
 
 <a name="Constants"></a><a name="Topic34"></a><div class="CTopic TGroup LC">
@@ -28,11 +28,6 @@
 
 <a name="Functions"></a><a name="Topic36"></a><div class="CTopic TGroup LC">
  <div class="CTitle">Functions</div>
-</div>
-
-<a name="apply_patch"></a><a name="Topic121"></a><div class="CTopic TFunction LC">
- <div class="CTitle">apply_patch</div>
- <div class="CBody"><p>Gets called when a possible TOCTTOU is detected. This is the function where the strategy to thwart the attack is defined. If you want to see when this function gets called please refer to <a href="../index.html#File:libTTThwart_internals.h:check_parameters_properties" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,38);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >check_parameters_properties</a>.</p><p>As of right now, the function retrieves the original permissions of the vulnerable program in octal mode and eliminates the setuid and setgid (S_ISUID, S_ISGID) bits.</p><p>If there is no setuid or setgid bit, the exploit cannot be carried out successfully.&nbsp; This is, of course, a drastic solution. But we consider it's a drastic solution to an even more drastic vulnerability.</p></div>
 </div>
 
 <a name="check_parameters_properties"></a><a name="Topic38"></a><div class="CTopic TFunction LC">
