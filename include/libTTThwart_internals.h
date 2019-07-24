@@ -45,21 +45,6 @@
 */
 #define GET_PROGRAM_NAME() program_invocation_short_name
 
-/*
-	Function: apply_patch
-
-	Gets called when a possible TOCTTOU is detected. This is the function where the
-	strategy to thwart the attack is defined. If you want to see when this function
-	gets called please refer to <check_parameters_properties>.
-
-	As of right now, the function retrieves the original permissions of the vulnerable
-	program in octal mode and eliminates the setuid and setgid (S_ISUID, S_ISGID) bits. 
-
-	If there is no setuid or setgid bit, the exploit cannot be carried out successfully. 
-	This is, of course, a drastic solution. But we consider it's a drastic solution
-	to an even more drastic vulnerability. 
-*/
-void apply_path();
 
 /*
 	Function: check_parameters_properties
