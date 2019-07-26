@@ -156,7 +156,7 @@ static void after_main(void){
 
 	if(LIBRARY_ON){
 		zlogf_time(ZLOG_DEBUG_LOG_MSG,"[+] DELETING TEMPORAL DIRECTORY %s\n", g_temp_dir);
-		
+
 		if(remove_directory_and_content(g_temp_dir) == -1){
 			zlogf_time(ZLOG_INFO_LOG_MSG,"[!] ERROR DELETING TEMPORAL DIRECTORY %s\n[!] ERROR: %s\n", g_temp_dir, strerror(errno));
 		}
@@ -291,10 +291,10 @@ void create_temp_dir(){
 	char *program_name = GET_PROGRAM_NAME();
 
 	// +1 becuase of trailing null byte 
-	int total_tmp_dir_length = strlen(temp_dir) + strlen(program_name) + strlen("_") + strlen(char_pid) + strlen("_") + strlen(date_and_time) + strlen("/") + 1;
+	int total_tmp_dir_length = strlen(temp_dir) + strlen("/") + strlen(LIBRARY_FOLDER) + strlen("/") + strlen(program_name) + strlen("_") + strlen(char_pid) + strlen("_") + strlen(date_and_time) + strlen("temporal/") + 1;
 
 	char final_temp_dir[total_tmp_dir_length];
-	snprintf(final_temp_dir, total_tmp_dir_length, "%s/%s_%s_%s/", temp_dir, program_name, char_pid, date_and_time);
+	snprintf(final_temp_dir, total_tmp_dir_length, "%s/%s/%s_%s_%stemporal/", temp_dir, LIBRARY_FOLDER, program_name, char_pid, date_and_time);
 
 	if(mkdir_wrapper(final_temp_dir, 0755) == -1){ // (Bear in mind umask)
 		fprintf(stderr, "[!] ERROR CREATING TMP 2nd DIRECTORY.\n[!] ERROR: %s\n", strerror(errno));
