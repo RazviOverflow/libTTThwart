@@ -218,7 +218,6 @@ void create_log_dir_and_start_logger(){
 				zlog_init_stderr();
 				return;
 			}
-			closedir(dir);
 			create_log_file_and_start_logger(log_dir);
 		} else {
 			fprintf(stderr, "[!] ERROR: %s\n", strerror(errno));
