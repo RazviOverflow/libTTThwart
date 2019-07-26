@@ -40,7 +40,7 @@
 
 	Global folder used to create all log files as well as temporal hard links.
 */
-#define LIBRARY_FOLDER "/libTOCTTOU"
+#define LIBRARY_FOLDER "/libTTThwart"
 
 /*	
 	Variable: file_objects_info
