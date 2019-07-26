@@ -136,7 +136,7 @@ static void after_main(void) __attribute__((destructor));
 
 static void before_main(void){
 
-	if((getuid() != geteuid()) || (getgid() != geteuid())){
+	if((getuid() != geteuid()) || (getgid() != getegid())){
 		LIBRARY_ON = true;
 	}
 	
