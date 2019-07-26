@@ -6,7 +6,11 @@ Please read this document in order to execute the Proof Of Concept (POC).
 
 Index:
 * Context
+* Configuration
+* Docs
 * POC
+* Logging
+* License
 
 ## Context
 
@@ -26,6 +30,16 @@ Statistically linked libraries are immune to LD_PRELOAD as well as functions def
 * https://blog.fpmurphy.com/2012/09/all-about-ld_preload.html
 * https://blog.jessfraz.com/post/ld_preload/
 * https://stackoverflow.com/questions/426230/what-is-the-ld-preload-trick
+
+## Configuration
+
+There is very little configuration this library need in order to get executed by the [dynamic loader](http://man7.org/linux/man-pages/man8/ld.so.8.html). 
+
+In the main directory, there is ``` configure.sh ```. We recommend you to run it since it will create a folder in your $HOME for the logs to be stored into and it will mount the folder in a TMPFS so there is almost no performance punishment. This implies two things:
+- You must be able to run ```configure.sh``` with superuser privileges. 
+- You must have $HOME environment variable pointing to some available directory.
+
+**Please bear in mind** that TMPFS is a volatile file system which offer very low latencies but is erased everytime you restart or shut down the computer. This is, *your logs will be deleted* unless you backup them.
 
 ## POC
 
