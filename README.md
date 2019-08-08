@@ -5,12 +5,17 @@ This project represents the creation of a Linux library that prevents race condi
 Please read this document in order to execute the Proof Of Concept (POC).
 
 Index:
+* Caveats
 * Context
 * Configuration
 * Docs
 * POC
 * Logging
 * License
+
+## Caveats
+
+Please bear in mind the present library is still under development and has been tested only on certain environments. It's strongly recommended to **NOT USE IT** in production environments, or your main operating system. Keep in mind the library persintently checks for existence of certain environment variables and files, **and it has system-wide range**. This is, it could affect normal behaviour of your system, e.g. the boot stage of the OS before $HOME variable is defined. 
 
 ## Context
 
