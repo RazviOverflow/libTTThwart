@@ -508,7 +508,7 @@ int __xstat(int ver, const char *path, struct stat *buf){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		free((void *)sanitized_path);
@@ -529,7 +529,7 @@ int __xstat64(int ver, const char *path, struct stat64 *buf){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		free((void *)sanitized_path);
@@ -550,7 +550,7 @@ int __lxstat(int ver, const char *path, struct stat *buf){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		free((void *)sanitized_path);
@@ -575,7 +575,7 @@ int __lxstat64(int ver, const char *path, struct stat64 *buf){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		free((void *)sanitized_path);
@@ -732,7 +732,7 @@ int access(const char *path, int mode){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		free((void *)sanitized_path);
@@ -1409,7 +1409,7 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsiz){
 		if(file_does_exist(sanitized_pathname)){
 			upsert_file_data_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_pathname, get_inode(sanitized_pathname));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_pathname, NONEXISTING_FILE_INODE);
 		}
 
 		if(readlink_result == -1){
@@ -1454,7 +1454,7 @@ ssize_t readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz){
 		if(file_does_exist(sanitized_path)){
 			upsert_file_data_in_array(&g_array, sanitized_path, get_inode(sanitized_path), g_temp_dir);
 		} else {
-			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, get_inode(sanitized_path));
+			upsert_nonexisting_file_metadata_in_array(&g_array, sanitized_path, NONEXISTING_FILE_INODE);
 		}
 
 		readlinkat_result = original_readlinkat(dirfd, pathname, buf, bufsiz);

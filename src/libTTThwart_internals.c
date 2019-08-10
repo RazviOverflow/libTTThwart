@@ -146,7 +146,7 @@ ino_t get_inode(const char *path){
 		} else {
 			zlogf_time(ZLOG_INFO_LOG_MSG, "[!] Errors occurred while getting inode of %s. ERROR: %s\n", path, strerror(errno));
 			close(fd);
-			return 0;
+			return 0; //NONEXISTING_FILE_INODE
 		}
 	}
 	struct stat file_stat;
