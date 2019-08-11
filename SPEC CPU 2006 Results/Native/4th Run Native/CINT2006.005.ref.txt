@@ -1,0 +1,203 @@
+                           SPEC(R) CINT2006 Summary
+                       System Vendor System Model Name
+         Test Sponsor: Test Sponsor (Optional, defaults to hw_vendor)
+                           Tue Aug  6 00:16:30 2019
+
+CPU2006 License: 0                                       Test date: Aug-2019
+Test sponsor: Test Sponsor (Optional, defaults to hw_vendor)  Hardware availability: Dec-9999
+Tested by:    (Optional, defaults to hw_vendor)  Software availability: May-2010
+
+                Base     Base       Base        Peak     Peak       Peak
+Benchmarks      Ref.   Run Time     Ratio       Ref.   Run Time     Ratio
+-------------- ------  ---------  ---------    ------  ---------  ---------
+400.perlbench    9770        326       30.0 S                                  
+400.perlbench    9770        242       40.4 S                                  
+400.perlbench    9770        281       34.8 *                                  
+401.bzip2        9650        382       25.3 S                                  
+401.bzip2        9650        392       24.6 *                                  
+401.bzip2        9650        434       22.2 S                                  
+403.gcc          8050        236       34.1 *                                  
+403.gcc          8050        235       34.2 S                                  
+403.gcc          8050        257       31.4 S                                  
+429.mcf          9120        334       27.3 S                                  
+429.mcf          9120        312       29.2 S                                  
+429.mcf          9120        318       28.7 *                                  
+445.gobmk       10490        442       23.7 S                                  
+445.gobmk       10490        458       22.9 *                                  
+445.gobmk       10490        489       21.5 S                                  
+456.hmmer        9330        332       28.1 *                                  
+456.hmmer        9330        317       29.5 S                                  
+456.hmmer        9330        347       26.9 S                                  
+458.sjeng       12100        479       25.3 *                                  
+458.sjeng       12100        486       24.9 S                                  
+458.sjeng       12100        477       25.4 S                                  
+462.libquantum  20720        316       65.5 *                                  
+462.libquantum  20720        318       65.2 S                                  
+462.libquantum  20720        280       74.1 S                                  
+464.h264ref     22130        444       49.8 S                                  
+464.h264ref     22130        401       55.2 S                                  
+464.h264ref     22130        432       51.2 *                                  
+471.omnetpp      6250        346       18.0 S                                  
+471.omnetpp      6250        385       16.2 S                                  
+471.omnetpp      6250        384       16.3 *                                  
+473.astar        7020        381       18.4 *                                  
+473.astar        7020        425       16.5 S                                  
+473.astar        7020        371       18.9 S                                  
+483.xalancbmk    6900        197       35.0 S                                  
+483.xalancbmk    6900        228       30.3 S                                  
+483.xalancbmk    6900        215       32.1 *                                  
+==============================================================================
+400.perlbench    9770        281       34.8 *                                  
+401.bzip2        9650        392       24.6 *                                  
+403.gcc          8050        236       34.1 *                                  
+429.mcf          9120        318       28.7 *                                  
+445.gobmk       10490        458       22.9 *                                  
+456.hmmer        9330        332       28.1 *                                  
+458.sjeng       12100        479       25.3 *                                  
+462.libquantum  20720        316       65.5 *                                  
+464.h264ref     22130        432       51.2 *                                  
+471.omnetpp      6250        384       16.3 *                                  
+473.astar        7020        381       18.4 *                                  
+483.xalancbmk    6900        215       32.1 *                                  
+ SPECint(R)_base2006                   29.5
+ SPECint2006                                                        Not Run
+
+
+                                   HARDWARE
+                                   --------
+            CPU Name: Intel Core i5-8250U
+ CPU Characteristics:  
+             CPU MHz: 9999
+                 FPU: Integrated
+      CPU(s) enabled: number of cores enabled cores, 1 chip, number of cores manufactured into each chip cores/chip, number of threads enabled per core threads/core
+    CPU(s) orderable: 1,2 chips
+       Primary Cache: 9999 KB I + 9999 KB D on chip per core
+     Secondary Cache: 9999 KB I+D on chip per core
+            L3 Cache: 9999 MB I+D on chip per chip
+         Other Cache: None
+              Memory: 7.678 GB fixme: If using DDR3, format is:
+                      'N GB (M x N GB nRxn PCn-nnnnnR-n, ECC)'
+      Disk Subsystem: 16 GB  add more disk info here
+      Other Hardware: None
+
+
+                                   SOFTWARE
+                                   --------
+    Operating System: Debian GNU/Linux 10 (buster)
+                      4.19.0-5-amd64
+            Compiler: gcc, g++ & gfortran 4.3.4
+       Auto Parallel: No
+         File System: btrfs
+        System State: Run level 5 (add definition here)
+       Base Pointers: 64-bit
+       Peak Pointers: 64-bit
+      Other Software: None
+
+
+                                 Submit Notes
+                                 ------------
+    'numactl' was used to bind copies to the cores.
+    See the configuration file for details.
+
+                            Operating System Notes
+                            ----------------------
+    'ulimit -s unlimited' was used to set environment stack size
+
+                                Platform Notes
+                                --------------
+     Sysinfo program /home/razvan/Desktop/SPEC_CPU/Docs/sysinfo
+     $Rev: 6775 $ $Date:: 2011-08-16 #$ 8787f7622badcf24e01c368b1db4377c
+     running on r4zv4n Tue Aug  6 00:16:32 2019
+    
+     This section contains SUT (System Under Test) info as seen by
+     some common utilities.  To remove or add to this section, see:
+       http://www.spec.org/cpu2006/Docs/config.html#sysinfo
+    
+     From /proc/cpuinfo
+        model name : Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
+           1 "physical id"s (chips)
+           8 "processors"
+        cores, siblings (Caution: counting these is hw and system dependent.  The
+        following excerpts from /proc/cpuinfo might not be reliable.  Use with
+        caution.)
+           cpu cores : 4
+           siblings  : 8
+           physical 0: cores 0 1 2 3
+        cache size : 6144 KB
+    
+     From /proc/meminfo
+        MemTotal:        8050876 kB
+        HugePages_Total:       0
+        Hugepagesize:       2048 kB
+    
+     /usr/bin/lsb_release -d
+        Debian GNU/Linux 10 (buster)
+    
+     From /etc/*release* /etc/*version*
+        debian_version: 10.0
+        os-release:
+           PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+           NAME="Debian GNU/Linux"
+           VERSION_ID="10"
+           VERSION="10 (buster)"
+           VERSION_CODENAME=buster
+           ID=debian
+           HOME_URL="https://www.debian.org/"
+           SUPPORT_URL="https://www.debian.org/support"
+    
+     uname -a:
+        Linux r4zv4n 4.19.0-5-amd64 #1 SMP Debian 4.19.37-5+deb10u1 (2019-07-19)
+        x86_64 GNU/Linux
+    
+     run-level 5 Aug 6 02:14
+    
+     SPEC is set to: /home/razvan/Desktop/SPEC_CPU
+        Filesystem     Type   Size  Used Avail Use% Mounted on
+        /dev/nvme0n1p6 btrfs   16G  8.3G  7.2G  54% /
+    
+     (End of data from sysinfo program)
+
+                           Base Compiler Invocation
+                           ------------------------
+C benchmarks: 
+     /usr/bin/gcc
+
+C++ benchmarks: 
+     /usr/bin/g++
+
+
+                            Base Portability Flags
+                            ----------------------
+  400.perlbench: -DSPEC_CPU_LP64 -DSPEC_CPU_LINUX_X64
+      401.bzip2: -DSPEC_CPU_LP64
+        403.gcc: -DSPEC_CPU_LP64
+        429.mcf: -DSPEC_CPU_LP64
+      445.gobmk: -DSPEC_CPU_LP64
+      456.hmmer: -DSPEC_CPU_LP64
+      458.sjeng: -DSPEC_CPU_LP64
+ 462.libquantum: -DSPEC_CPU_LP64 -DSPEC_CPU_LINUX
+    464.h264ref: -DSPEC_CPU_LP64
+    471.omnetpp: -DSPEC_CPU_LP64
+      473.astar: -DSPEC_CPU_LP64
+  483.xalancbmk: -DSPEC_CPU_LP64 -DSPEC_CPU_LINUX
+
+
+                           Base Optimization Flags
+                           -----------------------
+C benchmarks: 
+     -O2 -fno-strict-aliasing
+
+C++ benchmarks: 
+     -O2 -fno-strict-aliasing
+
+
+    SPEC and SPECint are registered trademarks of the Standard Performance
+    Evaluation Corporation.  All other brand and product names appearing
+    in this result are trademarks or registered trademarks of their
+    respective holders.
+-----------------------------------------------------------------------------
+For questions about this result, please contact the tester.
+For other inquiries, please contact webmaster@spec.org.
+Copyright 2006-2019 Standard Performance Evaluation Corporation
+Tested with SPEC CPU2006 v1.2.
+Report generated on Tue Aug  6 04:05:38 2019 by CPU2006 ASCII formatter v6400.
