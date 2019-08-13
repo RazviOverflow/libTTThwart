@@ -1,7 +1,7 @@
                            SPEC(R) CINT2006 Summary
                        System Vendor System Model Name
          Test Sponsor: Test Sponsor (Optional, defaults to hw_vendor)
-                           Tue Aug  6 21:05:15 2019
+                           Mon Aug 12 20:24:43 2019
 
 CPU2006 License: 0                                       Test date: Aug-2019
 Test sponsor: Test Sponsor (Optional, defaults to hw_vendor)  Hardware availability: Dec-9999
@@ -10,56 +10,56 @@ Tested by:    (Optional, defaults to hw_vendor)  Software availability: May-2010
                 Base     Base       Base        Peak     Peak       Peak
 Benchmarks      Ref.   Run Time     Ratio       Ref.   Run Time     Ratio
 -------------- ------  ---------  ---------    ------  ---------  ---------
-400.perlbench    9770        267       36.7 S                                  
-400.perlbench    9770        247       39.5 S                                  
-400.perlbench    9770        263       37.2 *                                  
-401.bzip2        9650        417       23.1 S                                  
-401.bzip2        9650        387       24.9 *                                  
-401.bzip2        9650        385       25.1 S                                  
+400.perlbench    9770        403       24.3 S                                  
+400.perlbench    9770        258       37.9 *                                  
+400.perlbench    9770        245       39.8 S                                  
+401.bzip2        9650        398       24.2 *                                  
+401.bzip2        9650        591       16.3 S                                  
+401.bzip2        9650        395       24.4 S                                  
+403.gcc          8050        228       35.3 S                                  
+403.gcc          8050        251       32.0 S                                  
 403.gcc          8050        246       32.7 *                                  
-403.gcc          8050        231       34.9 S                                  
-403.gcc          8050        262       30.7 S                                  
-429.mcf          9120        330       27.6 S                                  
-429.mcf          9120        301       30.3 S                                  
-429.mcf          9120        328       27.8 *                                  
-445.gobmk       10490        456       23.0 S                                  
-445.gobmk       10490        396       26.5 S                                  
-445.gobmk       10490        452       23.2 *                                  
-456.hmmer        9330        310       30.1 *                                  
-456.hmmer        9330        308       30.3 S                                  
-456.hmmer        9330        323       28.9 S                                  
-458.sjeng       12100        483       25.1 S                                  
-458.sjeng       12100        452       26.7 S                                  
-458.sjeng       12100        458       26.4 *                                  
-462.libquantum  20720        333       62.2 *                                  
-462.libquantum  20720        303       68.4 S                                  
-462.libquantum  20720        495       41.9 S                                  
-464.h264ref     22130        425       52.1 *                                  
-464.h264ref     22130        421       52.6 S                                  
-464.h264ref     22130        477       46.4 S                                  
-471.omnetpp      6250        359       17.4 *                                  
-471.omnetpp      6250        369       16.9 S                                  
-471.omnetpp      6250        352       17.8 S                                  
-473.astar        7020        372       18.9 S                                  
-473.astar        7020        385       18.2 *                                  
-473.astar        7020        389       18.1 S                                  
-483.xalancbmk    6900        198       34.9 S                                  
-483.xalancbmk    6900        217       31.8 S                                  
-483.xalancbmk    6900        216       31.9 *                                  
+429.mcf          9120        312       29.2 S                                  
+429.mcf          9120        338       27.0 S                                  
+429.mcf          9120        320       28.5 *                                  
+445.gobmk       10490        484       21.7 S                                  
+445.gobmk       10490        461       22.7 S                                  
+445.gobmk       10490        469       22.3 *                                  
+456.hmmer        9330        352       26.5 S                                  
+456.hmmer        9330        336       27.7 *                                  
+456.hmmer        9330        303       30.8 S                                  
+458.sjeng       12100        663       18.3 S                                  
+458.sjeng       12100        468       25.8 *                                  
+458.sjeng       12100        450       26.9 S                                  
+462.libquantum  20720        299       69.2 *                                  
+462.libquantum  20720        307       67.4 S                                  
+462.libquantum  20720        295       70.2 S                                  
+464.h264ref     22130        391       56.6 S                                  
+464.h264ref     22130        419       52.8 *                                  
+464.h264ref     22130        428       51.7 S                                  
+471.omnetpp      6250        416       15.0 S                                  
+471.omnetpp      6250        374       16.7 *                                  
+471.omnetpp      6250        350       17.9 S                                  
+473.astar        7020        410       17.1 S                                  
+473.astar        7020        369       19.0 *                                  
+473.astar        7020        357       19.6 S                                  
+483.xalancbmk    6900        193       35.7 S                                  
+483.xalancbmk    6900        200       34.5 *                                  
+483.xalancbmk    6900        224       30.8 S                                  
 ==============================================================================
-400.perlbench    9770        263       37.2 *                                  
-401.bzip2        9650        387       24.9 *                                  
+400.perlbench    9770        258       37.9 *                                  
+401.bzip2        9650        398       24.2 *                                  
 403.gcc          8050        246       32.7 *                                  
-429.mcf          9120        328       27.8 *                                  
-445.gobmk       10490        452       23.2 *                                  
-456.hmmer        9330        310       30.1 *                                  
-458.sjeng       12100        458       26.4 *                                  
-462.libquantum  20720        333       62.2 *                                  
-464.h264ref     22130        425       52.1 *                                  
-471.omnetpp      6250        359       17.4 *                                  
-473.astar        7020        385       18.2 *                                  
-483.xalancbmk    6900        216       31.9 *                                  
- SPECint(R)_base2006                   29.9
+429.mcf          9120        320       28.5 *                                  
+445.gobmk       10490        469       22.3 *                                  
+456.hmmer        9330        336       27.7 *                                  
+458.sjeng       12100        468       25.8 *                                  
+462.libquantum  20720        299       69.2 *                                  
+464.h264ref     22130        419       52.8 *                                  
+471.omnetpp      6250        374       16.7 *                                  
+473.astar        7020        369       19.0 *                                  
+483.xalancbmk    6900        200       34.5 *                                  
+ SPECint(R)_base2006                   30.1
  SPECint2006                                                        Not Run
 
 
@@ -107,7 +107,7 @@ Benchmarks      Ref.   Run Time     Ratio       Ref.   Run Time     Ratio
                                 --------------
      Sysinfo program /home/razvan/Desktop/SPEC_CPU/Docs/sysinfo
      $Rev: 6775 $ $Date:: 2011-08-16 #$ 8787f7622badcf24e01c368b1db4377c
-     running on r4zv4n Tue Aug  6 21:05:16 2019
+     running on r4zv4n Mon Aug 12 20:24:45 2019
     
      This section contains SUT (System Under Test) info as seen by
      some common utilities.  To remove or add to this section, see:
@@ -149,11 +149,11 @@ Benchmarks      Ref.   Run Time     Ratio       Ref.   Run Time     Ratio
         Linux r4zv4n 4.19.0-5-amd64 #1 SMP Debian 4.19.37-5+deb10u1 (2019-07-19)
         x86_64 GNU/Linux
     
-     run-level 5 Aug 6 23:02
+     run-level 5 Aug 12 22:22
     
      SPEC is set to: /home/razvan/Desktop/SPEC_CPU
         Filesystem     Type   Size  Used Avail Use% Mounted on
-        /dev/nvme0n1p6 btrfs   16G  8.0G  7.5G  52% /
+        /dev/nvme0n1p6 btrfs   16G  7.8G  7.7G  51% /
     
      (End of data from sysinfo program)
 
@@ -200,4 +200,4 @@ For questions about this result, please contact the tester.
 For other inquiries, please contact webmaster@spec.org.
 Copyright 2006-2019 Standard Performance Evaluation Corporation
 Tested with SPEC CPU2006 v1.2.
-Report generated on Wed Aug  7 00:53:42 2019 by CPU2006 ASCII formatter v6400.
+Report generated on Tue Aug 13 00:19:42 2019 by CPU2006 ASCII formatter v6400.
