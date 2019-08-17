@@ -1,6 +1,6 @@
 SHELL= /bin/sh
 CC=gcc
-CFLAGS= -shared -fPIC -Wall -Wextra -fstack-protector-all -O2 -lpthread -ldl
+CFLAGS= -shared -fPIC -Wall -Wextra -fstack-protector-all -O2
 LIBLINKFLAGS= -lpthread -ldl
 
 INCLUDEDIR=include
