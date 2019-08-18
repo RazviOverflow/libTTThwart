@@ -12,4 +12,4 @@ Authors:
 
 	<Razvan Raducu: https://twitter.com/Razvieu>
 
-	<Ricardo J. Rodríguez: https://twitter.com/RicardoJRdez>
+	<Ricardo J. Rodríguez: https://webdiis.unizar.es/~ricardo/>
