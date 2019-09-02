@@ -1,6 +1,6 @@
 # ld.so.preload
 
-This project represents the creation of a Linux library that prevents race condition, specifically TOCTTOU, attacks. 
+This project represents the creation of a Linux library that prevents TOCTOU attacks. 
 
 Please read this document in order to execute the Proof Of Concept (POC).
 
@@ -15,20 +15,19 @@ Index:
 
 ## Caveats
 
-Please bear in mind the present library is still under development and has been tested only on certain environments. It's strongly recommended to **NOT USE IT** in production environments, or your main operating system. Keep in mind the library persintently checks for existence of certain environment variables and files, **and it has system-wide range**. This is, it could affect normal behaviour of your system, e.g. the boot stage of the OS before $HOME variable is defined. 
+Please bear in mind the present library is still under development and has been tested only on certain environments. It's strongly recommended to **NOT USE IT** in production environments, or your main operating system. Keep in mind the library persistently checks for existence of certain environment variables and files, **and it has system-wide range**. This is, it could affect normal behavior of your system, e.g. the boot stage of the OS before $HOME variable is defined. 
 
 ## Context
 
-LD_PRELOAD allows dynamically linked function hooking.
+Linux GNU dynamic linker/loader allows dynamic linking and loading of shared objects (shared libraries).
 
 You might consider LD_PRELOAD a security hole but it is actually secured since it won't work if ruid != euid. 
 
-Shared libraries specified in **/etc/
-ld.so.preload** are loaded **before** those from LD_PRELOAD.
+In order to not suffer from that restriction one can specify shared libraries **/etc/ld.so.preload** file.
 
-Statistically linked libraries are immune to LD_PRELOAD as well as functions defined within the very source code.
+Statistically linked libraries are immune to dynamic linking. 
 
-### Here you can find very useful LD_PRELOAD information:
+### Here you can find very useful LD_PRELOAD or /etc/ld/.so.preload information:
 
 * http://www.goldsborough.me/c/low-level/kernel/2016/08/29/16-48-53-the_-ld_preload-_trick/
 * https://rafalcieslak.wordpress.com/2013/04/02/dynamic-linker-tricks-using-ld_preload-to-cheat-inject-features-and-investigate-programs/
@@ -38,26 +37,26 @@ Statistically linked libraries are immune to LD_PRELOAD as well as functions def
 
 ## Configuration
 
-There is very little configuration this library need in order to get executed by the [dynamic loader](http://man7.org/linux/man-pages/man8/ld.so.8.html). 
+There is very little configuration this library needs in order to get executed by the [dynamic loader](http://man7.org/linux/man-pages/man8/ld.so.8.html). 
 
-In the main directory, there is ``` configure.sh ```. We recommend you to run it since it will create a folder in your $HOME for the logs to be stored into and it will mount the folder in a TMPFS so there is almost no performance punishment. This implies two things:
+In the main directory, there is ``` configure.sh ```. It is recommended for you to run it since it will create a folder in your $HOME for the logs to be stored into and it will mount the folder in a TMPFS so there is almost no performance punishment. This implies two things:
 - You must be able to run ```configure.sh``` with superuser privileges. 
 - You must have $HOME environment variable pointing to some available directory.
 
-**Please bear in mind** that TMPFS is a volatile file system which offer very low latencies but is erased everytime you restart or shut down the computer. This is, *your logs will be deleted* unless you backup them.
+**Please bear in mind** that TMPFS is a volatile file system that offers very low latencies but is erased every time you restart or shut down the computer. This is, *your logs will be deleted* unless you backup them.
 
 ## POC
 
-In order to execute the TOCTTOU POC simply execute the following commands.
+In order to execute the TOCTOU POC, execute the following commands.
 
 There are two POC files. 
 
 * [vulnerableAccessFopen.c](/vulnerableAccessFopen.c) - Vulnerable <access, fopen> sequence.
 * [vulnerableLstatOpen.c](/vulnerableLstatOpen.c) - Vulnerable <lstat, open> sequence.
 
-Both files represent TOCTTOU-vulnerable code. The way of exploiting TOCTTOU consists of an attacker with lesser privileges than the actual program creating a file that he/she has access to in first place and then, at the exact moment (called the vulnerability window), replacing that file with a symbolic link towards some critic file he/she has no access to. Since the program will be running with escalated privileges, generally steuid to root, the user will be able to actually read/write in the protected file. 
+Both files represent TOCTOU-vulnerable code. The way of exploiting TOCTOU consists of an attacker with lesser privileges than the actual program creating a file that he/she has access to in first place and then, at the exact moment (called the vulnerability window), replacing that file with a symbolic link towards some critic file he/she has no access to. Since the program will be running with escalated privileges, generally setuid to root, the user will be able to actually read/write the protected file. 
 
-In order to test TOCTTOU exploitation simply follow these steps: (**Assuming you are working from the same directory where you cloned this repo and from where this README is**)
+In order to test TOCTOU exploitation simply follow these steps: (**Assuming you are working from the same directory where you cloned this repo and from where this README is**)
 
 1. We need some protected file, so let's create one with root user.
 
@@ -91,15 +90,15 @@ sudo chmod u+s vulnerable
 ```
 ./exploit.sh r00t.file 2> /dev/null
 ```
-*If you want to see every output, edit the script and dont redirect its output. Then simply execute ./exploit.sh r00t.file*
+*If you want to see every output, edit the script and don't redirect its output. Then simply execute ./exploit.sh r00t.file*
 
-6. Now simply wait for the script to finish. Sooner or later r00t.file will be edited via a *user* created file that's been replaced by a symbolic link at the right moment. Since TOCTTOU vulnerability is a non-deterministic one, we cannot know beforehand how long it will take to actually exploit the vulnerability. There are many factors to take into account, such as CPU performance, OS, enviroment variables, OS preempting, context switches, etc...
+6. Now simply wait for the script to finish. Sooner or later r00t.file will be edited via a *user* created file that's been replaced by a symbolic link at the right moment. Since TOCTOU vulnerability is a non-deterministic one, we cannot know beforehand how long it will take to actually exploit the vulnerability. There are many factors to take into account, such as CPU performance, OS, environment variables, OS preempting, context switches, etc...
 
 ## Logging
 
 Logging is carried out by Zlog, a C in-memory logging library. It allocates a buffer in memory for logging, and flush the buffer to the log file (or stdout) when the buffer is full, or it is instructed explicitly by the program or flushing thread. 
 
-Zlog is originally written by Zhiqiang Ma and it was modified to fulfill the project needs. You can find the modified library here (https://github.com/RazviOverflow/zlog) and the original here (https://github.com/zma/zlog). 
+Zlog is originally written by Zhiqiang Ma and it was modified to fulfill this project needs. You can find the modified library here (https://github.com/RazviOverflow/zlog) and the original here (https://github.com/zma/zlog). 
 
 ## Docs
 
