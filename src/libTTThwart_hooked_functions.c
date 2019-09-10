@@ -330,14 +330,14 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 
 			if(file_metadata.st_dev != aux.device_id){
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Device ID of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Device id was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.device_id, file_metadata.st_dev, GET_PROGRAM_NAME());
-				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGFILE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
 				exit(EXIT_FAILURE);
 			}
 
 			if(file_metadata.st_mode != aux.file_mode){
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n File mode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. File mode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.file_mode, file_metadata.st_mode, GET_PROGRAM_NAME());
-				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGFILE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
 				exit(EXIT_FAILURE);
 			}
@@ -349,7 +349,7 @@ void check_parameters_properties(const char *path, const char *caller_function_n
 			// process modified the file in-between. {@INODE_RACE}
 			if((aux.inode != inode_aux) || (inode_aux == NONEXISTING_FILE_INODE) || (inode_aux != inode)){
 				zlogf_time(ZLOG_INFO_LOG_MSG, "[+][!] WARNING! TOCTTOU DETECTED! [+][!]\n Inode of <%s> has changed since it was previously invoked. Threat detected when invoking <%s> function. Inode was <%lu> and now it is <%lu>. \n [#] PROGRAM %s ABORTED [#]\n\n", path, caller_function_name, aux.inode, inode, GET_PROGRAM_NAME());
-				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGIFLE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
+				fprintf(stderr,"[+][!] WARNING! TOCTTOU DETECTED!. [!][+]\n[#] PROGRAM %s ABORTED [#]\n[#] Check logs for more info [#]\n[!] LOGFILE: %s [!]\n", GET_PROGRAM_NAME(), zlog_get_log_file_name());
 				fflush(stdout);
 				exit(EXIT_FAILURE);
 			} // else inodes are equal, nothing to do.
